@@ -4,7 +4,7 @@
 
 이 문서는 프로젝트 최상위 제품/시스템 기준이다. AGENTS.md는 개발자의 행동규칙이며, Architecture, Data Model, State, Permission, 화면, Collector, Intelligence, Demo/Test 문서는 이 Baseline을 구체화한다.
 세부문서가 Baseline과 충돌하면 임의로 해석하지 않고 충돌, 영향범위, 선택지를 보고한다. 중요한 목표/범위 변경은 사용자 승인 후 Baseline과 Decision Log에 반영하고 구현한다. 미확정 기술사항을 임의로 확정하지 않는다.
-프로젝트 기준 Root는 이 문서의 상위 docs 디렉터리와 AGENTS.md, .gitignore를 포함하는 `dongalab`이다. 상위 Git Repository Root와 구분하며 파일을 임의로 이동하지 않는다.
+프로젝트 기준 Root는 docs 디렉터리와 AGENTS.md, .gitignore를 포함하는 `dongalab`이다. Git Repository Root는 작업 전 실제 상태로 확인하며 파일을 임의로 이동하지 않는다.
 
 ## 2. 프로젝트 최종 목표
 
@@ -46,6 +46,7 @@ AuthProvider, CompanyProvider, FileProvider, NotificationProvider, CapabilityPro
 동아테크놀로지를 대표 Demo 기업으로 사용한다. 확인되지 않은 기업정보는 DEMO/SEED로 명확히 표시한다.
 동아테크놀로지 전용 시스템을 만들지 않는다. 기업명/ID/업종/Site/조건, 서비스, Workflow, Permission, UI Logic을 하드코딩하지 않는다.
 Domain Model, DB, API, Workflow, UI는 다른 제조기업/비제조기업에서도 재사용하며 다른 기업을 등록해도 동일 Flow가 동작해야 한다.
+데이터 모델은 여러 Company, 한 Company의 여러 Site, 여러 지원사업 후보 및 여러 Support Case를 수용해야 한다. 모든 조합을 1차 Demo에서 완전 시연할 필요는 없으나 단일 Company/단일 Case에 고정된 설계는 허용하지 않는다.
 
 ## 7. 전체 시스템 경계
 
@@ -259,3 +260,31 @@ API Key, Password, Token, 실제 .env, 기업 개인정보, 민감 원본문서,
 실제 Private 자료와 Sanitized Demo 자산을 구분하며 사용자 권한과 기업 Scope를 검증한다.
 작업 전 Branch와 실제 파일 상태를 확인하고 공통 Schema/Contract/Auth/Workflow/Architecture 변경은 영향범위를 먼저 보고한다. 다른 연구원 작업을 덮어쓰지 않는다.
 기능개발은 특별한 지시가 없으면 Feature Branch를 기본으로 한다. Git add/commit/push/merge 및 파괴적 작업은 AGENTS.md의 명시적 승인 규칙을 따른다.
+
+## 36. 핵심 목표-기능-시연 추적성
+
+| 프로젝트 목표 | 필요한 핵심 Capability | 1차 Demo에서 확인할 증거 |
+| --- | --- | --- |
+| 정부지원사업 확보 | Collector / Notice | 기업마당 API 또는 검증 Snapshot 공고가 Web에 표시 |
+| 기업 이해 | Company Fact / Document Intake | 사업자등록증/재무제표 Upload → Candidate → Confirmed Fact |
+| 기업 개선요구 이해 | Improvement Workspace / Analyzer | 현황·문제·개선목표 분석결과와 검토 기록 |
+| DATCO 제공가능성 확인 | Capability Catalog / Analyzer | 기업과제 기준 서비스 후보와 판단근거 |
+| 적합 지원사업 검토 | 3-way Matching | FIT/PARTIAL_FIT/NEED_MORE_INFO/MISMATCH 및 근거 |
+| 기업과 정보 협업 | Information Request | DATCO 요청 → 기업응답 → DATCO 검증 |
+| 제안 및 합의 | Proposal / Approval | 특정 Proposal Version의 승인 기록 |
+| 실제 신청준비 | Dynamic Application / Application Package | 공고별 다른 양식·필수서류·준비상태 |
+| 실제 업무 진행관리 | Support Case / Task / Evidence | 제출·평가·선정 이후 단계 및 증빙의 연결 |
+| 변경 신뢰성 | Version / Audit / Change Impact | 수정공고 또는 승인 후 중요변경의 재검토/재승인 |
+| 시연 안정성 | Snapshot / Retry | Live API 장애에도 동일 Domain Logic으로 Demo 완료 |
+| DMP 확장성 | Provider / Adapter | Local Provider와 Domain Logic의 분리 확인 |
+
+이 표는 기능의 존재 이유와 확인할 증거를 연결한다. 선정 이후 단계의 증거는 전체 Life Cycle의 연결을 확인하며, 실제 실행 범위와 상세 수용기준은 Demo/Test 문서에서 구체화한다. 여기서 새로운 상세 구현이나 상태를 확정하지 않는다.
+
+## 37. 1차 운영/시연 필수 Capability
+
+- Deadline / Schedule / Prerequisite: 지원사업 마감일과 내부 업무기한, 선행업무, 지연상태, 마감임박을 식별한다.
+- Notification / Alert: 정보요청, 승인요청, 보완요청, 마감임박, 지연, 공고변경 영향을 전달한다. 1차는 In-App Notification으로 시작할 수 있고 향후 DMP Notification Provider로 교체 가능해야 한다.
+- Backup / Restore: 복구 가능한 운영시스템을 목표로 한다. 기준문서와 별개인 업무 DB/시스템 데이터, 실제 파일과 File/Evidence 참조를 장애·실수 후 일관되게 복구할 수 있어야 한다. 제품/주기/보존기간은 확정하지 않는다.
+- Import / Export: 필요한 업무데이터의 관리자 Import/Export와 Demo/Test 데이터 이동 가능성을 Architecture/Test에서 고려한다. 공고 Collector Import와 업무데이터 Export를 동일 기능으로 취급하지 않는다.
+
+이 항목들은 논리적 Capability 요구이며 구체 State/Schema/제품은 후속 설계에서 결정한다. 구조와 복구 경계는 System Architecture의 운영 안정성 절을 따른다.

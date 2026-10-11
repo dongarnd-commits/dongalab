@@ -3,7 +3,7 @@
 ## 1. 문서 역할과 적용 범위
 
 이 문서는 Project Baseline을 실제 시스템 구조로 구체화하는 Architecture 기준서다. AGENTS.md와 00_PROJECT_BASELINE.md에 따라 사용자, 시스템 경계, Module 책임, 데이터 전달, 공통 Core, 외부 Integration, 1차 Demo 및 향후 DMP 전환 구조를 정의한다.
-Project Root는 `C:\Users\PC\Desktop\정부지원사업운영체제 구축\dongalab`이다. 상위 Git Root와 구분한다.
+Project Root는 `C:\Users\PC\Desktop\정부지원사업운영체제 구축\dongalab`이다. Git Root는 작업 전 실제 상태로 확인한다.
 이 문서는 논리적 구조와 물리적 배치의 기본방향을 정하며 Framework, DB 제품, API Schema, 상세 Permission, 실제 디렉터리 구조를 확정하지 않는다. 이후 Data Model, State/Action, Permission, Collector, Intelligence, 화면 및 Demo/Test 문서가 세부 계약을 구체화한다.
 
 ## 2. 최상위 Architecture 원칙
@@ -165,7 +165,7 @@ Proposal, Approval, Case 생성 Use Case는 현재 승인 대상과 적용 Versi
 
 Match Candidate와 Support Case는 별개다. Match Review 완료 + 필요한 Company Confirmation/Approval + DATCO Proceed Confirmation을 충족해야 Case 생성이 가능하다.
 생성조건 검사와 생성은 한 업무 경계에서 일관되게 처리하며 반복 요청이 중복 Case를 생성하지 않게 한다. 실제 트랜잭션/식별 제약은 Data Model에서 확정한다.
-Case 흐름은 Baseline의 APPLICATION_PREP → SUBMISSION → EVALUATION → RESULT_CONFIRMED를 유지한다. 이번 요청의 `RESULT`는 결과 단계 개념으로 해석하며 별도의 상태를 추가하지 않는다.
+Case 흐름은 Baseline의 APPLICATION_PREP → SUBMISSION → EVALUATION → RESULT_CONFIRMED를 유지한다. 결과 단계의 상태명은 Baseline을 기준으로 하며 별도의 중복 상태를 추가하지 않는다.
 선정은 SELECTED → AGREEMENT → EXECUTION → INSPECTION → SETTLEMENT → CLOSED, 미선정은 NOT_SELECTED → CLOSED 또는 RECONSIDERATION이다. 미선정 상태에서 AGREEMENT로 자동 진행하지 않는다.
 Case는 Package/Task/Schedule/Evidence 및 평가·협약·수행·정산·사후관리와 연결한다. 세부 Guard는 후속 State/Action 문서에서 확정한다.
 
@@ -365,6 +365,44 @@ Frontend/Backend Framework, ORM, Database Product, AI/LLM Provider, OCR Product,
 | F: Notice v2 → Re-review | 변경검사/새 Version → Change Impact Candidate → Operations 검토 → 영향 Match/Proposal/Package 재검토 | 연결됨. 과거 Version 보존 |
 | G: Live 장애 → Snapshot | Collection 실패기록 → Snapshot Adapter → 동일 Raw/Normalize/Notice import → 분석/업무 Demo | 연결됨. 화면 결과 주입 우회 없음 |
 | H: DMP 교체 | 실제 계약 확인 → ID/소유권 검증 → Auth/Company/File Adapter 교체 → 기존 Use Case/Domain 사용 | 개념상 연결됨. 실제 계약과 이관 검증 필요 |
+| I: 여러 Company | 인증 주체 → Backend Company Scope → 기업별 조회/Action/File 검증 | 격리 경로 정의. 실제 교차기업 접근 Test 필요 |
+| J: 한 Company의 여러 Site | Company의 Site 관계 → Fact/자료의 Site 참조 → 분석/업무 연결 | 다중 Site 수용 원칙 유지. 관계/Scope 상세는 Data Model에서 확정 |
+| K: 여러 Notice/Case | Company → 복수 Match 후보 → 각각의 추진확정/Case/Package/Task | 단일 Case로 고정하지 않음. 중복 생성 방지와 정당한 복수 Case를 구분해 검증 |
+| L: 담당자 변경/이관 | 권한 검사 → Case/Task 담당 변경 → Audit → 새 담당자 업무 조회 | 업무 ID/과거 행위자 이력 유지. 상세 이관 권한은 Permission에서 확정 |
+| M: Deadline 임박/초과 | 공고/업무 due date → Schedule 판별 → Dashboard/Notification | 식별 경로 정의. 시간 기준/임박 기준은 후속 확정 |
+| N: Application/Job 재시작 | 영속 업무/Job 조회 → 실패·중단 실행 확인 → Version/idempotency 검사 → Retry | 확정 결과 보존. 중단 Job 복구정책은 후속 설계/실행 Test 필요 |
+| O: Backup/Restore | 일관된 DB/파일 복구 → Version/Audit/Evidence 참조 및 파일 존재 검증 | 검증 경계 정의. 실제 복구 Test와 수용기준 필요 |
 
-Baseline의 `RESULT_CONFIRMED`를 유지했으며 요청의 `RESULT` 표기는 결과 단계로 설명했다. AGENTS.md의 Step 02 한정 제한은 현재 Step 04 생성 승인과 충돌하지 않는다. 제품 목표/범위/소유권의 충돌은 발견하지 않았다.
+상세 실행 Test와 수용기준은 향후 `10_TEST_ACCEPTANCE.md`에서 정의한다. 문서상 경로 정의는 실제 운영 복구나 보안 검증의 완료를 의미하지 않는다.
 후속 구현의 완료 판단은 정상/예외 E2E, Company Scope, Version/승인, Evidence, 중복수집, 변경감지, Retry, Audit 및 새로고침 후 영속성 테스트로 검증한다.
+
+## 29. Operational Reliability / 운영 안정성
+
+기존 Modular Monolith와 Domain/Shared/Adapter 경계 안에서 다음 운영 Capability를 수용한다. 별도 Microservice를 추가하지 않으며 Backup, Scheduler, Message Broker, Queue, Notification SaaS, DB, Cloud, Monitoring 제품을 확정하지 않는다.
+
+### Deadline / Dependency
+
+Task/Schedule은 due date, prerequisite/dependency, overdue, blocked/waiting 개념을 지원한다. Notice 마감일과 내부 업무기한을 구분하고 Case/Task와 연결한다. Dashboard는 마감임박·초과·선행업무 대기 대상을 식별한다. 담당자 변경 시에도 Case/Task 식별과 기존 Audit History를 유지하며 새 담당자의 권한을 검사한다.
+정확한 State/Schema, 시간 기준, 마감임박 기준, 의존조건과 이관 정책은 Data Model, State/Action, Permission에서 확정한다.
+
+### Notification / Alert
+
+Information Request sent, Approval requested, Revision requested, Deadline approaching, Task overdue, Notice changed/impact review required를 Notification Abstraction의 논리 Event로 수용한다.
+관련 Domain/Use Case가 대상 객체와 기업 Scope를 제공하고 공통 알림 Port가 수신자의 권한과 공개범위를 적용한다. 1차 In-App, 향후 DMP Notification Provider 구조를 유지한다. 알림 수신 자체는 업무 승인이나 상태전이가 아니다.
+Event 형식, 전달/중복처리, 임박 판별 실행방식은 후속 설계에서 정한다.
+
+### Backup / Restore 경계
+
+복구대상은 업무 DB, File/Evidence metadata, 실제 파일 저장소, Version/Audit이다. DB와 파일 복구시점의 일관성을 고려하고 복구 후 Domain ID/Version/Approval/Evidence 참조 및 실제 파일 존재를 검증해야 한다.
+누락·불일치를 정상 업무로 간주하지 않고 식별·검토한다. 파일 Provider가 DMP로 교체되면 복구 책임과 참조 복원 가능성을 실제 계약으로 확인한다.
+Backup/Restore 제품, 운영주기, 보존기간, 복구목표와 실행절차는 후속 결정한다. Backup 존재만으로 복구 검증을 완료했다고 판단하지 않는다.
+
+### Import / Export 경계
+
+Collector Snapshot Import는 동일 공고 Normalize/import 경로를 사용한다. 업무데이터 Import는 관리자 Use Case로 각 Domain의 Validation/Scope/Version/idempotency/상태 정책을 거친다. Report/Data Export는 권한과 공개범위에 맞춘 조회/내보내기 Use Case다.
+세 기능을 구분하고 필요한 Demo/Test 데이터 이동을 지원할 확장 경계를 둔다. 실제 기업자료/Secret을 Demo 자산으로 옮기지 않는다. 형식·대상·권한·이동 정책은 후속 설계/Test에서 확정한다.
+
+### Operational Recovery
+
+Application/Job 재시작 후 저장된 업무상태와 확정 결과는 유지한다. 영속 Job 상태/오류/시도이력을 조회하여 실패 및 중단 실행을 확인하고, 현재 입력 Version과 idempotency를 검사한 뒤 정책에 따라 Retry한다.
+재시작을 이유로 확정 업무결과·승인·Audit을 삭제하거나 PROCESSING Job을 성공으로 간주하지 않는다. 중단 실행의 재판별/재시도 정책은 후속 설계에서 정한다. 복구와 Retry의 실제 수용기준은 10 Test에서 검증한다.
