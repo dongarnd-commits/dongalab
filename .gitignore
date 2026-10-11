@@ -1,0 +1,36 @@
+# Secrets / local environment
+.env
+.env.*
+!.env.example
+secrets/
+.secrets/
+
+# Dependencies / build
+node_modules/
+.next/
+dist/
+build/
+coverage/
+.cache/
+.turbo/
+
+# Python generated
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# Runtime / local data
+uploads/
+storage/private/
+data/private/
+tmp/
+temp/
+
+# Logs
+*.log
+
+# OS generated
+Thumbs.db
+.DS_Store
