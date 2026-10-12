@@ -21,7 +21,7 @@ URL shape: postgresql+psycopg://USER:PASSWORD@127.0.0.1:55432/DATABASE.
 Compose exposes PostgreSQL only on 127.0.0.1:55432. API uses 127.0.0.1:8000; Web uses localhost:3000.
 Optional Web server environment variable API_ORIGIN changes the API base URL and is never exposed to the browser.
 CORS allows only WEB_ORIGIN (default http://localhost:3000).
-Root .env is read by Compose and Backend; unrelated keys such as BIZINFO_API_KEY are ignored by Backend settings.
+Root .env is read by Compose and Backend. BIZINFO_API_KEY is a Backend SecretStr used only by the Live collector.
 
 ## Start
 
@@ -174,3 +174,53 @@ PDF pages without extractable text keep the job PARTIAL and expose page counts, 
 Notice API errors use the same `{ "reason": "..." }` schema in runtime responses, OpenAPI and generated TypeScript.
 Changing the selected notice clears its actions immediately and ignores responses from an older selection/request.
 Regression tests cover these behaviors, including delayed A response after B selection; formal docs/10 acceptance status remains unchanged.
+
+
+## Bizinfo ingestion slice
+
+After `uv sync --locked`, run `uv run alembic upgrade head`. Migration a44df74db1ac follows the Notice migration;
+existing Notice data remains intact. Start the API and `uv run python -m app.worker` as above.
+The same persistent PostgreSQL Job/Attempt queue now distinguishes NOTICE_ANALYSIS and BIZINFO_COLLECTION;
+collection pages and item outcomes persist separately. No scheduler or additional queue platform is used.
+
+Login as the local DATCO_OPERATOR at `/notice`. In Bizinfo Collection, choose **SANITIZED / DEMO snapshot** or
+**Live Bizinfo API**, then Request collection. Results show mode, attempts, pages, new/unchanged/version/duplicate/conflict
+outcomes and source failures. Review collected notice selects the existing Notice detail and analysis/review controls.
+Collection success does not request analysis or confirm requirements automatically. Refresh preserves the stored history.
+Retry preserves previous attempts and successful imports. A new NoticeVersion keeps previous candidates/reviews/confirmations;
+new input requires a new analysis and human review.
+
+Live endpoint: `https://www.bizinfo.go.kr/uss/rss/bizinfoApi.do`; Backend-only `BIZINFO_API_KEY` in ignored root `.env`.
+The client uses observed `crtfcKey`, `dataType=json`, `searchCnt=0`, `pageIndex`, `pageUnit`, and `jsonArray`.
+Manual browser requests use at most 3 pages of 2 notices. Backend commands accept page_unit/max_pages 1..5.
+Local safety limits are 15 seconds per HTTP request, at most 2 attempts for transient network/5xx failures,
+1 MiB per API page, 8 MiB per source, and a 120-second collection budget. These are local guards, not official rate limits.
+Short pages still require Empty confirmation; count changes, mismatches, repeated pages and a reached limit remain visible.
+A bounded page limit reports PARTIAL and does not claim a full Bizinfo sweep. No silent Snapshot fallback occurs.
+
+Raw successful page JSON is immutable content in ignored private storage, referenced by a CollectionPage and record position.
+Live Raw may contain contacts and is not a shareable fixture; the collection API excludes raw storage keys/content.
+Source provenance records mode, origin, time, source field/URL, immutable hash and acquisition outcome.
+Only official HTTPS Bizinfo hosts and matching detail IDs are accepted; private DNS addresses and redirects are blocked.
+Downloads enforce received-byte/time limits. A supplied attachment URL is not evidence that its file was acquired.
+PDF is identified by signature and strict parse, not by octet-stream MIME or print-file role. Other formats remain unsupported.
+HTML acquisition verifies encoding and notice identity; general portal selectors and complete body extraction remain unverified.
+HTML version comparison uses supported labelled clauses only; an otherwise unknown changed detail is held for review.
+Failed reacquisition does not delete a previously acquired source or fabricate a content change.
+
+The input-only `apps/api/fixtures/bizinfo/demo.json` follows Probe-verified field names but has synthetic, sanitized content
+and a DEMO external ID that does not collide with real Live IDs. Its HTML/PDF run through the same FileProvider,
+Normalizer, Notice input use case, Analysis Worker, evidence and Human Review as Live-derived notices.
+The existing Probe samples are retained as masked shape evidence; they are not presented as complete analysis fixtures.
+No Candidate, Review or Confirmed Requirement is preseeded by this snapshot.
+
+Run `uv run pytest` against PostgreSQL. After API startup, regenerate contracts with `npm.cmd run api:types`,
+then run lint/build/test:e2e. Collection browser tests cover snapshot persistence, deduplication, existing analysis/human confirmation,
+and unauthorized requests. Controlled Live response tests are test doubles and do not establish real Live availability.
+A limited real validation on 2026-10-12 performed 4 requests for one API record and its 3 references:
+metadata/Notice persistence and detail HTML succeeded; the API filename metadata identifies ZIP and HWP references, which were not valid supported PDFs and remain missing.
+The job is PARTIAL due to acquisition failures and the explicit one-page limit. Live PDF/whole-document analysis is not verified.
+The existing deterministic analyser still handles labelled clauses only; real Korean portal interpretation, OCR, HWP/HWPX,
+production heartbeat, scheduling and other business domains are outside this slice.
+
+Formal docs/10 acceptance stays NOT_RUN / system NOT_TESTED. No docs/00~11 or Probe artifacts are changed.

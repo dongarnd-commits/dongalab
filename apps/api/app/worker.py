@@ -103,7 +103,9 @@ def main():
         with get_session_factory().begin() as session:
             print("Recovered expired jobs:",recover_expired(session))
         return
+    from app.collector.worker import process_collection_one
     while True:
+        process_collection_one()
         process_one()
         if args.once:
             return

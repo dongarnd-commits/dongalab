@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { components } from "@/generated/api";
+import Collection from "./collection";
 
 type Summary = components["schemas"]["NoticeSummary"];
 type Detail = components["schemas"]["NoticeDetail"];
@@ -48,7 +49,7 @@ function CandidateCard({ candidate, version, isCurrent, reload }: { candidate: C
     <p>Evidence: {candidate.evidence.descriptor}</p><blockquote>{candidate.evidence.text}</blockquote>
     <a href={"/api/notice/sources/" + candidate.evidence.source_id + "/download"}>Download source</a>
     {reviewed ? <p>Review recorded: {JSON.stringify(candidate.reviews)}</p> : <>
-      <p><label><input type="checkbox" checked={official} onChange={e => setOfficial(e.target.checked)} /> I reviewed the source and verified its basis for this clause within the displayed DEMO/TEST context.</label></p>
+      <p><label><input type="checkbox" checked={official} onChange={e => setOfficial(e.target.checked)} /> I reviewed the source and verified its basis for this clause within the displayed {version.mode} source context.</label></p>
       <p><label>Review note <input value={note} onChange={e => setNote(e.target.value)} /></label></p>
       {!!conflict && <p><label>Conflict resolution <input value={resolution} onChange={e => setResolution(e.target.value)} /></label></p>}
       <button disabled={!isCurrent || !official || !note.trim() || (!!conflict && !resolution.trim())} onClick={confirm}>Confirm selected requirement</button>
@@ -124,13 +125,14 @@ export default function Review() {
   }
   return <main>
     <h1>Notice Requirement Review</h1>
-    <p>DEMO/TEST sources - synthetic inputs. These records do not represent an actual government notice.</p>
+    <p>Inputs include LIVE and SANITIZED/DEMO sources. Check each version mode and source provenance; candidates require human review.</p>
     {!actor ? <form onSubmit={login}>
       <p><label>Username <input value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" /></label></p>
       <p><label>Password <input type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" /></label></p>
       <button>Login</button>
     </form> : <>
       <p>Signed in: {actor.role}</p>
+      {actor.role === "DATCO_OPERATOR" && <Collection onSelectNotice={selectNotice} />}
       <label htmlFor="notice-choice">Notice</label><select id="notice-choice" value={selected} onChange={e => selectNotice(e.target.value)}>
         <option value="">Select a notice</option>
         {notices.map(n => <option key={n.id} value={n.id}>{n.title}</option>)}

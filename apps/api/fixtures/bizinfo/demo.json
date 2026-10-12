@@ -1,0 +1,35 @@
+{
+  "sanitized": true,
+  "synthetic": true,
+  "input_origin": "Probe-verified field shape; all notice content and external IDs are synthetic DEMO input",
+  "jsonArray": [
+    {
+      "trgetNm": "Manufacturing companies (synthetic)",
+      "updtPnttm": "2026-10-01 09:00:00",
+      "hashtags": "DEMO,SANITIZED",
+      "inqireCo": 0,
+      "creatPnttm": "2026-10-01 09:00:00",
+      "pblancNm": "DEMO/SANITIZED Bizinfo ingestion notice",
+      "pblancId": "PBLN_DEMO_INGESTION_001",
+      "printFlpthNm": "",
+      "refrncNm": "DEMO contact; no personal contact data",
+      "rceptEngnHmpgUrl": "",
+      "fileNm": "DEMO notice.pdf",
+      "pblancUrl": "https://www.bizinfo.go.kr/sii/siia/selectSIIA200Detail.do?pblancId=PBLN_DEMO_INGESTION_001",
+      "jrsdInsttNm": "DEMO agency",
+      "excInsttNm": "DEMO operator agency",
+      "totCnt": 1,
+      "reqstMthPapersCn": "Manual external portal submission (synthetic)",
+      "pldirSportRealmLclasCodeNm": "DEMO support",
+      "reqstBeginEndDe": "2026-10-01 ~ 2026-10-23",
+      "flpthNm": "https://www.bizinfo.go.kr/cmm/fms/getImageFile.do?atchFileId=FILE_DEMO_INGESTION_001&fileSn=0",
+      "bsnsSumryCn": "Synthetic manufacturing support notice; not an actual government program.",
+      "pldirSportRealmMlsfcCodeNm": "DEMO digital",
+      "printFileNm": ""
+    }
+  ],
+  "assets": {
+    "https://www.bizinfo.go.kr/sii/siia/selectSIIA200Detail.do?pblancId=PBLN_DEMO_INGESTION_001": "detail.html",
+    "https://www.bizinfo.go.kr/cmm/fms/getImageFile.do?atchFileId=FILE_DEMO_INGESTION_001&fileSn=0": "notice.pdf"
+  }
+}

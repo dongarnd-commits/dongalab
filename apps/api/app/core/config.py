@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[4]
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=ROOT / ".env", env_file_encoding="utf-8", extra="ignore", hide_input_in_errors=True)
     database_url: SecretStr
+    bizinfo_api_key: SecretStr | None = None
     web_origin: str = "http://localhost:3000"
 
     @field_validator("database_url")
