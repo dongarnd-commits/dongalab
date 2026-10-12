@@ -1,0 +1,20 @@
+{
+  "external_key": "DEMO_TEST_normal",
+  "title": "DEMO/TEST normal notice",
+  "metadata": {
+    "period_original": "2026-10-01 to 2026-10-23",
+    "source_mode": "DEMO_TEST"
+  },
+  "sources": [
+    {
+      "name": "DEMO/TEST HTML notice",
+      "file": "normal.html",
+      "media_type": "text/html"
+    },
+    {
+      "name": "DEMO/TEST PDF notice",
+      "file": "normal.pdf",
+      "media_type": "application/pdf"
+    }
+  ]
+}

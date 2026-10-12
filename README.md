@@ -1,7 +1,7 @@
 # DATCO Phase-1 Skeleton
 
 Minimal runtime path: Browser -> Next.js -> FastAPI -> SQLAlchemy/Psycopg -> PostgreSQL.
-Business domains, authentication, jobs, files and the first vertical slice are not implemented.
+The first Notice Requirement review slice adds local session, controlled source files, persistent analysis jobs and human confirmation. Other business domains remain unimplemented.
 Approved stack: [Decision-001](docs/11_DECISION_LOG.md). Product and module boundaries remain in [Baseline](docs/00_PROJECT_BASELINE.md) and [Architecture](docs/01_SYSTEM_ARCHITECTURE.md).
 
 ## Requirements
@@ -67,8 +67,7 @@ uv run alembic heads
 uv run alembic check
 ~~~
 
-Alembic uses empty SQLAlchemy Metadata. There are no business models or migrations.
-Alembic check checks schema drift; revisions will be added per vertical slice.
+Run uv run alembic upgrade head before tests or the API. The first migration contains only Notice review, session, file metadata, analysis/job and audit records. Alembic check checks schema drift.
 
 With API and PostgreSQL running:
 
@@ -118,3 +117,60 @@ They are limited to this Skeleton's development lint dependencies, with no confi
 ESLint 9 is deprecated; a compatible supported lint upgrade should be evaluated with that review.
 The installed Starlette TestClient also warns about future httpx deprecation; current tests pass.
 These notices are separate from full business acceptance, which has not been run.
+
+
+## First Notice slice
+
+All supplied notices are synthetic DEMO/TEST inputs, not actual government notices.
+Existing Bizinfo Probe data is masked and insufficient for text/page evidence; it is not used as a completed analysis fixture.
+Local login uses the account stored in the ignored root .env; configure DEMO_OPERATOR_USER and DEMO_OPERATOR_PASSWORD (no public default password).
+The Browser role is never used as an authorization source. Local HttpOnly/SameSite=strict sessions and explicit Origin validation are for localhost development.
+
+From apps/api, prepare input-only fixtures and start the same-code Worker:
+
+~~~powershell
+uv sync --locked
+uv run alembic upgrade head
+uv run python -m app.demo
+uv run python -m app.demo --fixture conflict
+uv run python -m app.demo --fixture partial
+uv run python -m app.worker
+~~~
+
+If an input fixture changes, re-running the loader creates a new NoticeVersion and retains previous source/analysis/review history; unchanged input is idempotent.
+Keep API, Worker and Web in separate terminals. Open http://localhost:3000/notice.
+Login, select a notice, request analysis, inspect candidate/source/page evidence, record source verification and review note, then confirm the selected clause.
+Confirmed snapshots, reviewer, input Version and evidence persist after refresh.
+Job SUCCEEDED means execution succeeded; it never confirms a requirement.
+Missing sources remain visible and confirmed scope is limited to selected clauses.
+Conflicting period clauses require an explicit human resolution note and retain both source values.
+Use the source download action to fetch immutable content through authorized Backend access; raw storage paths are never public URLs.
+
+The deterministic adapter handles explicitly labelled clauses only. General notice interpretation is not implemented.
+HTML extraction is for the inspectable fixtures; general government portal selectors are not established.
+pypdf 6.20.0 extracts the supplied text PDF's real pages. Image/scanned, encrypted, corrupted and empty documents require additional source/manual review; OCR and Korean PDF font accuracy are not claimed.
+Binary files live under ignored storage/private/notice; source/file metadata and evidence locations live in PostgreSQL.
+
+The local Worker claims with PostgreSQL SKIP LOCKED, releases the transaction before extraction, and fences completion by Attempt/state/lease.
+A 300-second local execution lease bounds this initial short fixture workload. Production lease/heartbeat policy remains undecided.
+To mark expired unfinished execution FAILED without deleting attempts, run uv run python -m app.worker --recover-expired.
+Retry creates a new Attempt and preserves previous failure/Run/Review history. Do not use recovery against an active unexpired execution.
+
+Backend acceptance mapping tests are in tests/test_notice_slice.py; they do not change docs/10's formal NOT_RUN records.
+With the input fixtures, API and Worker running, npm.cmd run test:e2e runs the original smoke plus login/candidate/evidence/confirm/refresh and unauthorized-access checks.
+The outage-specific test remains opt-in as described above.
+Stop API/Web/Worker with Ctrl+C; retain the PostgreSQL volume.
+
+
+### Notice slice regression fixes
+
+Snapshots replace a selected APPLICATION_PERIOD while preserving other reviewed clauses and all historical snapshots.
+Reanalysis of the same kind/value does not duplicate the current item.
+Successful command replay is identified before checking current input validity; `historical_replay` and `current_valid` are separate response fields.
+Confirmation identity includes actor, candidate, input version, verification, note, scope and conflict resolution; a changed command is rejected.
+HTTP retry requests supply `idempotency_key`; duplicate retries reuse the recorded receipt and do not create another transition.
+Period conflicts compare `period_original` metadata with HTML/PDF clauses and retain both source identities and document locations.
+PDF pages without extractable text keep the job PARTIAL and expose page counts, extracted/unextractable pages and the manual-review limitation.
+Notice API errors use the same `{ "reason": "..." }` schema in runtime responses, OpenAPI and generated TypeScript.
+Changing the selected notice clears its actions immediately and ignores responses from an older selection/request.
+Regression tests cover these behaviors, including delayed A response after B selection; formal docs/10 acceptance status remains unchanged.
