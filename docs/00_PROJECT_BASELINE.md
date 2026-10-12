@@ -39,7 +39,7 @@ AuthProvider, CompanyProvider, FileProvider, NotificationProvider, CapabilityPro
 | COMPANY_EDITOR | 자기 기업 Scope에서 기업정보 입력/확인, 문서/현장자료 업로드, 개선내용, Information Request 응답, 보완자료 제출 |
 | COMPANY_APPROVER | 자기 기업 Scope에서 Proposal Version·책임범위 확인, 승인/재승인, 진행상태 확인 |
 
-이는 역할 개념이며 상세 Permission은 향후 `05_PERMISSION_UI_MATRIX.md`에서 확정한다.
+이는 역할 개념이며 상세 Permission은 `05_PERMISSION_UI_MATRIX.md`의 Standalone Phase-1 기준과 남은 Open Decision을 따른다.
 
 ## 6. 대표 Demo 기업과 재사용 원칙
 
@@ -120,7 +120,7 @@ Approval은 특정 Proposal Version/Snapshot에 연결한다. v1 승인기록을
 
 Match 후보와 실제 추진건은 구분한다.
 MatchReview → Company Confirmation → DATCO Proceed Confirmation → Support Case의 정상 흐름을 따른다.
-필요한 확인/승인/추진확정 조건 충족 전에는 Support Case를 생성할 수 없다. 정확한 Guard와 Action은 향후 State/Action 문서에서 구체화한다.
+필요한 확인/승인/추진확정 조건 충족 전에는 Support Case를 생성할 수 없다. 정확한 Guard와 Action은 `04_STATE_ACTION_MODEL.md`의 기준을 따른다.
 
 ## 18. Support Case Life Cycle
 
@@ -129,7 +129,7 @@ MatchReview → Company Confirmation → DATCO Proceed Confirmation → Support 
 - 선정: SELECTED → AGREEMENT → EXECUTION → INSPECTION → SETTLEMENT → CLOSED.
 - 미선정: NOT_SELECTED → CLOSED, 또는 필요 시 NOT_SELECTED → RECONSIDERATION.
 
-미선정 Case는 자동으로 AGREEMENT로 이동하지 않는다. 재검토 이후 경로와 세부 Transition 조건은 향후 확정한다. 전체 업무의 사후관리까지 추적 가능해야 한다.
+미선정 Case는 자동으로 AGREEMENT로 이동하지 않는다. Phase-1 재검토와 세부 Transition은 `04_STATE_ACTION_MODEL.md`의 Case Stage Transition 기준을 따르며, 사업별 추가 정책과 선택단계의 Open Decision은 유지한다. 전체 업무의 사후관리까지 추적 가능해야 한다.
 
 ## 19. Dynamic Application
 
@@ -152,7 +152,7 @@ Confirmed Company Fact 등을 자동채움 후보로 재사용하고 Missing Dat
 
 Action 가능 여부는 Permission + State + Data Scope로 판단한다. 권한 없음은 Action 숨김, 권한 있음/조건 미충족은 Disabled와 불가 사유 표시를 적용한다.
 Backend/API도 Role/Permission/Company Scope 및 필요한 Case Scope를 검증한다. 기업 사용자는 다른 기업의 URL/API를 직접 호출해도 데이터를 볼 수 없어야 한다.
-중요 객체는 단순 CRUD가 아니라 State/Transition을 사용하고 Current State, Permission, Required Data, Required Approval, Required Evidence를 검사한다. 상세 Matrix는 이후 별도 문서에서 확정한다.
+중요 객체는 단순 CRUD가 아니라 State/Transition을 사용하고 Current State, Permission, Required Data, Required Approval, Required Evidence를 검사한다. 상세 Matrix의 1차 기준과 남은 Open Decision은 `05_PERMISSION_UI_MATRIX.md`를 참조한다.
 
 ## 23. Human-in-the-loop
 
@@ -172,7 +172,7 @@ Match, Proposal, Approval, Application Package, Support Case, Task를 영향 대
 
 ## 26. 오류와 비동기 Analysis Job
 
-긴 분석은 비동기 처리를 고려한다. 대표 상태는 QUEUED → PROCESSING → REVIEW_REQUIRED → CONFIRMED이며 실패는 FAILED → 오류표시 → Retry 흐름을 지원한다.
+긴 분석은 비동기 처리를 고려하며 Job 실행상태는 QUEUED → PROCESSING → SUCCEEDED / PARTIAL / FAILED로 구분한다. FAILED/PARTIAL은 오류와 Attempt를 보존하고 허용된 Retry 경로를 따른다. 성공/부분 실행에서 생성된 Candidate는 별도 REVIEW_REQUIRED 의미로 Human Review의 Confirm/보완/거절을 거치며, Job SUCCEEDED는 업무확정이 아니고 Job.CONFIRMED 상태를 요구하지 않는다.
 입력 Version, 분석 Version, 오류, 시도횟수, 결과를 추적한다. Retry도 사람 검토를 우회하지 않는다.
 초기 DB 기반 Job Queue도 가능한 선택지이며 구체 기술은 Architecture에서 확정한다.
 
@@ -186,7 +186,7 @@ Match, Proposal, Approval, Application Package, Support Case, Task를 영향 대
 | 공식 신청/접수 사실 | 외부 정부 공식포털이 공식 원천. 시스템은 Evidence/Receipt 연결 관리 |
 | 향후 Company Master / Auth / File | DMP 연동 이후 역할 변경 가능 |
 
-Intelligence는 분석 후보를 제공한다. 실제 세부 데이터 소유권은 Architecture/Data Model 단계에서 확정한다.
+Intelligence는 분석 후보를 제공한다. Phase-1 세부 데이터 소유권은 `01_SYSTEM_ARCHITECTURE.md`와 `03_DATA_MODEL.md`의 기준을 따른다.
 
 ## 28. Non-Goals
 
@@ -233,7 +233,7 @@ Browser UI, DB Persistence, 새로고침 후 상태 유지, Collector, 중복방
 
 ## 33. 향후 기준문서와 변경관리
 
-이후 다음 문서를 순차적으로 작성하며 현재 존재한다고 가정하지 않는다.
+현재 Standalone Phase-1 Design Baseline은 00~10 문서 세트로 구성된다. 다음 01~10 문서는 모두 존재하며 각 책임영역에서 이 Baseline을 구체화한다.
 
 1. docs/01_SYSTEM_ARCHITECTURE.md
 2. docs/02_E2E_SYSTEM_FLOW.md
@@ -245,13 +245,15 @@ Browser UI, DB Persistence, 새로고침 후 상태 유지, Collector, 중복방
 8. docs/08_SCREEN_ACTION_SPEC.md
 9. docs/09_DEMO_SCENARIO.md
 10. docs/10_TEST_ACCEPTANCE.md
-11. docs/11_DECISION_LOG.md
 
-각 문서는 Baseline을 구체화한다. Baseline을 임의 변경하지 않는다. 중요한 구현결정은 관련 기준문서와 동기화하며 필요한 결정은 승인 후 Decision Log에 기록한다.
+`docs/11_DECISION_LOG.md`는 00~10을 완성하기 위한 추가 설계문서가 아니라 Stack 선택·실제 구현 과정의 승인된 중요 기술/구조 결정을 기록하는 변경관리 문서다. 11 작성 완료는 현재 00~10 Design Baseline 동결의 선행조건이 아니다.
+Baseline을 임의 변경하지 않는다. 중요한 목표/정책/구조 변경과 구현결정은 상위 기준·영향범위를 확인한 후 관련 기준문서와 동기화하며 필요한 결정은 승인 후 Decision Log에 기록한다.
 
 ## 34. 현재 미확정 사항
 
-Frontend Framework, Backend Framework, DB, ORM, File Storage, Queue, AI/LLM Provider, OCR, Deployment 방식, 실제 DMP API Contract, 상세 Permission Matrix, 기업마당 실제 API Field Mapping은 미확정이다.
+Frontend Framework, Backend Framework, DB, ORM, File Storage, Queue, AI/LLM Provider, OCR, Deployment 방식, 실제 DMP API Contract는 미확정이다.
+Role/Permission/Scope와 핵심 Action Authorization의 Standalone Phase-1 기준은 `05_PERMISSION_UI_MATRIX.md`에서 정의되었으며, 복수 승인자/Assignment Scope/Package 확인 Actor 등 일부 조직·승인 정책은 Open Decision으로 유지한다.
+기업마당 Endpoint/인증/Wrapper/Field Mapping/Pagination/ID/Source 참조의 1차 기준은 `06_BIZINFO_COLLECTOR.md`에서 실제 Probe 기반으로 정의되었으며, Rate Limit/오류응답/다중첨부 표현/HTML Selector와 일부 운영수치는 Open Decision으로 유지한다.
 향후 관련 기준문서 작성과 실제 API/환경 확인 후 결정한다. 현재 단계에서 임의 선택하거나 외부 시스템 구조를 추정하여 확정하지 않는다.
 
 ## 35. 보안과 협업 기준
@@ -287,4 +289,4 @@ API Key, Password, Token, 실제 .env, 기업 개인정보, 민감 원본문서,
 - Backup / Restore: 복구 가능한 운영시스템을 목표로 한다. 기준문서와 별개인 업무 DB/시스템 데이터, 실제 파일과 File/Evidence 참조를 장애·실수 후 일관되게 복구할 수 있어야 한다. 제품/주기/보존기간은 확정하지 않는다.
 - Import / Export: 필요한 업무데이터의 관리자 Import/Export와 Demo/Test 데이터 이동 가능성을 Architecture/Test에서 고려한다. 공고 Collector Import와 업무데이터 Export를 동일 기능으로 취급하지 않는다.
 
-이 항목들은 논리적 Capability 요구이며 구체 State/Schema/제품은 후속 설계에서 결정한다. 구조와 복구 경계는 System Architecture의 운영 안정성 절을 따른다.
+이 항목들의 Phase-1 논리 데이터/State/Action 기준은 `03_DATA_MODEL.md`와 `04_STATE_ACTION_MODEL.md`를 따르며, 물리 Schema/제품과 운영수치는 구현·운영 단계의 미확정 사항으로 유지한다. 구조와 복구 경계는 System Architecture의 운영 안정성 절을 따른다.

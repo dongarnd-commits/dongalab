@@ -1,0 +1,28 @@
+{
+  "jsonArray": [
+    {
+      "trgetNm": "[REDACTED_TEXT]",
+      "updtPnttm": "[REDACTED_TEXT]",
+      "hashtags": "[REDACTED_TEXT]",
+      "inqireCo": 5349,
+      "creatPnttm": "2026-10-08 13:42:13",
+      "pblancNm": "[REDACTED_TEXT]",
+      "pblancId": "PBLN_000000000127087",
+      "printFlpthNm": "https://www.bizinfo.go.kr/cmm/fms/getImageFile.do?atchFileId=FILE_000000000776053&fileSn=0",
+      "refrncNm": "[REDACTED_TEXT]",
+      "rceptEngnHmpgUrl": "[REDACTED_URL]",
+      "fileNm": "[REDACTED_TEXT]",
+      "pblancUrl": "https://www.bizinfo.go.kr/sii/siia/selectSIIA200Detail.do?pblancId=PBLN_000000000127087",
+      "jrsdInsttNm": "[REDACTED_TEXT]",
+      "excInsttNm": "[REDACTED_TEXT]",
+      "totCnt": 1423,
+      "reqstMthPapersCn": "[REDACTED_TEXT]",
+      "pldirSportRealmLclasCodeNm": "[REDACTED_TEXT]",
+      "reqstBeginEndDe": "2026-10-01 ~ 2026-10-23",
+      "flpthNm": "https://www.bizinfo.go.kr/cmm/fms/getImageFile.do?atchFileId=FILE_000000000776054&fileSn=0@https://www.bizinfo.go.kr/cmm/fms/getImageFile.do?atchFileId=FILE_000000000776054&fileSn=1",
+      "bsnsSumryCn": "[REDACTED_TEXT]",
+      "pldirSportRealmMlsfcCodeNm": "[REDACTED_TEXT]",
+      "printFileNm": "[REDACTED_TEXT]"
+    }
+  ]
+}

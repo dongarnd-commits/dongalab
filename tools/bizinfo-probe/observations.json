@@ -1,0 +1,220 @@
+{
+  "endpoint": "https://www.bizinfo.go.kr/uss/rss/bizinfoApi.do",
+  "method": "GET",
+  "authParameter": "crtfcKey",
+  "request": {
+    "dataType": "json",
+    "searchCnt": 2,
+    "pageUnit": 1
+  },
+  "results": [
+    {
+      "page": 1,
+      "status": 200,
+      "contentType": "application/json; charset=UTF-8",
+      "bytes": 2585,
+      "json": true,
+      "topLevelKeys": [
+        "jsonArray"
+      ],
+      "count": 1,
+      "fields": {
+        "trgetNm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "updtPnttm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "hashtags": {
+          "type": "string",
+          "nonempty": true
+        },
+        "inqireCo": {
+          "type": "number",
+          "nonempty": true
+        },
+        "creatPnttm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "pblancNm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "pblancId": {
+          "type": "string",
+          "nonempty": true
+        },
+        "printFlpthNm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "refrncNm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "rceptEngnHmpgUrl": {
+          "type": "string",
+          "nonempty": true
+        },
+        "fileNm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "pblancUrl": {
+          "type": "string",
+          "nonempty": true
+        },
+        "jrsdInsttNm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "excInsttNm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "totCnt": {
+          "type": "number",
+          "nonempty": true
+        },
+        "reqstMthPapersCn": {
+          "type": "string",
+          "nonempty": true
+        },
+        "pldirSportRealmLclasCodeNm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "reqstBeginEndDe": {
+          "type": "string",
+          "nonempty": true
+        },
+        "flpthNm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "bsnsSumryCn": {
+          "type": "string",
+          "nonempty": true
+        },
+        "pldirSportRealmMlsfcCodeNm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "printFileNm": {
+          "type": "string",
+          "nonempty": true
+        }
+      },
+      "externalId": "PBLN_000000000127088",
+      "total": 1423,
+      "rateLimitHeaders": []
+    },
+    {
+      "page": 2,
+      "status": 200,
+      "contentType": "application/json; charset=UTF-8",
+      "bytes": 2424,
+      "json": true,
+      "topLevelKeys": [
+        "jsonArray"
+      ],
+      "count": 1,
+      "fields": {
+        "trgetNm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "updtPnttm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "hashtags": {
+          "type": "string",
+          "nonempty": true
+        },
+        "inqireCo": {
+          "type": "number",
+          "nonempty": true
+        },
+        "creatPnttm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "pblancNm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "pblancId": {
+          "type": "string",
+          "nonempty": true
+        },
+        "printFlpthNm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "refrncNm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "rceptEngnHmpgUrl": {
+          "type": "string",
+          "nonempty": true
+        },
+        "fileNm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "pblancUrl": {
+          "type": "string",
+          "nonempty": true
+        },
+        "jrsdInsttNm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "excInsttNm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "totCnt": {
+          "type": "number",
+          "nonempty": true
+        },
+        "reqstMthPapersCn": {
+          "type": "string",
+          "nonempty": true
+        },
+        "pldirSportRealmLclasCodeNm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "reqstBeginEndDe": {
+          "type": "string",
+          "nonempty": true
+        },
+        "flpthNm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "bsnsSumryCn": {
+          "type": "string",
+          "nonempty": true
+        },
+        "pldirSportRealmMlsfcCodeNm": {
+          "type": "string",
+          "nonempty": true
+        },
+        "printFileNm": {
+          "type": "string",
+          "nonempty": true
+        }
+      },
+      "externalId": "PBLN_000000000127087",
+      "total": 1423,
+      "rateLimitHeaders": []
+    }
+  ]
+}

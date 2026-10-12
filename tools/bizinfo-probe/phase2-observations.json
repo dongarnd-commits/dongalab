@@ -1,0 +1,156 @@
+{
+  "requestBudget": 6,
+  "pagination": [
+    {
+      "page": 1,
+      "pageUnit": 2,
+      "searchCnt": 0,
+      "status": 200,
+      "contentType": "application/json; charset=UTF-8",
+      "contentLength": null,
+      "contentRange": null,
+      "rateLimitHeaders": [],
+      "redirect": false,
+      "json": true,
+      "topKeys": [
+        "jsonArray"
+      ],
+      "count": 2,
+      "total": 1423,
+      "emptyShape": null
+    },
+    {
+      "page": 712,
+      "pageUnit": 2,
+      "searchCnt": 0,
+      "status": 200,
+      "contentType": "application/json; charset=UTF-8",
+      "contentLength": null,
+      "contentRange": null,
+      "rateLimitHeaders": [],
+      "redirect": false,
+      "json": true,
+      "topKeys": [
+        "jsonArray"
+      ],
+      "count": 1,
+      "total": 1423,
+      "emptyShape": null
+    },
+    {
+      "page": 713,
+      "pageUnit": 2,
+      "searchCnt": 0,
+      "status": 200,
+      "contentType": "application/json; charset=UTF-8",
+      "contentLength": null,
+      "contentRange": null,
+      "rateLimitHeaders": [],
+      "redirect": false,
+      "json": true,
+      "topKeys": [
+        "jsonArray"
+      ],
+      "count": 0,
+      "total": null,
+      "emptyShape": {
+        "jsonArray": []
+      }
+    }
+  ],
+  "detail": {
+    "status": 200,
+    "contentType": "text/html;charset=UTF-8",
+    "contentLength": null,
+    "contentRange": null,
+    "rateLimitHeaders": [],
+    "redirect": false,
+    "pblancId": "PBLN_000000000127088",
+    "idInHtml": true,
+    "htmlBytes": 81318,
+    "tableCount": 2,
+    "fileLinkCount": 3,
+    "sectionLabels": [
+      "사업개요",
+      "첨부파일",
+      "신청서"
+    ],
+    "apiFileReferencesInHtml": [
+      {
+        "field": "flpthNm",
+        "fileIdInHtml": true
+      },
+      {
+        "field": "printFlpthNm",
+        "fileIdInHtml": true
+      }
+    ]
+  },
+  "files": [
+    {
+      "field": "flpthNm",
+      "status": 200,
+      "contentType": "application/octet-stream",
+      "contentLength": "130041",
+      "contentRange": null,
+      "rateLimitHeaders": [],
+      "redirect": false,
+      "prefixBytes": 64,
+      "magic": "PDF",
+      "dispositionPresent": true,
+      "filenameExtension": "pdf",
+      "binarySaved": false
+    },
+    {
+      "field": "printFlpthNm",
+      "status": 200,
+      "contentType": "application/octet-stream",
+      "contentLength": "399346",
+      "contentRange": null,
+      "rateLimitHeaders": [],
+      "redirect": false,
+      "prefixBytes": 64,
+      "magic": "PDF",
+      "dispositionPresent": true,
+      "filenameExtension": "pdf",
+      "binarySaved": false
+    }
+  ],
+  "changes": [
+    {
+      "page": 1,
+      "pblancId": "PBLN_000000000127088",
+      "creatPnttm": "2026-10-08 14:07:33",
+      "updtPnttm": "2026-10-08 15:22:02",
+      "different": true,
+      "period": "2026-10-01 ~ 2026-10-23",
+      "contentPresent": true,
+      "attachmentPresent": true,
+      "printFilePresent": true
+    },
+    {
+      "page": 1,
+      "pblancId": "PBLN_000000000127087",
+      "creatPnttm": "2026-10-08 13:42:13",
+      "updtPnttm": "2026-10-08 15:22:02",
+      "different": true,
+      "period": "2026-10-01 ~ 2026-10-23",
+      "contentPresent": true,
+      "attachmentPresent": true,
+      "printFilePresent": true
+    },
+    {
+      "page": 712,
+      "pblancId": "PBLN_000000000092578",
+      "creatPnttm": "2023-11-03 13:53:04",
+      "updtPnttm": "2023-11-16 10:43:31",
+      "different": true,
+      "period": "2020.01.01 ~ 2026.12.31",
+      "contentPresent": true,
+      "attachmentPresent": false,
+      "printFilePresent": true
+    }
+  ],
+  "requests": 6,
+  "lastCandidate": 712
+}

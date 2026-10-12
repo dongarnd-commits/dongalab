@@ -4,7 +4,7 @@
 
 이 문서는 Project Baseline을 실제 시스템 구조로 구체화하는 Architecture 기준서다. AGENTS.md와 00_PROJECT_BASELINE.md에 따라 사용자, 시스템 경계, Module 책임, 데이터 전달, 공통 Core, 외부 Integration, 1차 Demo 및 향후 DMP 전환 구조를 정의한다.
 Project Root는 `C:\Users\PC\Desktop\정부지원사업운영체제 구축\dongalab`이다. Git Root는 작업 전 실제 상태로 확인한다.
-이 문서는 논리적 구조와 물리적 배치의 기본방향을 정하며 Framework, DB 제품, API Schema, 상세 Permission, 실제 디렉터리 구조를 확정하지 않는다. 이후 Data Model, State/Action, Permission, Collector, Intelligence, 화면 및 Demo/Test 문서가 세부 계약을 구체화한다.
+이 문서는 논리적 구조와 물리적 배치의 기본방향을 정하며 Framework, DB 제품, API Schema, 상세 Permission, 실제 디렉터리 구조를 확정하지 않는다. 현재 Data Model, State/Action, Permission, Collector, Intelligence, 화면 및 Demo/Test 기준문서가 각 세부 계약을 구체화한다.
 
 ## 2. 최상위 Architecture 원칙
 
@@ -17,7 +17,7 @@ Live API와 Snapshot은 동일 Normalization 및 후속 Domain Logic을 통과�
 
 | Actor/System | 수행 책임 | 경계 |
 | --- | --- | --- |
-| DATCO_ADMIN | 기준정보, Capability, 사용자/권한, 시스템 관리 | 상세 권한은 후속 Matrix로 결정. 관리자도 상태/감사 규칙 적용 |
+| DATCO_ADMIN | 기준정보, Capability, 사용자/권한, 시스템 관리 | Standalone Phase-1 상세 권한은 `05_PERMISSION_UI_MATRIX.md` 기준과 남은 Open Decision을 따름. 관리자도 상태/감사 규칙 적용 |
 | DATCO_OPERATOR | 기업자료/분석/Match 검토, Request, Proposal, 추진확정, Case/Package, 제출증빙 관리 | 분석 후보를 검토하며 기업 승인이나 외부 제출 사실을 임의 대체하지 않음 |
 | COMPANY_EDITOR | 자기 기업 정보/문서/현장자료, Request 응답과 보완 | 다른 기업 및 비공개 DATCO 정보 접근 불가 |
 | COMPANY_APPROVER | 자기 기업 Proposal Version·책임범위 확인, 승인/재승인 | 다른 Version의 승인으로 현재 Version을 자동 승인하지 않음 |
@@ -94,18 +94,18 @@ DATCO UI와 Company UI는 같은 Backend를 사용하지만 Role, State, Data Sc
 
 필수 Subcomponent는 Source Connector Interface, Bizinfo API Connector, Collection Job, Pagination Handler, Raw Source Capture, Normalizer, Duplicate Detector, Notice Version Manager, Change Detector, Attachment/Original Source Handler, Retry/Error Log, Manual Sync, Future Scheduler, Snapshot Import Adapter이다.
 Collector는 외부 수집과 Raw Source/수집 이력을 소유한다. Notice Version Manager는 Notice Domain의 import/Version 정책을 호출하며 별도의 경쟁 Notice 저장모델을 만들지 않는다.
-Connector는 실제 외부 응답을 Raw Source로 전달하고 Normalizer는 내부 import 모델로 변환한다. Source별 Field는 후속 Collector 설계에서 실제 응답 확인 후 정한다.
+Connector는 실제 외부 응답을 Raw Source로 전달하고 Normalizer는 내부 import 모델로 변환한다. 기업마당 Phase-1 Source Field/Mapping은 `06_BIZINFO_COLLECTOR.md`의 실제 Probe 기반 기준을 따르며 미확인 외부동작은 Open Decision으로 유지한다.
 Web의 수동 Sync는 Collection Job을 요청한다. Web/Intelligence가 기업마당 API를 별도로 직접 호출하지 않는다.
 
 ## 8. 기업마당 API Data Flow와 장애격리
 
 기업마당 API → BizinfoApiConnector → Raw Source Record → Normalization → Duplicate/Idempotency Check → Notice → NoticeVersion → Attachment/Original Source Link → Notice Analysis → Match Candidate → MatchReview → Operations Web.
 
-External ID는 외부 Source의 식별자이며 Internal ID는 내부 Notice 식별자다. Source 식별과 External ID를 연결해 반복수집을 판별하며 실제 키 형식/중복판정 기준은 후속 설계에서 검증한다.
+External ID는 외부 Source의 식별자이며 Internal ID는 내부 Notice 식별자다. Source 식별과 External ID를 연결하는 Phase-1 매핑/중복판정은 `03_DATA_MODEL.md`와 `06_BIZINFO_COLLECTOR.md`를 따르며 물리 키 형식·동시성 구현은 구현 단계에서 검증한다.
 동일 내용 재수집은 기존 Notice를 재사용하고 수집이력은 추적한다. 수정공고는 변경검사에 따라 새 NoticeVersion을 보존하고 후속 Change Impact 검토를 요청한다. 동시 import도 중복 Notice를 만들지 않도록 원자적 idempotency 검증을 수행한다.
 수집 실행은 일반 Web 조회와 분리된 Job으로 처리한다. 수집 실패는 Job 상태/로그/Retry에 남기고 기존 저장 Notice의 조회를 유지한다. 동일 프로세스 내 논리적 격리이며 완전한 프로세스 장애격리는 아니다. 시간제한과 실행량 통제, 필요 시 Worker 분리를 후속 설계한다.
 Snapshot Import Adapter도 Raw Source/provenance를 남긴 뒤 동일 Normalizer, idempotency, Notice Version 정책을 사용한다. 수집 모드/출처를 구분하고 분석·Matching·업무 로직을 우회하지 않는다.
-실제 기업마당 Field 이름, Pagination/응답/첨부 구조는 `06_BIZINFO_COLLECTOR.md`에서 실제 API 문서/응답 확인 후 확정한다.
+Probe에서 확인된 기업마당 Field/Wrapper/Pagination/Source 참조의 Phase-1 기준은 `06_BIZINFO_COLLECTOR.md`에 정의되어 있다. 다중첨부 표현/Rate Limit/오류응답과 세부 확보 방식의 미확인 사항은 Open Decision으로 유지한다.
 
 ## 9. Support Intelligence
 
@@ -126,7 +126,7 @@ Human Review/Confirmation은 해당 Operations Domain의 권한·상태 검사�
 
 | 공통 기능 | 역할과 Domain 경계 |
 | --- | --- |
-| Authentication / Authorization | 인증 주체 및 Permission/Role/Company Scope 정책 검사. 업무별 권한 정의는 후속 Matrix |
+| Authentication / Authorization | 인증 주체 및 Permission/Role/Company Scope 정책 검사. 업무별 Phase-1 권한 기준은 `05_PERMISSION_UI_MATRIX.md`를 따름 |
 | Workflow / State Transition | 공통 전이 검증/실행 기반. 각 Domain이 상태와 Guard를 소유 |
 | File Abstraction / Notification Abstraction | Private File와 알림 Port, 접근검사 및 Provider 연결 |
 | Audit / Versioning | 행위·Version 참조 및 변경이력 보존 기반. Domain이 업무 Snapshot 의미 정의 |
@@ -146,7 +146,7 @@ Demo/Seed, Manual Input, Document Upload → Enterprise Intake → Extraction/In
 
 Company Fact + Improvement Task + DATCO Capability + Notice Requirement → Matching Engine → Match Analysis Candidate → MatchReview → Missing Information / Hold / Exclude / Proposable → Proposal.
 업무상 3-way 관계는 기업 개선/지원과제 × Capability × Notice이며 Company Fact는 자격과 과제 판단의 근거다.
-FIT/PARTIAL_FIT/NEED_MORE_INFO/MISMATCH와 Review 후 업무 판단을 구분한다. 정확한 상태명/Transition은 후속 문서에서 확정한다.
+FIT/PARTIAL_FIT/NEED_MORE_INFO/MISMATCH와 Review 후 업무 판단을 구분한다. 정확한 Phase-1 State/Transition은 `04_STATE_ACTION_MODEL.md` 기준을 따른다.
 Matching Engine은 Proposal이나 Proceed를 자동 확정하지 않는다. DATCO 검토와 필요한 기업 확인/승인을 거친다.
 
 ## 13. Information Request Loop
@@ -159,15 +159,15 @@ Match 단계와 Package 준비 단계에서 동일 Request Module을 재사용�
 
 MatchReview → ProposalVersion → ApprovalRequest → Company Approval을 연결한다. 승인 대상은 특정 Version/Snapshot이며 행위자/시각/결과를 보존한다.
 Approved Proposal → 중요변경 → New Proposal Version → Reapproval Required. 기존 Approval은 유지하며 이전 승인이 새 Version을 자동 승인하지 않는다.
-Proposal, Approval, Case 생성 Use Case는 현재 승인 대상과 적용 Version의 일치 여부 및 권한/상태/Scope를 검사한다. 상세 중요변경 기준은 State/Action과 Data Model에서 정의한다.
+Proposal, Approval, Case 생성 Use Case는 현재 승인 대상과 적용 Version의 일치 여부 및 권한/상태/Scope를 검사한다. 중요변경·Version·Approval의 Phase-1 기준은 `03_DATA_MODEL.md`와 `04_STATE_ACTION_MODEL.md`를 따른다.
 
 ## 15. Support Case Architecture
 
 Match Candidate와 Support Case는 별개다. Match Review 완료 + 필요한 Company Confirmation/Approval + DATCO Proceed Confirmation을 충족해야 Case 생성이 가능하다.
-생성조건 검사와 생성은 한 업무 경계에서 일관되게 처리하며 반복 요청이 중복 Case를 생성하지 않게 한다. 실제 트랜잭션/식별 제약은 Data Model에서 확정한다.
+생성조건 검사와 생성은 한 업무 경계에서 일관되게 처리하며 반복 요청이 중복 Case를 생성하지 않게 한다. 논리 식별·중복 제약은 `03_DATA_MODEL.md`를 따르며 실제 트랜잭션 구현은 구현 단계에서 결정한다.
 Case 흐름은 Baseline의 APPLICATION_PREP → SUBMISSION → EVALUATION → RESULT_CONFIRMED를 유지한다. 결과 단계의 상태명은 Baseline을 기준으로 하며 별도의 중복 상태를 추가하지 않는다.
 선정은 SELECTED → AGREEMENT → EXECUTION → INSPECTION → SETTLEMENT → CLOSED, 미선정은 NOT_SELECTED → CLOSED 또는 RECONSIDERATION이다. 미선정 상태에서 AGREEMENT로 자동 진행하지 않는다.
-Case는 Package/Task/Schedule/Evidence 및 평가·협약·수행·정산·사후관리와 연결한다. 세부 Guard는 후속 State/Action 문서에서 확정한다.
+Case는 Package/Task/Schedule/Evidence 및 평가·협약·수행·정산·사후관리와 연결한다. Phase-1 세부 Guard는 `04_STATE_ACTION_MODEL.md` 기준을 따른다.
 
 ## 16. Dynamic Application / Package Architecture
 
@@ -221,7 +221,7 @@ Collector와 Intake의 데이터는 각각 분석과 사람 검토를 통해 Mat
 Notice Analysis, PDF/Document Extraction, Financial Document Analysis, Image/Layout Analysis, Matching, Change Impact Analysis는 장시간 작업으로 취급할 수 있다.
 Application은 입력 객체/Version을 참조하는 Job을 등록하고 실행기는 Intelligence/Collector Port를 호출해 결과와 오류를 저장한다. Browser는 상태/결과를 조회하며 장시간 외부 처리를 요청 응답에 묶지 않는다.
 초기 DB-backed Job Queue가 가능한 구조를 둔다. 구체 Queue 제품과 프로세스 배치는 미확정이다.
-대표 Analysis Job 상태는 QUEUED, PROCESSING, REVIEW_REQUIRED, CONFIRMED, FAILED이다. 성공한 분석 결과도 REVIEW_REQUIRED를 거쳐 사람 확인하며 Collector Job 상태와 동일 enum이라고 가정하지 않는다.
+Collector/Analysis Job의 실행상태는 QUEUED → PROCESSING → SUCCEEDED / PARTIAL / FAILED이며, 실행결과와 각 업무 결과를 혼동하지 않는다. AnalysisRun/Candidate 생성 후 REVIEW_REQUIRED 의미의 Human Review/Confirm은 해당 Domain Object/Review가 소유한다. SUCCEEDED는 실행 성공이지 업무확정이 아니며 Architecture는 Job.CONFIRMED enum을 요구하지 않는다.
 입력 Version, 분석 Version, 시도횟수, Error Reason, 결과를 추적하고 Retry를 지원한다. 재시도 중복 실행과 오래된 입력 결과의 확정은 idempotency/Version 검사를 거친다.
 실행량, timeout, 재시도 한계, 재시작 후 실행 복구는 후속 설계에서 정한다. Worker 분리 시에도 동일 Use Case와 Port를 유지한다.
 
@@ -249,7 +249,7 @@ Browser와 Browser가 보낸 Role/Company ID/상태는 신뢰하지 않는다. �
 Internal DATCO Data와 Company-visible Data를 응답/조회 정책에서 분리한다. UI 숨김만으로 보호하지 않는다.
 Secret은 Backend 환경변수로 관리하며 기업마당 Key를 Frontend, Git, 로그, 분석 결과에 노출하지 않는다.
 실제 기업문서는 Private Storage/File Port로 접근하고 다운로드도 소유 기업/권한을 검증한다. 다운로드, 승인, 중요한 상태변경을 Audit한다.
-업로드 형식/크기/내용 검증과 운영 보안·파일 격리 정책은 후속 설계대상이다. 상세 보안정책 및 권한 Matrix는 후속 문서에서 확장한다.
+업로드 형식/크기/내용 검증과 운영 보안·파일 격리 정책의 구현 세부·수치는 미확정으로 유지한다. Role/Scope/Action Authorization의 Phase-1 기준은 `05_PERMISSION_UI_MATRIX.md`를 따른다.
 
 ## 22. Integration / Adapter와 DMP 전환 Diagram
 
@@ -325,13 +325,14 @@ docs/
 
 Presentation → Application/Domain → Ports/Interfaces로 의존한다. Infrastructure/Integration은 Port를 구현하며 Domain이 Bizinfo API, DMP API, 특정 DB Library에 직접 의존하지 않는다.
 Module 간 조정은 Application Use Case로 수행한다. 서로의 저장소를 직접 갱신하거나 Circular Dependency를 만들지 않는다. ID/Version 참조와 필요한 조회 Port로 연결한다.
-상태변경과 관련 Version/Audit 기록은 일관된 업무 경계로 보존한다. 승인 확인/Case 생성/Readiness 검사 시 오래된 Version과 동시 변경을 검출한다. 실제 transaction, 잠금, 이벤트 전달/재처리 방식은 Data Model 및 State/Action에서 확정한다.
+상태변경과 관련 Version/Audit 기록은 일관된 업무 경계로 보존한다. 승인 확인/Case 생성/Readiness 검사 시 오래된 Version과 동시 변경을 검출한다. 논리적 일관성 기준은 `03_DATA_MODEL.md`와 `04_STATE_ACTION_MODEL.md`를 따르며 실제 transaction/잠금/이벤트 전달·재처리 방식은 구현 단계에서 결정한다.
 같은 DB를 사용해도 논리 데이터 소유권은 유지한다. Background Job이나 외부 호출 실패가 확정 업무 이력을 임의 삭제하지 않도록 한다.
 
 ## 26. Architecture Decision Point
 
 이번 기준으로 정한 사항은 Browser Web, Modular Monolith 우선, Collector 필수범위, Logical Module Boundary, Provider/Adapter, Human Review, Version/Audit, Async Job 개념, Standalone → DMP 전환, Live API + Snapshot Strategy이다.
-Frontend/Backend Framework, ORM, Database Product, AI/LLM Provider, OCR Product, Queue Product, Cloud Provider, Deployment Platform, File Storage 제품, DMP 실제 API Schema, 기업마당 세부 Field Mapping과 상세 Permission은 미확정이다.
+Frontend/Backend Framework, ORM, Database Product, AI/LLM Provider, OCR Product, Queue Product, Cloud Provider, Deployment Platform, File Storage 제품, DMP 실제 API Schema는 미확정이다.
+Phase-1 Role/Scope/핵심 Action 권한 기준은 `05_PERMISSION_UI_MATRIX.md`에서 정의되었으며 일부 조직·승인 정책은 Open Decision이다. 기업마당 Field Mapping의 Phase-1 기준은 `06_BIZINFO_COLLECTOR.md`에서 실제 Probe 기반으로 정의되었으며, Rate Limit/오류응답/다중첨부/HTML Selector 등 미확인 외부동작과 운영수치는 Open Decision이다.
 후속 확인으로 기준 변경이 필요하면 영향범위를 보고하고 승인된 범위에서 Baseline/Decision Log와 동기화한다.
 
 ## 27. Architecture Risk와 후속 확인
@@ -357,7 +358,7 @@ Frontend/Backend Framework, ORM, Database Product, AI/LLM Provider, OCR Product,
 
 | Scenario | Architecture 경로와 검사 | 검토 결과 |
 | --- | --- | --- |
-| A: API → Web | Connector → Raw/Normalize → NoticeVersion → 분석 후보 → MatchReview → 권한별 Web | 연결됨. API Field는 후속 확인 |
+| A: API → Web | Connector → Raw/Normalize → NoticeVersion → 분석 후보 → MatchReview → 권한별 Web | 연결됨. Phase-1 API Field 기준은 `06_BIZINFO_COLLECTOR.md`, 미확인 외부동작은 Open |
 | B: 사업자등록증 → Fact → Match | Private Upload → Intake/Extraction Candidate/Evidence → Human Review → Confirmed Fact → Matching | 연결됨. 자동 Master 덮어쓰기 없음 |
 | C: Missing Info → Re-Match | Request → 기업 응답/File → DATCO 검토 → Fact/Request 확인 → 새 입력 Version으로 Rematch | 연결됨. 미확인 응답 확정 방지 |
 | D: 승인 → 중요변경 → 재승인 | 승인된 ProposalVersion → 새 Version → Reapproval Request → 기업 판단 | 연결됨. 이전 승인 보존 |
@@ -366,14 +367,14 @@ Frontend/Backend Framework, ORM, Database Product, AI/LLM Provider, OCR Product,
 | G: Live 장애 → Snapshot | Collection 실패기록 → Snapshot Adapter → 동일 Raw/Normalize/Notice import → 분석/업무 Demo | 연결됨. 화면 결과 주입 우회 없음 |
 | H: DMP 교체 | 실제 계약 확인 → ID/소유권 검증 → Auth/Company/File Adapter 교체 → 기존 Use Case/Domain 사용 | 개념상 연결됨. 실제 계약과 이관 검증 필요 |
 | I: 여러 Company | 인증 주체 → Backend Company Scope → 기업별 조회/Action/File 검증 | 격리 경로 정의. 실제 교차기업 접근 Test 필요 |
-| J: 한 Company의 여러 Site | Company의 Site 관계 → Fact/자료의 Site 참조 → 분석/업무 연결 | 다중 Site 수용 원칙 유지. 관계/Scope 상세는 Data Model에서 확정 |
+| J: 한 Company의 여러 Site | Company의 Site 관계 → Fact/자료의 Site 참조 → 분석/업무 연결 | 다중 Site 수용 원칙 유지. 관계/Scope 상세는 `03_DATA_MODEL.md`와 `05_PERMISSION_UI_MATRIX.md` 기준을 따름 |
 | K: 여러 Notice/Case | Company → 복수 Match 후보 → 각각의 추진확정/Case/Package/Task | 단일 Case로 고정하지 않음. 중복 생성 방지와 정당한 복수 Case를 구분해 검증 |
-| L: 담당자 변경/이관 | 권한 검사 → Case/Task 담당 변경 → Audit → 새 담당자 업무 조회 | 업무 ID/과거 행위자 이력 유지. 상세 이관 권한은 Permission에서 확정 |
+| L: 담당자 변경/이관 | 권한 검사 → Case/Task 담당 변경 → Audit → 새 담당자 업무 조회 | 업무 ID/과거 행위자 이력 유지. Phase-1 이관 권한은 `05_PERMISSION_UI_MATRIX.md` 기준과 남은 Open Decision을 따름 |
 | M: Deadline 임박/초과 | 공고/업무 due date → Schedule 판별 → Dashboard/Notification | 식별 경로 정의. 시간 기준/임박 기준은 후속 확정 |
-| N: Application/Job 재시작 | 영속 업무/Job 조회 → 실패·중단 실행 확인 → Version/idempotency 검사 → Retry | 확정 결과 보존. 중단 Job 복구정책은 후속 설계/실행 Test 필요 |
-| O: Backup/Restore | 일관된 DB/파일 복구 → Version/Audit/Evidence 참조 및 파일 존재 검증 | 검증 경계 정의. 실제 복구 Test와 수용기준 필요 |
+| N: Application/Job 재시작 | 영속 업무/Job 조회 → 실패·중단 실행 확인 → Version/idempotency 검사 → Retry | 확정 결과 보존. 중단 Job 복구 기준은 `04_STATE_ACTION_MODEL.md`, 실행 세부·Test는 구현 단계 |
+| O: Backup/Restore | 일관된 DB/파일 복구 → Version/Audit/Evidence 참조 및 파일 존재 검증 | 검증 경계와 수용기준은 `10_TEST_ACCEPTANCE.md`를 따르며 실제 복구 Test는 미실행 |
 
-상세 실행 Test와 수용기준은 향후 `10_TEST_ACCEPTANCE.md`에서 정의한다. 문서상 경로 정의는 실제 운영 복구나 보안 검증의 완료를 의미하지 않는다.
+상세 실행 Test와 수용기준은 현재 `10_TEST_ACCEPTANCE.md`의 기준을 따른다. 문서상 경로 정의는 실제 운영 복구나 보안 검증의 완료를 의미하지 않는다.
 후속 구현의 완료 판단은 정상/예외 E2E, Company Scope, Version/승인, Evidence, 중복수집, 변경감지, Retry, Audit 및 새로고침 후 영속성 테스트로 검증한다.
 
 ## 29. Operational Reliability / 운영 안정성
@@ -383,13 +384,13 @@ Frontend/Backend Framework, ORM, Database Product, AI/LLM Provider, OCR Product,
 ### Deadline / Dependency
 
 Task/Schedule은 due date, prerequisite/dependency, overdue, blocked/waiting 개념을 지원한다. Notice 마감일과 내부 업무기한을 구분하고 Case/Task와 연결한다. Dashboard는 마감임박·초과·선행업무 대기 대상을 식별한다. 담당자 변경 시에도 Case/Task 식별과 기존 Audit History를 유지하며 새 담당자의 권한을 검사한다.
-정확한 State/Schema, 시간 기준, 마감임박 기준, 의존조건과 이관 정책은 Data Model, State/Action, Permission에서 확정한다.
+Phase-1 논리 데이터/State/의존조건·이관 권한은 `03_DATA_MODEL.md`, `04_STATE_ACTION_MODEL.md`, `05_PERMISSION_UI_MATRIX.md`를 따른다. 물리 Schema/시간·마감임박 수치와 남은 조직정책은 Open Decision으로 유지한다.
 
 ### Notification / Alert
 
 Information Request sent, Approval requested, Revision requested, Deadline approaching, Task overdue, Notice changed/impact review required를 Notification Abstraction의 논리 Event로 수용한다.
 관련 Domain/Use Case가 대상 객체와 기업 Scope를 제공하고 공통 알림 Port가 수신자의 권한과 공개범위를 적용한다. 1차 In-App, 향후 DMP Notification Provider 구조를 유지한다. 알림 수신 자체는 업무 승인이나 상태전이가 아니다.
-Event 형식, 전달/중복처리, 임박 판별 실행방식은 후속 설계에서 정한다.
+전달/업무결정 분리 기준은 `04_STATE_ACTION_MODEL.md`를 따르며 Event 형식·전달/중복처리·임박 판별의 실행 세부는 구현 단계에서 정한다.
 
 ### Backup / Restore 경계
 
@@ -400,9 +401,9 @@ Backup/Restore 제품, 운영주기, 보존기간, 복구목표와 실행절차�
 ### Import / Export 경계
 
 Collector Snapshot Import는 동일 공고 Normalize/import 경로를 사용한다. 업무데이터 Import는 관리자 Use Case로 각 Domain의 Validation/Scope/Version/idempotency/상태 정책을 거친다. Report/Data Export는 권한과 공개범위에 맞춘 조회/내보내기 Use Case다.
-세 기능을 구분하고 필요한 Demo/Test 데이터 이동을 지원할 확장 경계를 둔다. 실제 기업자료/Secret을 Demo 자산으로 옮기지 않는다. 형식·대상·권한·이동 정책은 후속 설계/Test에서 확정한다.
+세 기능을 구분하고 필요한 Demo/Test 데이터 이동을 지원할 확장 경계를 둔다. 실제 기업자료/Secret을 Demo 자산으로 옮기지 않는다. Phase-1 대상·권한·검증은 `04_STATE_ACTION_MODEL.md`, `05_PERMISSION_UI_MATRIX.md`, `06_BIZINFO_COLLECTOR.md`, `10_TEST_ACCEPTANCE.md`를 따르며 실제 이동 형식·실행 세부는 구현 단계에서 결정한다.
 
 ### Operational Recovery
 
 Application/Job 재시작 후 저장된 업무상태와 확정 결과는 유지한다. 영속 Job 상태/오류/시도이력을 조회하여 실패 및 중단 실행을 확인하고, 현재 입력 Version과 idempotency를 검사한 뒤 정책에 따라 Retry한다.
-재시작을 이유로 확정 업무결과·승인·Audit을 삭제하거나 PROCESSING Job을 성공으로 간주하지 않는다. 중단 실행의 재판별/재시도 정책은 후속 설계에서 정한다. 복구와 Retry의 실제 수용기준은 10 Test에서 검증한다.
+재시작을 이유로 확정 업무결과·승인·Audit을 삭제하거나 PROCESSING Job을 성공으로 간주하지 않는다. 중단 실행의 재판별/재시도 기본경로는 `04_STATE_ACTION_MODEL.md`를 따르며 실행소유·운영수치 등 구현 세부는 Open으로 유지한다. 복구와 Retry의 수용기준은 `10_TEST_ACCEPTANCE.md`를 따르고 실제 검증은 구현 후 수행한다.
