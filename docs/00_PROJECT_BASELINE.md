@@ -174,7 +174,7 @@ Match, Proposal, Approval, Application Package, Support Case, Task를 영향 대
 
 긴 분석은 비동기 처리를 고려하며 Job 실행상태는 QUEUED → PROCESSING → SUCCEEDED / PARTIAL / FAILED로 구분한다. FAILED/PARTIAL은 오류와 Attempt를 보존하고 허용된 Retry 경로를 따른다. 성공/부분 실행에서 생성된 Candidate는 별도 REVIEW_REQUIRED 의미로 Human Review의 Confirm/보완/거절을 거치며, Job SUCCEEDED는 업무확정이 아니고 Job.CONFIRMED 상태를 요구하지 않는다.
 입력 Version, 분석 Version, 오류, 시도횟수, 결과를 추적한다. Retry도 사람 검토를 우회하지 않는다.
-초기 DB 기반 Job Queue도 가능한 선택지이며 구체 기술은 Architecture에서 확정한다.
+Phase-1 비동기 실행은 Decision-001에 따라 PostgreSQL-backed Persistent Job과 Python Worker로 같은 Backend Application/Domain 코드를 재사용한다. 실행소유/복구/Retry 운영수치와 프로세스 배치 세부는 Skeleton/첫 Vertical Slice에서 구체화한다.
 
 ## 27. 논리적 Source of Truth
 
@@ -229,7 +229,7 @@ Browser UI, DB Persistence, 새로고침 후 상태 유지, Collector, 중복방
 
 초기 기본방향은 Modular Monolith이다. Collector, Intelligence, Operations, Integration, Shared/Core의 논리적 Module 경계를 유지한다.
 처음부터 불필요한 Microservice로 분리하지 않으며 향후 Collector Worker/Analysis Worker 등을 독립시킬 수 있어야 한다.
-구체 Framework, DB, ORM, AI Model은 이 문서에서 확정하지 않는다.
+Phase-1 Framework/DB/ORM 선택은 `01_SYSTEM_ARCHITECTURE.md`와 `11_DECISION_LOG.md`의 Decision-001을 따르며 AI Model은 미확정으로 유지한다.
 
 ## 33. 향후 기준문서와 변경관리
 
@@ -251,10 +251,11 @@ Baseline을 임의 변경하지 않는다. 중요한 목표/정책/구조 변경
 
 ## 34. 현재 미확정 사항
 
-Frontend Framework, Backend Framework, DB, ORM, File Storage, Queue, AI/LLM Provider, OCR, Deployment 방식, 실제 DMP API Contract는 미확정이다.
+Phase-1 Stack은 Next.js/React/TypeScript, FastAPI/Python, PostgreSQL/SQLAlchemy/Alembic, Local Private FileProvider, PostgreSQL-backed Persistent Job/Python Worker, pytest/Playwright 방향으로 확정되었다. 상세 기술결정은 `01_SYSTEM_ARCHITECTURE.md`와 `11_DECISION_LOG.md`의 Decision-001을 따른다.
+정확한 Runtime/Package Version, AI/LLM Provider/OCR/PDF 처리제품, Scheduler 제품·주기, Cloud/CI/Production Deployment 세부, 실제 DMP Contract와 운영수치는 미확정으로 유지한다.
 Role/Permission/Scope와 핵심 Action Authorization의 Standalone Phase-1 기준은 `05_PERMISSION_UI_MATRIX.md`에서 정의되었으며, 복수 승인자/Assignment Scope/Package 확인 Actor 등 일부 조직·승인 정책은 Open Decision으로 유지한다.
 기업마당 Endpoint/인증/Wrapper/Field Mapping/Pagination/ID/Source 참조의 1차 기준은 `06_BIZINFO_COLLECTOR.md`에서 실제 Probe 기반으로 정의되었으며, Rate Limit/오류응답/다중첨부 표현/HTML Selector와 일부 운영수치는 Open Decision으로 유지한다.
-향후 관련 기준문서 작성과 실제 API/환경 확인 후 결정한다. 현재 단계에서 임의 선택하거나 외부 시스템 구조를 추정하여 확정하지 않는다.
+남은 Open Decision은 해당 Slice/실제 API·환경·운영요구 확인 후 결정하며 외부 시스템 구조나 최신 버전을 추정하여 확정하지 않는다.
 
 ## 35. 보안과 협업 기준
 

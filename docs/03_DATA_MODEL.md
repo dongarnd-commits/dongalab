@@ -4,7 +4,7 @@
 
 이 문서는 Logical Entity, Relationship/Cardinality, Identity, External/Internal ID, Version/Snapshot, Source/Provenance/Evidence, Company/Site/Case Scope, Integrity Constraint, 중복/idempotency, Lineage를 정의한다. Entity는 논리 Object이며 이 목록의 개수가 실제 Table 개수를 뜻하지 않는다.
 우선순위는 [AGENTS](../AGENTS.md) → [Baseline](00_PROJECT_BASELINE.md) → [Architecture](01_SYSTEM_ARCHITECTURE.md) → [E2E Flow](02_E2E_SYSTEM_FLOW.md) → [1차 Probe](../tools/bizinfo-probe/ANALYSIS.md)/[2차 Probe](../tools/bizinfo-probe/PHASE2_ANALYSIS.md) → 이 문서다. 충돌·추가 결정은 Open Decision에 기록하고 상위문서를 임의 수정하지 않는다.
-DB 제품/ORM/SQL Type, 실제 Table·Column 최종 Naming, Index/Partition/Storage Engine, Redis/Queue, Migration, 모든 State enum/Permission, 내부 API Endpoint/UI Component는 미확정이다. 속성명은 논리 의미를 표현한다. Modular Monolith의 데이터 소유권과 참조 경계를 유지한다.
+Phase-1 Persistence는 `11_DECISION_LOG.md`의 Decision-001에 따라 PostgreSQL/SQLAlchemy 2.x/Psycopg 3/Sync Session/Alembic으로 선택되었다. 이 문서는 SQL Type/실제 Table·Column 최종 Naming/Index·Partition·Lock·Transaction·Constraint·Junction 구현, 모든 State enum/Permission, API Endpoint/UI Component를 확정하지 않는다. 속성명은 논리 의미이며 Modular Monolith의 데이터 소유권과 참조 경계를 유지한다. Physical Schema는 Slice별 Migration/Integration Test로 구현하고 Logical Entity를 Table과 1:1로 자동 생성하지 않는다.
 
 ## 2. 핵심 불변조건
 
@@ -181,7 +181,7 @@ updtPnttm은 변경신호 후보다. NoticeVersion은 내용/기간/첨부와 �
 | EvidenceReference.sourceLocation/file/source/reason | 판단 근거와 자료 | 최소 하나 자료 참조 | 검토/Domain | 단순 File 존재와 근거 검토 구분 |
 | EvidenceBinding.evidence/explicitTargetVersion | 근거의 업무대상 | 필수 | 해당 Domain | 대상·Scope 무결성 검증 |
 
-외부 URL은 SourceReference, 실제 확보 내용은 FileAsset, 업무판단에 쓰는 근거는 EvidenceReference로 분리한다. HTML/text 확보도 FileAsset의 논리 Content로 취급할 수 있으며 실제 저장 제품/형식은 미확정이다. SourceReference 1→0..N 확보 FileAsset, FileAsset 1→1..N StorageReference(보관 완료 시), SourceLocation은 특정 Source/File에 귀속된다.
+외부 URL은 SourceReference, 실제 확보 내용은 FileAsset, 업무판단에 쓰는 근거는 EvidenceReference로 분리한다. HTML/text 확보도 FileAsset의 논리 Content로 취급할 수 있으며 Phase-1은 Local Private FileProvider/DB Metadata를 사용하고 실제 저장 형식·물리 배치는 구현 단계에서 구체화한다. SourceReference 1→0..N 확보 FileAsset, FileAsset 1→1..N StorageReference(보관 완료 시), SourceLocation은 특정 Source/File에 귀속된다.
 FileAsset 내용은 불변, Provider 이관은 StorageReference 이력을 바꾸고 논리 File ID를 유지한다. Notice의 Global 자료와 Company Private 파일을 분리한다. URL 참조만 있는 단계에는 확보 File이 없어도 된다. 추출 여부는 AnalysisRun/Job 결과, 검토 여부는 Domain Review로 확인한다.
 여러 NoticeAttachmentReference를 모델이 지원하지만 실제 기업마당 다중첨부 방식은 미확정이다. API 제공 URL의 실제 HTML/PDF 접근은 확인됐으나 전체본문/print 역할/HWP/HWPX/파일내용 분석은 부분확인 또는 미확인이다.
 EvidenceBinding은 FactVersionEvidence, RequirementItemEvidence, ImprovementVersionEvidence, CapabilityVersionEvidence, MatchCandidateEvidence, ResponseItemEvidence, ApplicationValueEvidence, CaseStageEvidence, ResultEvidence 등의 **허용된 명시 연결군**을 뜻한다. SubmissionEvidence/TaskEvidence는 별도 의미 있는 관계다. 각 관계는 실제 존재하는 대상 ID/Version과 Evidence를 검증하며 무제한 문자열 target_type+target_id를 기본 구조로 삼지 않는다.
@@ -641,7 +641,7 @@ erDiagram
 
 | Open Decision | 영향/확정 위치 |
 | --- | --- |
-| DB 제품/ORM/UUID·ULID 등 ID 기술/물리 Naming/Index/transaction | 물리 Schema/구현 결정 |
+| UUID·ULID 등 ID 기술/물리 Naming/Index·Partition·Lock·transaction/Constraint·Junction | PostgreSQL/SQLAlchemy/Psycopg/Alembic은 Decision-001로 선택됨. 남은 Physical Schema는 Slice별 구현 결정 |
 | 정확한 State/Guard/Version 잠금·승인 유효성/Readiness/Case 전이 | 04_STATE_ACTION_MODEL |
 | 상세 Permission/기업확인·증빙검토 Role/담당 이관·공동담당 | 05_PERMISSION_UI_MATRIX |
 | Fact 항목·기간/기준일·유효기간 identity/단위/금융 Taxonomy | 후속 03 구체화·Domain 정책 |
@@ -650,10 +650,10 @@ erDiagram
 | 전체본문 Extraction/HWP·HWPX/실 API 다중첨부/print 역할 | 06/07_INTELLIGENCE_DESIGN |
 | Template 생성 알고리즘/조건부서류/자동매핑/Confidence | 07 Intelligence, 04/05 확인정책 |
 | typed 관계군의 실제 Junction/Review-후보 집합/감사대상 명세 | 물리설계/해당 Domain, 무결성 검증 유지 |
-| Background Queue/중단 복구·Retry/Job 상태 | 후속 실행설계/04 |
+| Background Queue 실행 세부/중단 복구·Retry 운영수치 | PostgreSQL Job/Python Worker는 Decision-001로 선택됨. 기존 04 Job/Attempt 기준을 유지하며 실행 세부는 구현 단계 |
 | Backup/Retention/개인정보 삭제·보존 충돌/복구목표 | 승인된 운영정책/10 검증 |
 | 실제 DMP Contract/외부 ID 매핑/데이터 소유권/이관 | Integration 검증 후 결정 |
 | 협약/정산 등 독립 Record 필요성·복잡한 비용 구조 | 실제 업무 요구 확인 후 분리 결정 |
 
-후속 04는 State/Transition/Guard/Action, 05는 Role/Permission/Scope, 06은 실제 API Mapping/Pagination/Retry/Duplicate/Change/Attachment, 07은 Extraction/OCR/LLM/Analyzer/Candidate/Confidence를 확정한다. 08은 화면이 조회/변경할 Object, 09는 Fixture/시연 Data, 10은 Constraint/Version/Scope/Evidence/Recovery 실행 검증을 담당한다.
-**04_STATE_ACTION_MODEL 설계 착수 가능: YES.** 핵심 Object/Version/Scope/관계와 Gate를 표현할 수 있으며 남은 물리 기술과 외부 API 상세는 상태·행동 설계의 Blocker가 아니다. 상태 Guard와 데이터 무결성은 다음 단계에서 상호 검토한다.
+현재 04는 State/Transition/Guard/Action, 05는 Role/Permission/Scope, 06은 실제 API Mapping/Pagination/Retry/Duplicate/Change/Attachment, 07은 Extraction/OCR/LLM/Analyzer/Candidate/Confidence의 Phase-1 기준을 담당한다. 08은 Screen/Action과 조회·변경 Object, 09는 Demo Scenario/Fixture·시연 Data, 10은 Test/Acceptance와 Constraint/Version/Scope/Evidence/Recovery 실행 검증 기준을 담당한다.
+**현재 03 Logical Data Model은 Phase-1 구현 기준으로 사용 가능하다.** Physical Schema는 Decision-001의 PostgreSQL/SQLAlchemy/Alembic 기준 아래 각 Vertical Slice에서 필요한 범위만 구현하고, State Guard와 데이터 무결성을 함께 검증한다.

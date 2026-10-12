@@ -4,7 +4,7 @@
 
 이 문서는 Project Baseline을 실제 시스템 구조로 구체화하는 Architecture 기준서다. AGENTS.md와 00_PROJECT_BASELINE.md에 따라 사용자, 시스템 경계, Module 책임, 데이터 전달, 공통 Core, 외부 Integration, 1차 Demo 및 향후 DMP 전환 구조를 정의한다.
 Project Root는 `C:\Users\PC\Desktop\정부지원사업운영체제 구축\dongalab`이다. Git Root는 작업 전 실제 상태로 확인한다.
-이 문서는 논리적 구조와 물리적 배치의 기본방향을 정하며 Framework, DB 제품, API Schema, 상세 Permission, 실제 디렉터리 구조를 확정하지 않는다. 현재 Data Model, State/Action, Permission, Collector, Intelligence, 화면 및 Demo/Test 기준문서가 각 세부 계약을 구체화한다.
+이 문서는 논리적 구조와 물리적 배치의 기본방향 및 승인된 Phase-1 Stack을 반영하며, 실제 API Schema/Physical Schema/상세 Permission/구현 Directory 전체를 확정하지 않는다. 현재 Data Model, State/Action, Permission, Collector, Intelligence, 화면 및 Demo/Test 기준문서가 각 세부 계약을 구체화한다.
 
 ## 2. 최상위 Architecture 원칙
 
@@ -220,7 +220,7 @@ Collector와 Intake의 데이터는 각각 분석과 사람 검토를 통해 Mat
 
 Notice Analysis, PDF/Document Extraction, Financial Document Analysis, Image/Layout Analysis, Matching, Change Impact Analysis는 장시간 작업으로 취급할 수 있다.
 Application은 입력 객체/Version을 참조하는 Job을 등록하고 실행기는 Intelligence/Collector Port를 호출해 결과와 오류를 저장한다. Browser는 상태/결과를 조회하며 장시간 외부 처리를 요청 응답에 묶지 않는다.
-초기 DB-backed Job Queue가 가능한 구조를 둔다. 구체 Queue 제품과 프로세스 배치는 미확정이다.
+Phase-1은 PostgreSQL-backed Persistent Job과 Python Worker를 사용하고 같은 Backend Application/Domain 코드를 재사용한다. JobAttempt/Retry/Recovery/idempotency를 유지하며 Redis/Celery/RabbitMQ는 초기 도입하지 않는다. 실행·프로세스 배치 세부는 Skeleton/첫 Slice에서 구체화한다.
 Collector/Analysis Job의 실행상태는 QUEUED → PROCESSING → SUCCEEDED / PARTIAL / FAILED이며, 실행결과와 각 업무 결과를 혼동하지 않는다. AnalysisRun/Candidate 생성 후 REVIEW_REQUIRED 의미의 Human Review/Confirm은 해당 Domain Object/Review가 소유한다. SUCCEEDED는 실행 성공이지 업무확정이 아니며 Architecture는 Job.CONFIRMED enum을 요구하지 않는다.
 입력 Version, 분석 Version, 시도횟수, Error Reason, 결과를 추적하고 Retry를 지원한다. 재시도 중복 실행과 오래된 입력 결과의 확정은 idempotency/Version 검사를 거친다.
 실행량, timeout, 재시도 한계, 재시작 후 실행 복구는 후속 설계에서 정한다. Worker 분리 시에도 동일 Use Case와 Port를 유지한다.
@@ -279,22 +279,23 @@ DMP 전환 때 사용자/기업/파일 식별 매핑, 데이터 소유권, 인�
 | 구분 | 1차 Demo Mode | 향후 DMP Mode |
 | --- | --- | --- |
 | 사용자 접근 | Standalone Browser Web | DMP SSO와 연결된 Web |
-| Application | Modular Monolith Backend | Operations Domain을 가능한 유지 |
-| Provider | Local/Demo Auth/Company/File/알림/Capability | 검증된 DMP Adapter로 교체 |
-| 영속성 | 실제 DB와 실제 Private File 처리 | 업무 DB 및 DMP 소유 데이터 역할 재확인 |
+| Application | Next.js App Router Web + FastAPI/Python Modular Monolith Backend | Operations Domain을 가능한 유지 |
+| Provider | Backend Server Session/Local Auth, Local Company/Private File/알림/Capability | 검증된 DMP Adapter로 교체 |
+| 영속성 | PostgreSQL/SQLAlchemy/Psycopg, Alembic, Local Private File의 Binary + DB Metadata | 업무 DB 및 DMP 소유 데이터 역할 재확인 |
 | 공고 수집 | 기업마당 Live API + Snapshot fallback | 동일 Collector/Notice 경계 유지 |
-| 장시간 작업 | 논리 Job 실행기, DB-backed Queue 가능 | 필요 시 Collector/Analysis Worker 독립 |
+| 장시간 작업 | PostgreSQL-backed Persistent Job + Python Worker, 같은 Backend 코드 | 필요 시 실행 Adapter/Worker 배치 변경 |
 
-기본 물리 구성은 Browser, Application Backend, 영속 저장소, Private File 보관, Job 실행기의 역할로 설명한다. 별도 호스트/컨테이너 개수, SSR/SPA, Worker 프로세스 분리, DB/파일/Queue 제품과 Cloud는 아직 결정하지 않는다. 초기 논리 실행기는 Monolith 내부로 구현할 수 있으며 운영 규모에 따라 분리한다.
+Phase-1 개발은 Next.js/FastAPI/Worker의 Host 실행과 PostgreSQL Docker Compose 환경을 권고한다. Worker는 같은 Application/Domain 코드의 실행 경계이며 Microservice가 아니다. 실제 실행명령/프로세스·컨테이너 배치/Production Worker 수·Cloud·Hosting은 미확정이고 Docker는 Domain Architecture를 바꾸지 않는다.
 Demo는 DMP 없이 동작하고 실제 DB/File을 사용한다. 저장된 데이터 조회와 Job 실행의 자원 경계를 고려하며 운영 배포 방식은 후속 결정한다.
 
 ## 24. Repository Logical Skeleton
 
-아래는 향후 가능한 개념 예시이며 기술 Stack 결정 후 조정한다. 현재 실제 폴더를 생성하거나 확정된 구조로 취급하지 않는다.
+승인된 Monorepo 방향은 apps/web의 Next.js와 apps/api의 FastAPI/Python이며 기존 docs/tools를 유지한다. 아래 Module들은 논리 책임 예시이고 실제 배치는 Skeleton 단계에서 구체화한다. 현재 apps/폴더나 Application Source가 이미 존재한다고 가정하지 않는다.
 
 ```text
 apps/
   web/
+  api/
 modules/
   collector/
   company/
@@ -319,6 +320,7 @@ integrations/
 shared/
 tests/
 docs/
+tools/
 ```
 
 ## 25. Module Dependency와 일관성 원칙
@@ -331,7 +333,8 @@ Module 간 조정은 Application Use Case로 수행한다. 서로의 저장소�
 ## 26. Architecture Decision Point
 
 이번 기준으로 정한 사항은 Browser Web, Modular Monolith 우선, Collector 필수범위, Logical Module Boundary, Provider/Adapter, Human Review, Version/Audit, Async Job 개념, Standalone → DMP 전환, Live API + Snapshot Strategy이다.
-Frontend/Backend Framework, ORM, Database Product, AI/LLM Provider, OCR Product, Queue Product, Cloud Provider, Deployment Platform, File Storage 제품, DMP 실제 API Schema는 미확정이다.
+승인된 Phase-1 Stack은 Next.js App Router/React/TypeScript/npm(package-lock), FastAPI/Python/Uvicorn/Pydantic 2.x, PostgreSQL/SQLAlchemy 2.x/Psycopg 3/Alembic이며 Sync DB Session을 우선한다. REST/FastAPI OpenAPI와 생성 TypeScript Contract, Backend Server Session/opaque ID·HttpOnly Cookie/Local AuthProvider, Local Private FileProvider/DB Metadata, PostgreSQL Job/Python Worker, pytest/FastAPI API·PostgreSQL Integration/Playwright를 사용한다. Frontend Component Test는 Vitest/React Testing Library를 첫 Slice 필요범위에 적용한다. 상세 근거·대안·영향은 `11_DECISION_LOG.md`의 Decision-001을 따른다.
+정확한 Runtime/Package Version, AI/LLM/OCR Provider, 전체 Document 처리제품, Scheduler, Cloud/CI/Production Hosting, Backup·성능·운영수치, 실제 DMP API/SSO Contract는 Open이다. Redis/Celery/S3 등의 향후 필요성은 보류하며 초기 Job에 Redis/Celery/RabbitMQ를 도입하지 않는다.
 Phase-1 Role/Scope/핵심 Action 권한 기준은 `05_PERMISSION_UI_MATRIX.md`에서 정의되었으며 일부 조직·승인 정책은 Open Decision이다. 기업마당 Field Mapping의 Phase-1 기준은 `06_BIZINFO_COLLECTOR.md`에서 실제 Probe 기반으로 정의되었으며, Rate Limit/오류응답/다중첨부/HTML Selector 등 미확인 외부동작과 운영수치는 Open Decision이다.
 후속 확인으로 기준 변경이 필요하면 영향범위를 보고하고 승인된 범위에서 Baseline/Decision Log와 동기화한다.
 
@@ -379,7 +382,7 @@ Phase-1 Role/Scope/핵심 Action 권한 기준은 `05_PERMISSION_UI_MATRIX.md`�
 
 ## 29. Operational Reliability / 운영 안정성
 
-기존 Modular Monolith와 Domain/Shared/Adapter 경계 안에서 다음 운영 Capability를 수용한다. 별도 Microservice를 추가하지 않으며 Backup, Scheduler, Message Broker, Queue, Notification SaaS, DB, Cloud, Monitoring 제품을 확정하지 않는다.
+기존 Modular Monolith와 Domain/Shared/Adapter 경계 안에서 다음 운영 Capability를 수용한다. PostgreSQL/DB-backed Job의 Phase-1 선택은 Decision-001을 따르며 별도 Microservice를 추가하지 않는다. Backup/Scheduler/Notification SaaS/Cloud/Monitoring 제품과 운영수치는 계속 Open이고 Message Broker는 초기 도입하지 않는다.
 
 ### Deadline / Dependency
 

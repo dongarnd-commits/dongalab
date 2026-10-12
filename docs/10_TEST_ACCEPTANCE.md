@@ -8,7 +8,7 @@ Standalone Phase-1 구현 후 무엇을 어떻게 검증해야 완료로 인정�
 
 기준은 [AGENTS](../AGENTS.md) → [00 Baseline](00_PROJECT_BASELINE.md) → [01 Architecture](01_SYSTEM_ARCHITECTURE.md) → [02 E2E](02_E2E_SYSTEM_FLOW.md) → [03 Data](03_DATA_MODEL.md) → [04 State/Action](04_STATE_ACTION_MODEL.md) → [05 Permission](05_PERMISSION_UI_MATRIX.md) → [06 Collector](06_BIZINFO_COLLECTOR.md) → [07 Intelligence](07_INTELLIGENCE_DESIGN.md) → [08 Screen](08_SCREEN_ACTION_SPEC.md) → [09 Demo](09_DEMO_SCENARIO.md) → 이 문서다. 실제 API 사실은 기존 [1차](../tools/bizinfo-probe/ANALYSIS.md)/[2차 Probe](../tools/bizinfo-probe/PHASE2_ANALYSIS.md)를 참고하며 Production 구현 통과 근거로 대체하지 않는다.
 
-새로운 Entity/State/Action/Guard/Role/Permission/Screen/Business Policy를 추가하지 않는다. Test Framework/Browser Automation/CI/Cloud/Stack/DB/API Route/Assertion Code/Fixture 파일/Artifact 위치/배포 Pipeline은 확정하지 않는다. 화면 표시만 그럴듯하고 Backend 저장/Guard가 틀리면 FAIL이다.
+새로운 Entity/State/Action/Guard/Role/Permission/Screen/Business Policy를 추가하지 않는다. 승인된 Test 기술은 `11_DECISION_LOG.md`의 Decision-001을 따른다: pytest/FastAPI API Test/실제 PostgreSQL Integration/Playwright, Frontend Component는 Vitest/React Testing Library를 첫 Slice 필요범위에 적용한다. CI/Cloud/API Route/Assertion Code/Fixture 파일/Artifact 위치/배포 Pipeline은 미확정이다. 화면 표시만 그럴듯하고 Backend 저장/Guard가 틀리면 FAIL이다.
 
 ## 2. 결과 / Gate / Priority / Evidence
 
@@ -327,7 +327,7 @@ DEMO_READY ≠ 전체 Production 운영승인, BASELINE_IMPLEMENTATION_ACCEPTED 
 
 ## 13. 실행 순서 / 자동화 / 최소 운영성
 
-구현 후 Environment/Persistence → Fixture/Snapshot → Collector → Notice/Intelligence → Company/Improvement → Matching/Request → Proposal/Approval → Proceed/Case → Application/Package → Submission/Evidence → Result/Task → Security Negative → Version/Reapproval → Failure/Recovery → Full E2E → Demo Re-run → Gate 판정 순서로 수행한다. 관련 Negative·보안검사는 해당 Slice 개발 중에도 실행하고 마지막까지 미루지 않는다. CI 제품/실제 Pipeline은 Stack 단계에서 정한다.
+구현 후 Environment/Persistence → Fixture/Snapshot → Collector → Notice/Intelligence → Company/Improvement → Matching/Request → Proposal/Approval → Proceed/Case → Application/Package → Submission/Evidence → Result/Task → Security Negative → Version/Reapproval → Failure/Recovery → Full E2E → Demo Re-run → Gate 판정 순서로 수행한다. 관련 Negative·보안검사는 해당 Slice 개발 중에도 실행하고 마지막까지 미루지 않는다. CI 제품/실제 Pipeline은 Decision-001의 Open Decision으로 유지하며 실제 구현·협업·배포 환경 확인 후 결정한다.
 
 Permission/Scope/State/Version/Persistence/idempotency/Schema/API·Domain 결과는 자동화 적합하다. Evidence가 주장을 뒷받침하는지, PDF 위치를 실제 읽을 수 있는지, Matching Reason과 Source가 맞는지, Fixture의 기간·단위/조건·증빙이 일관되는지는 사람 의미검토가 필요하다. 같은 자연어 문장 출력 자체를 Acceptance로 요구하지 않는다.
 
@@ -339,10 +339,10 @@ Permission/Scope/State/Version/Persistence/idempotency/Schema/API·Domain 결과
 
 | Open Decision | 후속 확인 |
 | --- | --- |
-| OD-01 Test Framework | Stack/구현 |
-| OD-02 Browser Automation | 핵심 E2E/Negative 자동화 |
+| OD-01 Test Framework | Decision-001: Backend pytest/FastAPI API Test 확정. Vitest/React Testing Library 사용방향 확정, Component 세부범위는 첫 Slice |
+| OD-02 Browser Automation | Decision-001: Playwright 확정, 핵심 E2E/Negative의 실행구현은 후속 |
 | OD-03 CI | 실제 Pipeline |
-| OD-04 Test DB | 영속성/격리·일관성 |
+| OD-04 Test DB | Decision-001: 실제 PostgreSQL Integration 방향 확정. DB 준비/격리·실행 세부는 구현 단계 |
 | OD-05 Fixture Loader | 기존 FIX-*·정상 Input 경로 |
 | OD-06 Demo Reset | 승인된 격리 준비/재현 |
 | OD-07 Live Integration 실행시점 | 접근 가능 환경·제한적 호출 |
@@ -382,14 +382,14 @@ Permission/Scope/State/Version/Persistence/idempotency/Schema/API·Domain 결과
 | Y 복구 History 보존 | AC-FAIL/OPS/IDEM | 정의됨 |
 | Z Stack/Skeleton 전환 | 15절 | 설계상 가능 |
 
-02 Flow, 03 Object/Version·File·Lineage, 04 State/Guard/idempotency, 05 Role/Scope, 06 Collector/Mode, 07 Input/Candidate/Human, 08 Screen/Gap, 09 Main/예외/Checkpoint와 교차검토했다. 상위문서와 구조적 충돌은 발견하지 않았다. 88 Action×모든 State 조합/모든 Entity CRUD/새 업무정책/임의 SLA/Test Framework를 추가하지 않는다.
+02 Flow, 03 Object/Version·File·Lineage, 04 State/Guard/idempotency, 05 Role/Scope, 06 Collector/Mode, 07 Input/Candidate/Human, 08 Screen/Gap, 09 Main/예외/Checkpoint와 교차검토했다. 상위문서와 구조적 충돌은 발견하지 않았다. 88 Action×모든 State 조합/모든 Entity CRUD/새 업무정책/임의 SLA 및 승인된 범위 외 Test Framework를 추가하지 않는다.
 
 ## 15. 00~10 Baseline 완료 판단 / 다음 단계
 
 **DESIGN BASELINE: READY.** Standalone Phase-1을 시작할 기능·State/Action·권한·화면·Demo·Acceptance 경계가 정의됐다. **실제 SYSTEM ACCEPTANCE: NOT_TESTED.** 모든 AC-*는 NOT_RUN이며 DEMO_READY/BASELINE_IMPLEMENTATION_ACCEPTED가 달성됐다고 판정하지 않는다.
 
-다음은 00~10 Baseline 검토/동결 → 필요 시 사용자 승인 후 Baseline Git Commit → 기술 Stack 결정 → Repository/Application Skeleton → AG-01 구현 계약 구체화 → 첫 Vertical Slice → Test 실행 → 09 Demo 재현 → Evidence 기반 Acceptance 판정이다. Git Commit은 이번 작업에서 수행하지 않는다. Skeleton은 Stack/실행·영속성·파일경계 결정 후 착수한다.
+00~10 Baseline 동결 후 Phase-1 Stack은 Decision-001로 승인되었다. 다음은 개발환경 확인/준비 → Repository/Application Skeleton → 첫 Vertical Slice의 Physical Schema/AG-01 계약 구체화 → 구현/Test 실행 → 09 Demo 재현 → Evidence 기반 Acceptance 판정이다. Git 작업은 별도 사용자 지시 없이 수행하지 않는다. Stack 승인은 실제 Test PASS가 아니다.
 
 구현 전 해당 Slice의 AG-01 저장·Upload/권한·Version 계약, 선택한 Stack/Adapter, 실제 의미있는 Sanitized Fixture/공식근거 대응관계, 지정 승인/Package 확인요건을 구체화해야 한다. 외부전송 Adapter는 실제 계약/보안범위를 확인하고 미확정 Provider/Rate/Retry 수치를 추정하지 않는다. 이 준비사항은 설계 동결을 막는 새로운 구조적 Blocker가 아니다.
 
-**00~10 설계 Baseline을 동결하고 Stack 결정 단계로 전환 가능한가: YES. 실제 시스템 Acceptance가 완료됐는가: NO — NOT_TESTED.**
+**승인된 Phase-1 Stack으로 개발환경 확인/준비 및 Skeleton 단계 진행 가능한가: YES. 실제 시스템 Acceptance가 완료됐는가: NO — NOT_TESTED.**
