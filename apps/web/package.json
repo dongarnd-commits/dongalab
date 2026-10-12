@@ -1,0 +1,12 @@
+{
+  "name": "datco-web", "version": "0.1.0", "private": true,
+  "engines": {"node": ">=24 <25"},
+  "scripts": {
+    "dev": "next dev --hostname localhost", "build": "next build",
+    "start": "next start --hostname localhost", "lint": "eslint .",
+    "api:types": "openapi-typescript http://127.0.0.1:8000/openapi.json -o src/generated/api.d.ts",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {"next": "16.4.0", "react": "19.3.0", "react-dom": "19.3.0"},
+  "devDependencies": {"@playwright/test": "1.64.0", "@types/node": "^24", "@types/react": "^19", "@types/react-dom": "^19", "eslint": "^9", "eslint-config-next": "16.4.0", "openapi-typescript": "7.13.0", "typescript": "^5"}
+}
