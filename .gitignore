@@ -34,3 +34,7 @@ temp/
 # OS generated
 Thumbs.db
 .DS_Store
+# Skeleton generated test output
+playwright-report/
+test-results/
+*.tsbuildinfo
