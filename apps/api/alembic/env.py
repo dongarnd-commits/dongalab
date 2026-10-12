@@ -1,5 +1,7 @@
 from alembic import context
 from app.infrastructure.database import Base, get_engine
+from app.infrastructure import notice_schema
+
 target_metadata = Base.metadata
 
 def run_migrations_offline():
