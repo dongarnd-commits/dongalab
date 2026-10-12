@@ -12,7 +12,7 @@ async function readiness(path: string, service: Health["service"]): Promise<bool
 export default async function Home() {
   const [api, database] = await Promise.all([readiness("/health", "api"), readiness("/health/db", "database")]);
   return <main>
-    <p className="eyebrow">Phase-1 ? Application Skeleton</p>
+    <p className="eyebrow">Phase-1 Application Skeleton</p>
     <h1>DATCO Government Support Operations</h1>
     <dl aria-label="Runtime status">
       <div><dt>Web</dt><dd data-testid="web-status">READY</dd></div>

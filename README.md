@@ -113,7 +113,8 @@ npm audit reports five High findings in the development lint dependency chain:
 eslint-config-next -> @next/eslint-plugin-next -> fast-glob -> micromatch -> braces (GHSA-vfj7-8cjw-p6xm).
 The registry currently publishes braces 3.0.3 with no patched version.
 Do not run audit fix --force: its proposed downgrade breaks the selected Next.js tooling alignment.
-Resolve or explicitly review these findings before GitHub sharing.
+The current High findings were reviewed before GitHub sharing and accepted with a note.
+They are limited to this Skeleton's development lint dependencies, with no confirmed production runtime exposure or GitHub sharing blocker.
 ESLint 9 is deprecated; a compatible supported lint upgrade should be evaluated with that review.
 The installed Starlette TestClient also warns about future httpx deprecation; current tests pass.
 These notices are separate from full business acceptance, which has not been run.
