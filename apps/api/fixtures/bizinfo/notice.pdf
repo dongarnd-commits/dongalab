@@ -1,0 +1,107 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<<
+/Producer (pypdf)
+>>
+endobj
+2 0 obj
+<<
+/Type /Pages
+/Count 2
+/Kids [ 4 0 R 8 0 R ]
+>>
+endobj
+3 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+4 0 obj
+<<
+/Type /Page
+/MediaBox [ 0 0 612 792 ]
+/Resources <<
+/Font <<
+/F1 5 0 R
+>>
+>>
+/Contents 7 0 R
+/Parent 2 0 R
+>>
+endobj
+5 0 obj
+<<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+>>
+endobj
+6 0 obj
+<<
+/Length 124
+>>
+stream
+BT /F1 12 Tf 50 740 Td (DEMO/TEST notice - page 1) Tj 0 -22 Td (Application period: 2026-10-01 to 2026-10-23) Tj 0 -22 Td ET
+endstream
+endobj
+7 0 obj
+<<
+/Length 123
+>>
+stream
+BT /F1 12 Tf 50 740 Td (DEMO/TEST notice - page 1) Tj 0 -22 Td (Application period: 2026-10-01 ~ 2026-10-23) Tj 0 -22 Td ET
+endstream
+endobj
+8 0 obj
+<<
+/Type /Page
+/MediaBox [ 0 0 612 792 ]
+/Resources <<
+/Font <<
+/F1 5 0 R
+>>
+>>
+/Contents 10 0 R
+/Parent 2 0 R
+>>
+endobj
+9 0 obj
+<<
+/Length 183
+>>
+stream
+BT /F1 12 Tf 50 740 Td (DEMO/TEST notice - page 2) Tj 0 -22 Td (Required document: Business registration certificate) Tj 0 -22 Td (Evaluation: Improvement plan quality) Tj 0 -22 Td ET
+endstream
+endobj
+10 0 obj
+<<
+/Length 183
+>>
+stream
+BT /F1 12 Tf 50 740 Td (DEMO/TEST notice - page 2) Tj 0 -22 Td (Required document: Business registration certificate) Tj 0 -22 Td (Evaluation: Improvement plan quality) Tj 0 -22 Td ET
+endstream
+endobj
+xref
+0 11
+0000000000 65535 f 
+0000000015 00000 n 
+0000000054 00000 n 
+0000000119 00000 n 
+0000000168 00000 n 
+0000000296 00000 n 
+0000000366 00000 n 
+0000000541 00000 n 
+0000000715 00000 n 
+0000000844 00000 n 
+0000001078 00000 n 
+trailer
+<<
+/Size 11
+/Root 3 0 R
+/Info 1 0 R
+>>
+startxref
+1313
+%%EOF

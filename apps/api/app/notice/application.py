@@ -18,6 +18,8 @@ class NoticeApplication:
         return version
 
     def replay_result(self,result,version_id,replay=False):
+        if version_id is None:
+            return dict(result,historical_replay=replay,current_valid=True)
         version=self.store.get("versions",version_id)
         notice=self.store.get("notices",version["notice_id"])
         current_valid=notice["current_ordinal"]==version["ordinal"]
@@ -44,9 +46,10 @@ class NoticeApplication:
         self.audit(actor,"REQUEST_NOTICE_REVIEW",version_id,job["id"])
         return job
 
-    def retry(self,actor,job_id,key=None):
+    def retry(self,actor,job_id,key=None,kind="NOTICE_ANALYSIS"):
         authorize(actor)
         job=self.store.get("jobs",job_id,True)
+        if job["kind"]!=kind: raise Denied("JOB_KIND_MISMATCH")
         # Direct local callers retain an attempt-specific identity; HTTP callers supply a key.
         key=key or f"{job_id}:{len(self.store.rows('attempts',job_id=job_id))}"
         fingerprint=sha256(key.encode()).hexdigest()
@@ -59,7 +62,7 @@ class NoticeApplication:
                 if audit["job_id"]!=job_id:
                     raise Denied("IDEMPOTENCY_TARGET_MISMATCH")
                 return self.replay_result(saved["result"],job["version_id"],True)
-        self.version(job["version_id"])
+        if job["version_id"] is not None: self.version(job["version_id"])
         if job["state"] not in ("FAILED","PARTIAL"):
             raise Denied("TRANSITION_NOT_ALLOWED")
         self.store.change("jobs",job_id,state="QUEUED",error=None,lease_until=None)
@@ -180,3 +183,65 @@ class NoticeApplication:
         content=self.files.read(source["storage_key"],source["digest"])
         self.audit(actor,"DOWNLOAD_NOTICE_SOURCE",version=source["version_id"],source=source_id)
         return source,content
+
+
+    def import_collected(self,source_system,normalized,mode,acquired,raw_reference,collected_at):
+        # Notice owns root identity, immutable version composition and current selection.
+        key=source_system+":"+normalized.external_id
+        self.store.lock_identity(key)
+        roots=self.store.rows("notices",external_key=key)
+        previous=None; prior_sources=[]
+        if roots:
+            notice=self.store.get("notices",roots[0]["id"],True)
+            previous=next(v for v in self.store.rows("versions",notice_id=notice["id"]) if v["ordinal"]==notice["current_ordinal"])
+            prior_sources=self.store.rows("sources",version_id=previous["id"])
+        else:
+            notice=self.store.add("notices",external_key=key,title=normalized.title or "Notice "+normalized.external_id+" (title missing)",current_ordinal=1)
+        old_core=previous["metadata"].get("comparison",{}) if previous else {}
+        core=dict(old_core,**normalized.core)
+        old_comparisons=previous["metadata"].get("source_comparisons",{}) if previous else {}
+        comparisons={}; source_rows=[]; warnings=[]
+        for incoming in acquired:
+            item=dict(incoming)
+            field=item["field"]
+            if not item["url"]: continue
+            old=next((r for r in prior_sources if r["name"]==field),None)
+            old_url=old_comparisons.get(field,{}).get("url")
+            if not item.get("digest") and old and old_url==item["url"] and old["storage_key"] and old["digest"]:
+                # Retain the validated file metadata without changing this acquisition's failure status.
+                item["storage_key"],item["digest"]=old["storage_key"],old["digest"]
+                item["media_type"]=old["media_type"]
+                item["comparison_digest"]=old_comparisons.get(field,{}).get("digest")
+                item["retained_previous_file"]=True
+            comparison_digest=item.get("comparison_digest")
+            if item["media_type"]=="text/html" and comparison_digest is None and old and old_url==item["url"]:
+                if item.get("digest") and item["digest"]!=old["digest"]:
+                    warnings.append("DETAIL_CHANGE_REQUIRES_REVIEW")
+                comparison_digest=old_comparisons.get(field,{}).get("digest")
+            comparisons[field]={"url":item["url"],"digest":comparison_digest}
+            source_rows.append(item)
+        # Missing/invalid fields do not mean an explicit reference deletion.
+        for field,comparison in old_comparisons.items():
+            if field not in comparisons and field in normalized.metadata["missing_fields"]:
+                comparisons[field]=comparison
+                old=next(r for r in prior_sources if r["name"]==field)
+                source_rows.append({"field":field,"url":comparison["url"],"media_type":old["media_type"],
+                    "storage_key":old["storage_key"],"digest":old["digest"],"status":"RETAINED_UNOBSERVED"})
+        if previous and core==old_core and comparisons==old_comparisons:
+            self.audit(None,"KEEP_EXISTING_VERSION",previous["id"],reason="Same normalized content and available source comparison; no automatic confirmation")
+            return notice,previous,"UNCHANGED",warnings
+        ordinal=notice["current_ordinal"]+1 if previous else 1
+        metadata=dict(normalized.metadata,**core,comparison=core,source_comparisons=comparisons,
+            input_mode=mode,raw_reference=raw_reference,collected_at=collected_at,
+            acquisition_warnings=warnings,previous_version_id=previous["id"] if previous else None)
+        version=self.store.add("versions",notice_id=notice["id"],ordinal=ordinal,
+            mode="LIVE" if mode=="LIVE" else "SANITIZED_SNAPSHOT",metadata=metadata)
+        for item in source_rows:
+            provenance={k:v for k,v in item.items() if k not in ("storage_key","digest")}
+            provenance.update(source_system=source_system,input_mode=mode,collected_at=collected_at,content_hash=item.get("digest"))
+            self.store.add("sources",version_id=version["id"],name=item["field"],media_type=item["media_type"],
+                provenance=json.dumps(provenance,ensure_ascii=True,sort_keys=True),storage_key=item.get("storage_key"),digest=item.get("digest"))
+        self.store.change("notices",notice["id"],current_ordinal=ordinal,title=core.get("title") or notice["title"])
+        self.audit(None,"CREATE_NOTICE_VERSION" if previous else "IMPORT_NEW_NOTICE",version["id"],
+            reason=source_system+" normalized content/source change; analysis and human review required")
+        return self.store.get("notices",notice["id"]),version,"NEW_VERSION" if previous else "NEW",warnings

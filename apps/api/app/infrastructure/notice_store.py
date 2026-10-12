@@ -1,10 +1,16 @@
-from sqlalchemy import select, insert, update
+from sqlalchemy import select, insert, update, text
+from hashlib import sha256
 from app.notice.domain import Denied
 from app.infrastructure.notice_schema import identity, TABLES
+from app.infrastructure import collector_schema
 
 class SqlNoticeStore:
     def __init__(self, session):
         self.session = session
+
+    def lock_identity(self, key):
+        value=int.from_bytes(sha256(key.encode()).digest()[:8],"big",signed=True)
+        self.session.execute(text("SELECT pg_advisory_xact_lock(:key)"),{"key":value})
 
     def get(self, entity, identity, lock=False):
         table = TABLES[entity]

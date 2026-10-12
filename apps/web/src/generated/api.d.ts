@@ -38,6 +38,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/notice/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Collections */
+        get: operations["list_collections_notice_collections_get"];
+        put?: never;
+        /** Request Collection */
+        post: operations["request_collection_notice_collections_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notice/collections/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Collection Detail */
+        get: operations["collection_detail_notice_collections__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notice/collections/{job_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry Collection */
+        post: operations["retry_collection_notice_collections__job_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/notice/session": {
         parameters: {
             query?: never;
@@ -193,6 +245,19 @@ export interface components {
             /** Idempotency Key */
             idempotency_key: string;
         };
+        /** AttemptResponse */
+        AttemptResponse: {
+            /** Id */
+            id: string;
+            /** Ordinal */
+            ordinal: number;
+            /** State */
+            state: string;
+            /** Error */
+            error: string | null;
+            /** Pages */
+            pages: components["schemas"]["PageResponse"][];
+        };
         /** CandidateResponse */
         CandidateResponse: {
             /** Id */
@@ -208,6 +273,59 @@ export interface components {
             reviews: {
                 [key: string]: unknown;
             }[];
+        };
+        /** CollectionJobResponse */
+        CollectionJobResponse: {
+            /**
+             * Historical Replay
+             * @default false
+             */
+            historical_replay: boolean;
+            /**
+             * Current Valid
+             * @default true
+             */
+            current_valid: boolean;
+            /** Id */
+            id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "QUEUED" | "PROCESSING" | "SUCCEEDED" | "PARTIAL" | "FAILED";
+            /** Error */
+            error: string | null;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Attempts */
+            attempts?: components["schemas"]["AttemptResponse"][];
+        };
+        /** CollectionRequest */
+        CollectionRequest: {
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "LIVE" | "SNAPSHOT";
+            /** Idempotency Key */
+            idempotency_key: string;
+            /**
+             * Page Unit
+             * @default 2
+             */
+            page_unit: number;
+            /**
+             * Max Pages
+             * @default 3
+             */
+            max_pages: number;
         };
         /** Confirm */
         Confirm: {
@@ -343,6 +461,46 @@ export interface components {
             /** Current Ordinal */
             current_ordinal: number;
         };
+        /** PageResponse */
+        PageResponse: {
+            /** Id */
+            id: string;
+            /** Page Number */
+            page_number: number;
+            /** State */
+            state: string;
+            /** Error */
+            error: string | null;
+            /** Observed Count */
+            observed_count: number;
+            /** Expected Total */
+            expected_total: number | null;
+            /** Warnings */
+            warnings: string[];
+            /** Records */
+            records: components["schemas"]["RecordResponse"][];
+        };
+        /** RecordResponse */
+        RecordResponse: {
+            /** Id */
+            id: string;
+            /** Position */
+            position: number;
+            /** External Id */
+            external_id: string | null;
+            /** Notice Id */
+            notice_id: string | null;
+            /** Notice Version Id */
+            notice_version_id: string | null;
+            /** Outcome */
+            outcome: string;
+            /** Error */
+            error: string | null;
+            /** Acquisitions */
+            acquisitions: {
+                [key: string]: unknown;
+            }[];
+        };
         /** RequirementResponse */
         RequirementResponse: {
             /**
@@ -476,6 +634,278 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    list_collections_notice_collections_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionJobResponse"][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    request_collection_notice_collections_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionJobResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    collection_detail_notice_collections__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionJobResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    retry_collection_notice_collections__job_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Retry"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionJobResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

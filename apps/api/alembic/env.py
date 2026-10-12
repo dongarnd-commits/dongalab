@@ -1,6 +1,6 @@
 from alembic import context
 from app.infrastructure.database import Base, get_engine
-from app.infrastructure import notice_schema
+from app.infrastructure import notice_schema, collector_schema
 
 target_metadata = Base.metadata
 

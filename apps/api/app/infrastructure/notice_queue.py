@@ -4,8 +4,8 @@ from sqlalchemy import select, update
 from app.infrastructure.notice_schema import jobs, attempts
 from app.infrastructure.notice_store import SqlNoticeStore
 
-def claim(session,lease_seconds=300):
-    row=session.execute(select(jobs).where(jobs.c.state=="QUEUED")
+def claim(session,lease_seconds=300,kind="NOTICE_ANALYSIS"):
+    row=session.execute(select(jobs).where(jobs.c.state=="QUEUED",jobs.c.kind==kind)
         .order_by(jobs.c.created_at).with_for_update(skip_locked=True).limit(1)).mappings().first()
     if row is None:
         return None

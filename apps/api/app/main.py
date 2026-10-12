@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.health import router
 from app.api.notice import router as notice_router, ErrorResponse
+from app.api.collection import router as collection_router
 from app.notice.domain import Denied
 from fastapi.responses import JSONResponse
 from app.core.config import get_settings
@@ -15,6 +16,7 @@ app.include_router(router)
 async def denied_handler(request,exc):
     return JSONResponse(status_code=exc.status,content=ErrorResponse(reason=exc.reason).model_dump())
 
+app.include_router(collection_router)
 app.include_router(notice_router)
 
 from fastapi.exceptions import RequestValidationError
