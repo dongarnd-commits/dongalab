@@ -171,7 +171,8 @@ def test_append_only_versions_new_run_and_idempotency(context):
     notice,version,job=prepare(context)
     factory,files,actor=context
     process_one(factory,files)
-    first=detail(context,notice)["versions"][0]["runs"][0]["candidates"][0]
+    # Transaction timestamps tie in this isolated schema; UUID order is not semantic.
+    first=next(c for c in detail(context,notice)["versions"][0]["runs"][0]["candidates"] if c["kind"]=="ELIGIBILITY_REQUIREMENT")
     rv1=confirm(context,version,first)
     with factory.begin() as session:
         service=NoticeApplication(SqlNoticeStore(session),files)

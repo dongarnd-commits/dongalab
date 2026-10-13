@@ -67,7 +67,7 @@ main.operator-main { max-width:1450px; padding:32px 42px 72px; margin:0 auto; mi
 .job-list { background:#eef3f4; padding:12px 18px; border-radius:8px; margin-bottom:24px; }
 .job-list > div { display:flex; gap:12px; align-items:center; flex-wrap:wrap; padding:6px 0; }
 .candidate-card { background:white; border:1px solid var(--line); padding:24px; border-radius:10px; margin:18px 0; }
-.candidate-content { font-size:17px; font-weight:600; overflow-wrap:anywhere; }
+.candidate-content { white-space:pre-wrap; font-size:17px; font-weight:600; overflow-wrap:anywhere; }
 .evidence { background:#f2f6f3; border-left:3px solid #9db888; padding:16px 20px; margin:20px 0; border-radius:0 7px 7px 0; }
 .evidence .section-heading { margin:0 0 10px; }
 .evidence blockquote { margin:10px 0 16px; color:#4c6561; white-space:pre-wrap; overflow-wrap:anywhere; font-size:14px; }

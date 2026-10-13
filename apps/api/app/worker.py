@@ -6,9 +6,10 @@ from app.core.config import ROOT
 from app.infrastructure.database import get_session_factory
 from app.infrastructure.notice_store import SqlNoticeStore
 from app.infrastructure.notice_queue import claim,recover_expired
-from app.infrastructure.notice_documents import LocalPrivateFiles,extract_document,DeterministicAnalysis
+from app.infrastructure.notice_documents import LocalPrivateFiles,extract_document,DeterministicAnalysis,evidence_exists
 from app.notice.application import NoticeApplication
 from app.notice.domain import Denied
+from app.infrastructure.notice_korean import has_period_conflict
 
 def process_one(factory=None,files=None,provider=None):
     factory=factory or get_session_factory()
@@ -40,22 +41,28 @@ def process_one(factory=None,files=None,provider=None):
                         "total_pages":extracted.total_pages,"extracted_pages":list(extracted.extracted_pages),
                         "unextractable_pages":list(extracted.unextractable_pages),"limitation":extracted.limitation})
                 elif not extracted.spans:
-                    raise Denied("SOURCE_NEEDS_MANUAL_REVIEW")
+                    raise Denied("TEXT_EXTRACTION_EMPTY")
                 spans.extend(extracted.spans)
-            except Exception:
-                missing.append({"source_id":source["id"],"reason":"SOURCE_MISSING_OR_UNREADABLE"})
+            except Exception as exc:
+                missing.append({"source_id":source["id"],"reason":exc.reason if isinstance(exc,Denied) else "TEXT_EXTRACTION_FAILED",
+                    "extraction_succeeded":False})
         outputs=provider.analyze(spans)
+        if hasattr(provider,"diagnostics"):
+            missing.extend(provider.diagnostics(spans,outputs))
         if not outputs:
+            if spans and not missing:
+                missing.append({"reason":"REQUIREMENT_STRUCTURE_NOT_RECOGNIZED","extraction_succeeded":True,
+                    "extracted_span_count":len(spans),"limitation":"Text extraction succeeded; no supported explicit requirement structure was recognized. This is not an eligibility decision."})
             raise Denied("NO_VALID_REQUIREMENT_CANDIDATE")
         for output in outputs:
-            if output.kind not in {"ELIGIBILITY_REQUIREMENT","SUPPORT_SCOPE","APPLICATION_PERIOD","REQUIRED_DOCUMENT","EVALUATION_CRITERION","FORM_FIELD","PLAN_SECTION","CONDITIONAL_REQUIREMENT"} or output.span not in spans or not output.content.strip() or output.content not in output.span.text or not output.reason.strip():
+            if output.kind not in {"ELIGIBILITY_REQUIREMENT","SUPPORT_SCOPE","APPLICATION_PERIOD","REQUIRED_DOCUMENT","EVALUATION_CRITERION","FORM_FIELD","PLAN_SECTION","CONDITIONAL_REQUIREMENT"} or not evidence_exists(spans,output.span) or not output.content.strip() or output.content not in output.span.text or not output.reason.strip():
                 raise Denied("INVALID_ANALYSIS_OUTPUT")
         periods=[o for o in outputs if o.kind=="APPLICATION_PERIOD"]
         metadata_period=version["metadata"].get("period_original")
         values={o.content for o in periods}
         if metadata_period:
             values.add(metadata_period)
-        if periods and len(values)>1:
+        if periods and has_period_conflict(values):
             evidence=[{"source_type":"DOCUMENT","source_id":o.span.source_id,"value":o.content,
                 "page":o.span.page,"descriptor":o.span.descriptor,"text":o.span.text} for o in periods]
             if metadata_period:
@@ -79,9 +86,9 @@ def process_one(factory=None,files=None,provider=None):
                 NoticeApplication(store,files).version(job["version_id"],True)
             except Denied:
                 state,error="FAILED","STALE_INPUT_VERSION"
-        if state!="FAILED":
+        if state!="FAILED" or error=="NO_VALID_REQUIREMENT_CANDIDATE":
             run=store.add("runs",attempt_id=attempt["id"],version_id=job["version_id"],
-                provider_version=provider.version,extractor_version="html-blocks-v1/pypdf-"+package_version("pypdf"),
+                provider_version=provider.version,extractor_version="html-blocks-v1/ranges-v1/pypdf-"+package_version("pypdf"),
                 missing=missing,conflicts=conflicts)
             for output in outputs:
                 location=store.add("locations",run_id=run["id"],source_id=output.span.source_id,
