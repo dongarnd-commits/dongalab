@@ -224,3 +224,17 @@ The existing deterministic analyser still handles labelled clauses only; real Ko
 production heartbeat, scheduling and other business domains are outside this slice.
 
 Formal docs/10 acceptance stays NOT_RUN / system NOT_TESTED. No docs/00~11 or Probe artifacts are changed.
+
+
+## Notice operator UI
+
+The Korean /notice screen is the government support notice module: normal notice catalog, notice detail/requirement review, and collection under operations tools.
+The normal catalog includes only stored versions explicitly marked LIVE. It excludes Demo/TEST and does not imply official recruitment status or complete Bizinfo coverage.
+Click a program name to open its detail. The selected notice and screen are kept in URL parameters using the native History API, including back/forward and refresh.
+Demo/TEST records and Sanitized Snapshot input remain accessible through the explicit test/demo entry under operations tools; this UI context is not authorization.
+Collection requests use existing DATCO_OPERATOR/Origin/Session guards. The normal collection screen uses Live; test/demo mode enables the existing Snapshot selector.
+Acquisition state, unsupported files, PARTIAL, source errors and attempts are retained in detail/operations views rather than a catalog column.
+Basic requirement extraction is the existing limited labelled-clause rule adapter, not general AI interpretation. Candidate, execution success and scoped human confirmation remain distinct.
+Raw IDs, provenance JSON and execution data are collapsed under technical details. Earlier versions, analysis and confirmation records remain available.
+Existing list/detail APIs, Backend guards and source download permissions are unchanged; no schema, contract or Worker change is required.
+Catalog detail hydration is for the current local slice; large-scale server pagination and aggregation are outside this UI change.

@@ -12,33 +12,43 @@ test("operator reviews actual Worker candidate, evidence and persistent confirma
   const account = localAccount();
   expect(account.password.length).toBeGreaterThan(0);
   await page.goto("/notice");
-  await page.getByLabel("Username", { exact: true }).fill(account.username);
-  await page.getByLabel("Password", { exact: true }).fill(account.password);
-  await page.getByRole("button", { name: "Login", exact: true }).click();
-  await expect(page.getByText("Signed in: DATCO_OPERATOR")).toBeVisible();
-  await page.getByLabel("Notice", { exact: true }).selectOption({ label: "DEMO/TEST normal notice" });
+  await page.getByLabel("아이디", { exact: true }).fill(account.username);
+  await page.getByLabel("비밀번호", { exact: true }).fill(account.password);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
+  await expect(page.getByText("DATCO 운영자")).toBeVisible();
+  if (!new URL(page.url()).searchParams.has("context")) {
+    await page.locator(".demo-entry summary").click();
+    await page.getByRole("button", { name: "테스트·시연 모드 열기", exact: true }).click();
+  }
+  await page.getByRole("button", { name: "공고 목록", exact: true }).click();
+  await page.locator(".title-button").filter({ hasText: "DEMO/TEST normal notice" }).click();
   const panel = page.getByTestId("notice-version").last();
   await expect(panel).toBeVisible();
   const oldCount = await panel.getByTestId("candidate").count();
-  await page.getByRole("button", { name: "Request analysis", exact: true }).click();
+  await page.getByRole("button", { name: "기본 요건 추출", exact: true }).click();
   await expect.poll(() => panel.getByTestId("candidate").count(), { timeout: 20000 }).toBeGreaterThan(oldCount);
-  const card = panel.getByTestId("candidate").filter({ hasText: "REQUIRED_DOCUMENT" }).filter({ has: page.getByRole("button", { name: "Confirm selected requirement" }) }).last();
-  await expect(card).toContainText("PDF page 2");
-  await expect(card.getByRole("button", { name: "Confirm selected requirement" })).toBeDisabled();
+  const card = panel.getByTestId("candidate").filter({ hasText: "필수 제출서류" }).filter({ has: page.getByRole("button", { name: "선택 요건 확정" }) }).last();
+  await expect(card).toContainText("PDF 2페이지");
+  await expect(card.getByRole("button", { name: "선택 요건 확정" })).toBeDisabled();
   const download = page.waitForEvent("download");
-  await card.getByRole("link", { name: "Download source" }).click();
+  await card.getByRole("link", { name: "원천자료 다운로드 ↗" }).click();
   expect((await download).suggestedFilename()).toBe("notice-source");
   await card.getByRole("checkbox").check();
-  await card.getByLabel("Review note", { exact: true }).fill("Reviewed page 2 of the DEMO/TEST notice.");
+  await card.getByLabel("검토 의견", { exact: true }).fill("Reviewed page 2 of the DEMO/TEST notice.");
   const confirmation = page.waitForResponse(response => response.url().endsWith("/confirm") && response.status() === 200);
-  await card.getByRole("button", { name: "Confirm selected requirement" }).click();
+  await card.getByRole("button", { name: "선택 요건 확정" }).click();
   const result = await (await confirmation).json();
   await expect(panel.getByTestId("confirmed")).toContainText(result.id);
   await expect(panel.getByTestId("confirmed")).toContainText("Business registration certificate");
   const before = await panel.getByTestId("confirmed").innerText();
   await page.reload();
-  await expect(page.getByText("Signed in: DATCO_OPERATOR")).toBeVisible();
-  await page.getByLabel("Notice", { exact: true }).selectOption({ label: "DEMO/TEST normal notice" });
+  await expect(page.getByText("DATCO 운영자")).toBeVisible();
+  if (!new URL(page.url()).searchParams.has("context")) {
+    await page.locator(".demo-entry summary").click();
+    await page.getByRole("button", { name: "테스트·시연 모드 열기", exact: true }).click();
+  }
+  await page.getByRole("button", { name: "공고 목록", exact: true }).click();
+  await page.locator(".title-button").filter({ hasText: "DEMO/TEST normal notice" }).click();
   await expect(panel.getByTestId("confirmed")).toHaveText(before, { useInnerText: true });
 });
 
@@ -53,16 +63,20 @@ test("browser cannot manufacture Operator permission or access private source", 
 test("notice selection ignores delayed A after B and hides old actions immediately", async ({ page }) => {
   const account = localAccount();
   await page.goto("/notice");
-  await page.getByLabel("Username", { exact: true }).fill(account.username);
-  await page.getByLabel("Password", { exact: true }).fill(account.password);
-  await page.getByRole("button", { name: "Login", exact: true }).click();
-  await expect(page.getByText("Signed in: DATCO_OPERATOR")).toBeVisible();
+  await page.getByLabel("아이디", { exact: true }).fill(account.username);
+  await page.getByLabel("비밀번호", { exact: true }).fill(account.password);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
+  await expect(page.getByText("DATCO 운영자")).toBeVisible();
+  if (!new URL(page.url()).searchParams.has("context")) {
+    await page.locator(".demo-entry summary").click();
+    await page.getByRole("button", { name: "테스트·시연 모드 열기", exact: true }).click();
+  }
   const list = await (await page.request.get("/api/notice")).json();
   const a = list.find((n: { title: string }) => n.title === "DEMO/TEST normal notice");
   const b = list.find((n: { title: string }) => n.title === "DEMO/TEST partial notice");
   expect(a).toBeTruthy(); expect(b).toBeTruthy();
   // Display A first, then deliberately hold its next refresh response.
-  await page.getByLabel("Notice", { exact: true }).selectOption(a.id);
+  await page.locator(".title-button").filter({ hasText: a.title }).click();
   await expect(page.getByTestId("notice-version").last()).toBeVisible();
   let release!: () => void;
   let started!: () => void;
@@ -94,16 +108,17 @@ test("notice selection ignores delayed A after B and hides old actions immediate
     }
   });
   await requested;
-  await page.getByLabel("Notice", { exact: true }).selectOption(b.id);
+  await page.getByRole("button", { name: "공고 목록", exact: true }).click();
+  await page.locator(".title-button").filter({ hasText: b.title }).click();
   await expect(page.getByTestId("notice-version")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Confirm selected requirement" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "선택 요건 확정" })).toHaveCount(0);
   releaseB();
   await expect(page.getByTestId("notice-version").last()).toHaveAttribute("data-notice-id", b.id);
   release();
   await delivered;
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   // A has been delivered; check again after a subsequent B polling response as well.
-  await expect(page.getByLabel("Notice", { exact: true })).toHaveValue(b.id);
+  expect(new URL(page.url()).searchParams.get("notice")).toBe(b.id);
   await expect(page.getByTestId("notice-version").last()).toHaveAttribute("data-notice-id", b.id);
   await expect(page.getByTestId("notice-version").last()).not.toHaveAttribute("data-notice-id", a.id);
 });
