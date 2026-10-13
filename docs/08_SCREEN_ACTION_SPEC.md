@@ -292,3 +292,20 @@ Demo/Seed도 같은 Screen/Role/Scope/Guard/Version/Audit를 사용한다. LIVE/
 02의 주요 Flow, 04 Action 이름/From·Guard·저장결과, 05 Role/Scope·14 Navigation Group, 07 Review 정보와 교차검토했다. 상위문서와 구조적 충돌은 발견하지 않았다. 기존 Workflow 외 입력·관리 계약은 AG-01/02로 명시했고 새 Action/State/Role/Permission을 생성하지 않았다.
 
 **09_DEMO_SCENARIO 설계 착수 가능: YES.** 핵심 E2E의 화면/Actor/Version/Action/결과·실패복귀가 연결돼 있다. 다음은 09 → 10 → 00~10 설계 Baseline 확정 → Stack/Skeleton/실제 Vertical Slice 순서이며 이번 문서에서 UI/API/DB 구현을 수행하지 않는다.
+
+## 13. 자유입력·매칭 결과 및 전주기 동선 (Decision-002)
+
+기존 Screen/Action/Role/Scope 및 AG-01 계약을 재사용한다. DATCO 업무 검토는 O, Catalog 발행은 A의 기존 책임이며 새 API/권한을 확정하지 않는다.
+
+| 동선 | 기존 화면 및 표시·검증 |
+| --- | --- |
+| 기업 입력 | 인증된 E가 SCR-COMPANY-02 → SCR-IMPROVE-01에서 Company/Site 연결 자유서술 저장·제출. 카테고리 미선택·Catalog 밖 요구도 등록 가능. 보조정보는 선택 사항 |
+| 사진·자료·원문 | 위 Workspace의 AG-01 Upload로 선택적 첨부, 파일 보안/Scope 유지. 원문·수정 Version·제출본·첨부를 구조화 후보/확인 결과와 구분. 업로드 자체를 사진 AI 확인으로 표시하지 않음 |
+| 검토·보완 | O의 SCR-FACT-01/SCR-IMPROVE-01 → 기존 보완 Action 또는 SCR-REQUEST-01의 요청/응답/검증 |
+| 서비스·3자 매칭 | SCR-CAP-01 → SCR-MATCH-01. 실제 CapabilityVersion/Assessment·복수 조합·조건/범위/Evidence와 해결/미해결 범위 표시. 서비스 적합과 공고 적격을 별도 표시 |
+| 비성공 결과 | 미매칭 원문/사유/Review 보존. 기존 후보 의미 및 HOLD/EXCLUDE/REQUEST_MORE_INFO 등 해당 검토결과 표시. 추가정보 요청/검토 연결, 근거 없는 추천·제안 생성 없이 기존 Guard 적용 |
+| 제안·승인 | SCR-PROPOSAL-01 → 지정 P의 SCR-APPROVAL-01. 수정요청·새 Version·재승인 및 과거 승인 보존, E/O의 승인 대행 없음 |
+| 신청·제출 확인 | SCR-PROCEED-01 → SCR-CASE-01 → SCR-APP-01 → SCR-PACKAGE-01/02 → SCR-SUBMIT-01. 제안 승인·Application 확인·기업 Package 확인·Ready·제출/증빙 검증 구분 |
+| 결과·사후관리 | SCR-RESULT-01/SCR-CASE-01 ↔ SCR-TASK-01. 선정 Case 협약·수행·검수·정산·종료 및 CLOSED Case 사후관리 Task 생성·배정·진행·완료검토·완료 이력. Case 자동 재개 없음 |
+
+기업은 자기 Scope의 공개 Projection만 조회한다. 가상 외부 결과는 DEMO로 표시한다. 별도 최종 신청 승인 정책은 PENDING이며 기존 정의 이상의 State/권한을 만들지 않는다. AG-01 등 실제 구현 여부는 별도 확인한다.

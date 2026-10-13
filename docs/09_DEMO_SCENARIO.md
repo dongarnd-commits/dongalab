@@ -6,7 +6,7 @@
 
 Demo는 Production Domain 흐름의 역할·Scope·State·Version·Guard·Evidence·Audit를 그대로 사용한다. Demo 전용 승인/상태변경 API, DB 직접 상태조작, 권한 bypass, Candidate의 직접 Confirmed Seed, ApprovalDecision 직접 삽입, READY_TO_SUBMIT 직접 설정, 접수증 없이 신청완료, Live 실패를 조용히 성공으로 표시하는 경로는 금지한다.
 
-Main Happy Path는 하나이며 공고 수집/원천 → 사람 검토 → 기업 Fact/Improvement → 3-way Match → 정보요청/검증 → 제안/기업승인 → 별도 Proceed/Case → Application/Package → 제출사실/증빙 → 공식결과까지 연결한다. 두 Company 격리, Refresh Persistence와 History도 증명한다. 모든 Screen/ADMIN 기능/Task State/Case Stage/공고/Format/OCR/Scheduler/DMP Integration을 시연하지 않는다.
+Main Happy Path는 하나이며 공고 수집/원천 → 사람 검토 → 기업 Fact/Improvement → 3-way Match → 정보요청/검증 → 제안/기업승인 → 별도 Proceed/Case → Application/Package → 제출사실/증빙 → 공식결과 및 H26~32의 사후관리 완료까지 연결한다. 두 Company 격리, Refresh Persistence와 History도 증명한다. 선정 Main의 협약·수행·검수·정산·종료·사후관리는 필수다. 모든 Screen/ADMIN 기능/Task State 조합/공고/Format/OCR/Scheduler/DMP Integration을 전수 시연하지 않는다.
 
 발표시간·날짜·발표자 대본, UI 디자인/Route/API, DB Script/Seed Code/실제 Fixture 파일, AI Provider/Stack/Cloud는 확정·생성하지 않는다. 새로운 Entity/State/Action/Guard/Role/Permission/Screen은 만들지 않는다. 아래 계획은 실제 Demo 성공 또는 구현 완료 보고가 아니다.
 
@@ -64,7 +64,7 @@ Fixture는 Company Fact 기간·단위/자격조건, Improvement→Capability �
 
 일치하는 자료를 준비할 수 없다면 해당 제출/공식결과 Step은 미완료로 남긴다. 일반 샘플 PDF·파일명·접수번호만으로 공식성 확인을 통과시키지 않는다. Fixture라는 이유로 G-OFFICIAL/G-EVIDENCE/Company·Case·Version 검사를 생략하지 않는다. Synthetic 증빙으로 대체할 경우 실제 공식근거가 아닌 Demo 자료임을 명시하고 정상 검증 계약에 맞는 지원범위를 사전 확인해야 하며, 확인되지 않은 신뢰정책/예외 Guard를 새로 만들지 않는다.
 
-## 5. DEMO-HAPPY-01 — 수집부터 제출·결과까지
+## 5. DEMO-HAPPY-01 — 자유입력·수집부터 사후관리까지
 
 Main Scenario는 하나다. 모든 행은 CORE이며 조회 보조 화면은 7절 SUPPORTING 기준으로 통합해 보여줄 수 있다. 같은 행의 여러 Backend Action은 **각각 별도 실행/결과 확인**이며 하나의 자동 완료 버튼이 아니다. 요청 후 Worker 결과를 기다리고 다음 업무 Gate를 검사한다. Actor는 인증 Context를 확인한 후 전환한다.
 
@@ -94,13 +94,13 @@ Main Scenario는 하나다. 모든 행은 CORE이며 조회 보조 화면은 7�
 | H22 | O | SCR-SUBMIT-01 | 대응 Receipt 등록 후 공식근거 검토 | REGISTER_SUBMISSION_EVIDENCE, VERIFY_SUBMISSION_EVIDENCE | 실제 확보/검증된 대응 증빙/대상 일치 | REVIEW_REQUIRED→VERIFIED | 별도 등록/검토/Audit, Refresh 후 File·Review 유지 |
 | H23 | O | SCR-RESULT-01 | 증빙 Gate 후 평가시작 | START_EVALUATION | 제출 VERIFIED/선행조건 | Case EVALUATION/평가회차 | 증빙확인 전 시작 불가 |
 | H24 | O | SCR-RESULT-01 | 대응 공식 결과근거 검토·확인 | CONFIRM_OFFICIAL_RESULT | 정확한 대상·회차/결과 Evidence, Demo 표시 | Result SELECTED, Case RESULT_CONFIRMED | OfficialResultRecord와 Stage 분리·검토자/Source |
-| H25 | O | SCR-CASE-01 | 진행/Version/Decision/Evidence/Timeline 추적 | 조회 | H01~24 저장결과 | 종료 시점의 연결된 업무상태 | Source→Review→Proposal/Approval→Proceed→Case/제출/Result 일부 역추적 |
+| H25 | O | SCR-CASE-01 | 진행/Version/Decision/Evidence/Timeline 추적 | 조회 | H01~24 저장결과 | 결과 확인 시점의 연결된 업무상태 | Source→Review→Proposal/Approval→Proceed→Case/제출/Result 일부 역추적 |
 
 Main은 Missing→Request→Response→Verification→Rematch를 포함한다. Missing을 FAIL/숫자 추정으로 채우지 않고 현재 적용 Fact/Requirement로 판단하는 가치를 증명한다. 초기 Match는 부분입력 후보이며 PROPOSABLE Gate를 통과하지 않는다. H11 Verification과 원 Domain Fact 확정은 필요한 경우 별도 Action이다.
 
 H17 기본은 O가 H10의 기업 제공/확인 자료와 Fact를 신청입력에 사용하여 Role 전환을 줄인다. 기업이 직접 작성해야 하는 추가 항목이 실제 Fixture에 있다면 E의 SCR-APP-01 허용 입력을 거친 후 O 확인을 수행한다. 이는 새 Scenario/권한이 아니며 P에게 E 편집권한을 자동 부여하지 않는다.
 
-Main 결과는 SELECTED로 RESULT_CONFIRMED까지다. OPTIONAL로 공식 협약근거/선행조건이 준비됐을 때 START_AGREEMENT, 또는 필요한 Task CREATE_TASK/ASSIGN_TASK와 진행 조회를 보여줄 수 있다. 모든 후속 Stage/Task State를 순회하지 않는다. Role 전환은 O→E→O→E→O→P→O→P→O 순서이며 각 전환을 인증된 계정으로 확인한다.
+Main은 SELECTED의 RESULT_CONFIRMED 이후 §12 H26~32까지 필수다. 기존 근거/선행조건을 충족하는 정상 Action으로 수행하며 모든 Task State 조합을 순회할 필요는 없다. Role 전환은 O→E→O→E→O→P→O→P→O 순서이며 각 전환을 인증된 계정으로 확인한다.
 
 ## 6. 핵심 Exception Scenario 5개
 
@@ -120,7 +120,7 @@ OPTIONAL 보조 Proof는 Metadata/HTML은 확보하고 첨부 실패인 Partial 
 
 ## 7. Demo Screen Coverage / Screen Traceability
 
-08 Critical Set 19개를 모두 따로 방문하도록 강제하지 않는다. MUST_SHOW는 업무결정·입력·근거를 직접 확인할 16개, SUPPORTING은 조회가 통합돼도 되는 2개, NOT_REQUIRED_IN_MAIN_DEMO는 선택적 Task 화면 1개다. Login/Role Context/Evidence Viewer는 공통 Pattern으로 확인한다.
+08 Critical Set 19개를 모두 따로 방문하도록 강제하지 않는다. MUST_SHOW는 업무결정·입력·근거와 수행·사후관리 Task를 확인할 17개, SUPPORTING은 조회가 통합돼도 되는 2개다. Login/Role Context/Evidence Viewer는 공통 Pattern으로 확인한다.
 
 | Screen ID | Coverage | Main Step / 제외·통합 이유 |
 | --- | --- | --- |
@@ -142,7 +142,7 @@ OPTIONAL 보조 Proof는 Metadata/HTML은 확보하고 첨부 실패인 Partial 
 | SCR-PACKAGE-02 | MUST_SHOW | H19 지정 기업확인 |
 | SCR-SUBMIT-01 | MUST_SHOW | H21/22 제출사실/등록·검증 |
 | SCR-RESULT-01 | MUST_SHOW | H23/24 평가 Gate/공식결과 |
-| SCR-TASK-01 | NOT_REQUIRED_IN_MAIN_DEMO | 후속 업무는 선택사항, Timeline/기한 연결은 Case에서 설명 가능 |
+| SCR-TASK-01 | MUST_SHOW | 수행·사후관리 Task 담당·진척·완료검토·완료 이력 |
 
 Main 표가 Step/Screen/Actor/04 Action/Expected Domain Result의 Traceability Matrix를 겸한다. Stage/결정이 다른 화면을 단순 목록으로 대체하지 않는다. 전체 Catalog 관리/기업목록/ADMIN 운영/전체 Audit Explorer는 Main 필수가 아니다. 승인 Actor/근거·이력은 각 업무 화면에서 확인한다.
 
@@ -207,7 +207,7 @@ Bizinfo LIVE/AI Provider/File Preview 실패를 숨기지 않는다. 안전한 �
 | OD-03 | 실제 발표 LIVE/SNAPSHOT 선택 | 재현 기준은 SNAPSHOT, LIVE는 시점/자료 검증 후 명시 선택 |
 | OD-04 | 정확한 Bizinfo Notice | 의미있는 자격·기간·개요·서류근거 1개 선정 |
 | OD-05 | 실제 Sanitized HTML/Attachment 선정 | 실제 Content·Role/Location·완전성 검증 |
-| OD-06 | Result 후 Agreement 클릭 여부 | Main은 RESULT_CONFIRMED까지, 협약은 조건부 OPTIONAL |
+| OD-06 | Result 후 Agreement 클릭 여부 | Decision-002로 협약부터 사후관리 완료까지 필수. 단계별 근거/완료조건은 실행 전 확인 |
 | OD-07 | Reset 구현 방식 | 격리 Dataset/Precondition 복원, 운영 삭제와 분리 |
 | OD-08 | 실제 Fixture 파일 형식/식별 매핑 | 03 Object/Source/Version 일관성 유지 |
 | OD-09 | AI Provider/Fixture Adapter 실행 방식 | 공통 Input/Run/Validation/Review, Mode·한계 표시 |
@@ -215,9 +215,9 @@ Bizinfo LIVE/AI Provider/File Preview 실패를 숨기지 않는다. 안전한 �
 
 Information Request를 Main에 포함하는 선택은 확정했고 Open으로 남기지 않는다. 실제 자료/도구 선택이 달라져도 Scope·Version·Human Decision·증빙 검증은 동일하다.
 
-Main 종료는 Notice 확인/기업과제/MatchReview/Request 검증/Proposal/기업 Approval/Proceed/Case/Application/기업확인/READY_TO_SUBMIT/제출기록/증빙 VERIFIED/공식 Result까지 **저장된 연결**이 이어진 때다. Snapshot/Fixture 기반이면 실제 외부 제출·선정을 완료한 것으로 말하지 않는다. 예외·Persistence/History Proof는 Checkpoint로 확인한다. 아직 구현하지 않은 화면 또는 준비되지 않은 Step은 완료한 것처럼 보고하지 않는다.
+Main 종료는 Notice 확인/기업과제/MatchReview/Request 검증/Proposal/기업 Approval/Proceed/Case/Application/기업확인/READY_TO_SUBMIT/제출기록/증빙 VERIFIED/공식 Result 및 H26~32의 사후관리 완료까지 **저장된 연결**이 이어진 때다. Snapshot/Fixture 기반이면 실제 외부 제출·선정을 완료한 것으로 말하지 않는다. 예외·Persistence/History Proof는 Checkpoint로 확인한다. 아직 구현하지 않은 화면 또는 준비되지 않은 Step은 완료한 것처럼 보고하지 않는다.
 
-Critical Proof는 Source(외부 원천→Notice/Version), Intelligence(Source→Candidate→Evidence→Human), Company(입력/Fact/Improvement/Scope), Matching(3축/Missing/Opposing Evidence), Decision(정확한 Proposal Approval→별도 Proceed), Operations(Case→Application→Package→Submission→Result), Security(Cross-company DENY), History(Version/Evidence/Audit/Refresh)다.
+Critical Proof는 Source(외부 원천→Notice/Version), Intelligence(Source→Candidate→Evidence→Human), Company(입력/Fact/Improvement/Scope), Matching(3축/Missing/Opposing Evidence), Decision(정확한 Proposal Approval→별도 Proceed), Operations(Case→Application→Package→Submission→Result→협약→수행→검수→정산→종료→사후관리 Task), Security(Cross-company DENY), History(Version/Evidence/Audit/Refresh)다.
 
 ## 11. Validation A~Z / 10 착수 판단
 
@@ -250,8 +250,37 @@ Critical Proof는 Source(외부 원천→Notice/Version), Intelligence(Source→
 | W Refresh Persistence | H04/05/14/16/20/22/CHK-14 | 정의 |
 | X Version/Evidence/Audit | H25/CHK-14 | 연결 |
 | Y AG-01/02 새 Action 없음 | 9절 Prerequisite/Seed 책임 | 충족 |
-| Z 10용 Checkpoint | CHK-01~14 | 준비 |
+| Z 10용 Checkpoint | CHK-01~15 | 준비 |
 
 02 E2E, 04 State/Action/Guard, 05 Actor/Scope, 06 Mode/Raw/Normalize, 07 Candidate/Evidence/Human Review, 08 기존 Screen과 교차검토했다. 상위문서와 구조적 충돌은 발견하지 않았다. 발표 대본/클릭좌표/전체 Acceptance Assertion/새 Demo Domain을 추가하지 않는다.
 
 **10_TEST_ACCEPTANCE 설계 착수 가능: YES.** Main 순서·예외·Fixture 요건·화면/Action·Checkpoint가 연결돼 있다. 다음은 10 → 00~10 설계 Baseline 확정 → Stack → Skeleton → 실제 Vertical Slice/통합 Test/Demo이며 이번 작업에서 Fixture/Seed/Source/UI/API/DB를 생성하거나 외부 API/AI/OCR을 호출하지 않는다.
+
+## 12. 전주기 필수 시연 및 비성공 결과 (Decision-002)
+
+H05에서 기업 로그인/Company Context를 확인하고 카테고리 선택 없이 자유서술·선택적 사진/자료를 실제 저장·제출한다. 원문·수정 Version과 구조화 후보를 구분한다. H07~12는 확인된 Capability의 서비스 조합·조건/범위와 공고 적합성을 독립 검토한다. 합성 역량은 DEMO 표시한다. H14 제안 승인과 H17~20 Application 확인/기업 Package 확인/Ready는 별개다.
+
+아래 CORE Step은 H25 다음 같은 Company/Case로 수행한다. 단계별 Task/Evidence/완료조건은 확인된 사업조건 또는 명시적 Demo Fixture 조건으로 준비한다. 자료가 부족하면 BLOCKED이며 Guard를 완화하지 않는다. 입력 자료만 준비하고 Stage/Task 완료결과는 Seed하지 않는다. 가상 협약·산출물·검수·정산 자료는 SYNTHETIC_DEMO로 표시한다. 접수/결과의 공식성 계약과 의미 있는 Fixture 대응관계는 §4를 유지하며 일반 샘플로 검증을 우회하지 않는다.
+
+| Step | Actor / Screen | 기존 Action 및 필수 Proof |
+| --- | --- | --- |
+| H26 | O / SCR-RESULT-01, SCR-CASE-01 | SELECTED·협약 근거/선행조건 충족 후 START_AGREEMENT, AGREEMENT 이력 |
+| H27 | O / SCR-CASE-01, SCR-TASK-01 | 협약조건 충족 후 START_EXECUTION. CREATE_TASK/ASSIGN_TASK/START_TASK로 수행계획·담당·기한·진척 저장, 필요한 완료요청/검토 |
+| H28 | O / SCR-CASE-01, SCR-TASK-01 | 수행 Task·산출 근거 충족 후 START_INSPECTION. 산출물 파일·검수 Task/Evidence/검토 연결 |
+| H29 | O / SCR-CASE-01, SCR-TASK-01 | 검수조건 충족 후 START_SETTLEMENT. 정산자료·선행 Task/검토 저장 |
+| H30 | O / SCR-CASE-01 | 정산/종료 Task·근거 충족 후 CLOSE_CASE. CLOSED/종료 이력·사후관리 연결 |
+| H31 | O / SCR-TASK-01 | CLOSED Case 사후관리 CREATE_TASK/ASSIGN_TASK/START_TASK → REQUEST_TASK_COMPLETION → COMPLETE_TASK. 완료조건·검토·Evidence/이력 보존, Case CLOSED 유지 |
+| H32 | O/E/P / 허용 Workspace | 새로고침·재로그인 후 원문/사진→입력 Version→매칭 근거→제안/승인→신청/증빙→Stage→사후관리 완료의 연결 조회 |
+
+CHK-15를 추가하여 H26~32의 저장·파일·선행조건·완료 Review·CLOSED 유지·재로그인 이력을 확인한다. 기존 CHK-01~14/예외는 보존한다.
+
+| 필수 Scenario | 기대 결과 / 연결 |
+| --- | --- |
+| SCENARIO-A | 자유입력→서비스 조합→공고 적합 검토→제안/기업 승인→H16~32 전주기 완료, CHK-01~15 |
+| SCENARIO-B | Catalog 밖 요구 정상 저장·Capability 미매칭 사유/Review 보존. 허위 서비스·근거 없는 자동 제안 없음, AC-MVP-02 |
+| SCENARIO-C | 서비스 적합이나 공고 부적합/미확인. 허위 공고 추천·적격 판정 없이 사유/확인업무 보존, AC-MVP-03 |
+| SCENARIO-D | 모호·부족 원문 보존→추가정보 요청/응답→사람 검토. Unknown을 FIT로 변경하지 않음, AC-MVP-04 |
+| SCENARIO-E | 승인 후 중요변경의 과거 승인·새 Version/Impact·재승인 Guard, DEMO-EX-02 |
+| SCENARIO-F | 타기업 자료/파일/제안/승인 직접 접근 서버 DENY, DEMO-EX-01 |
+
+필수 범위 승인은 구현 완료·대표 승인·공식 제출/선정·Test PASS가 아니다. 별도 최종 신청 승인 정책은 결정 대기이며 기존 Action을 유지한다.

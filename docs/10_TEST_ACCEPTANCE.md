@@ -201,7 +201,7 @@ AC-ENV-04의 8개 지점은 Confirmed Requirement, Submitted Improvement, Approv
 | AC-TASK-05 | B/D | 완료 Review | O | 진행·근거·선행 완전 | REQUEST_TASK_COMPLETION/COMPLETE_TASK | COMPLETION_REVIEW→COMPLETED/Review | 근거 미검토 자동완료 없음 | D/F/H | NOT_RUN |
 | AC-TASK-06 | B | Derived Overdue | O | 기한 전/후 Fixture | 현재시각별 조회 | 기한초과 표시·Task State 유지 | Overdue 저장 State 추가 없음 | D | NOT_RUN |
 
-Task는 Main 필수 방문 화면이 아니어도 Phase-1 제품 Acceptance의 최소 기능이다. 모든 Task/Case State 조합을 전수 테스트하지 않는다.
+Task는 Main의 수행·사후관리 필수 방문 화면이며 Phase-1 제품 Acceptance의 최소 기능이다. 모든 Task/Case State 조합을 전수 테스트하지 않는다.
 
 ## 9. Security / Version / Audit / Idempotency / Failure / File
 
@@ -255,7 +255,7 @@ Task는 Main 필수 방문 화면이 아니어도 Phase-1 제품 Acceptance의 �
 
 | Test ID | Gate | Scenario / Purpose | Actor | Preconditions | Execution | Expected Result | Negative Assertion | Evidence | Result |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| AC-E2E-01 | B/F | Full Snapshot E2E | O/E/P | 09 Precondition/AG-01/의미있는 Fixture | 09 H01~25를 정상 Action으로 실행 | CHK-01~10/14의 연결된 저장결과 | 중간 Decision/Ready Seed·Guard 우회 없음 | D/R/F/J/H | NOT_RUN |
+| AC-E2E-01 | B/F | Full Snapshot E2E | O/E/P | 09 Precondition/AG-01/의미있는 Fixture | 09 H01~32를 정상 Action으로 실행 | CHK-01~10/14/15의 연결된 저장결과 | 중간 Decision/Ready Seed·Guard 우회 없음 | D/R/F/J/H | NOT_RUN |
 | AC-DEMO-01 | F | Demo 재현/예외 | O/E/P | 정상 Dataset/필수 Screen·계정 | Main Re-run 및 EX-01/02/04/05/06의 통제 검증 | Checkpoint/권한·재승인·증빙·미선정·Mode 재현 | 실제 LIVE 실패가 없는데 장애 Test PASS 주장 금지 | D/R/X/F/J/H | NOT_RUN |
 | AC-UI-01 | A/E | 기본 운영성/오류 의미 | O/E/P | 큰 Job/차단·실패 입력 | Job 진행·timeout/실패·차단복귀 확인 | 무한대기 없이 기술상태/원인·보완경로 | Secret/타기업 존재/Stack Trace 없음 | J/D/X/L | NOT_RUN |
 | AC-UI-02 | F | 추가 Browser/접근성 | O/E/P | 실제 추가 요구 확정 시 | 합의된 환경/범위로 실행 | 요구범위 결과 기록 | 임의 Version/WCAG/Breakpoint 요구 생성 금지 | D/Report | NOT_RUN |
@@ -281,6 +281,7 @@ AC-UI-02/AC-EXT-01은 OPTIONAL/조건부 확장검증이다. 선택된 Provider�
 | CHK-12 | AC-VER-01~08, AC-APPROVAL-07~09 | 역사보존/Stale/재승인/Impact 후속조건 |
 | CHK-13 | AC-COL-09~10, AC-FAIL-05, AC-DEMO-01 | 공통 Normalize/Mode, 실제 Live 여부 별도 |
 | CHK-14 | AC-ENV-04, AC-AUDIT-01, AC-IDEM-01~05, AC-FILE-07 | 영속성/Actor·Version·근거/역추적·중복없음 |
+| CHK-15 | AC-MVP-05, AC-E2E-01 | 같은 Case의 협약·수행·검수·정산·종료·사후관리 Task 완료, 근거·Review·CLOSED 유지·재로그인 영속성 |
 
 | E2E Flow | Acceptance Test IDs | Coverage |
 | --- | --- | --- |
@@ -319,9 +320,9 @@ FLOW-28은 AC-OPS-01, FLOW-29의 일반 업무이동은 AC-OPS-02, FLOW-24의 �
 
 각 Case는 정의된 입력 변형을 실행하고 기대 저장결과·불가행위의 미발생·필수 Evidence를 확인해야 PASS다. 단순 UI Toast/높은 Confidence/잘 보이는 화면/기존 Probe 관찰만으로 PASS가 아니다. Security/Version/공식증빙 오류를 “Demo이므로 허용”하지 않는다.
 
-**DEMO_READY**는 09 Main/필수 예외의 재현, MUST_SHOW 16 Screen/정상 Role Account, 의미·관계 검증된 Snapshot Dataset, AG-01 저장·Upload 구현, CHK-01~12/14의 필수 Proof와 명시적 Mode/외부사실·Demo 구분을 요구한다. AC-E2E-01/AC-DEMO-01 및 이 Proof에 매핑된 결정적 기능·권한·History Case가 PASS여야 한다. CHK-13의 통제 fallback/공통 경로는 PASS, 실제 Live 결과는 별도 보고한다. 당일 외부장애로 AC-COL-10이 BLOCKED여도 Snapshot Demo 준비도는 별도 판단할 수 있다. Mandatory Security/Version/Evidence FAIL이나 Demo bypass가 있으면 DEMO_READY 불가다.
+**DEMO_READY**는 09 Main/필수 예외의 재현, 09의 MUST_SHOW Screen/정상 Role Account, 의미·관계 검증된 Snapshot Dataset, AG-01 저장·Upload 구현, CHK-01~12/14/15의 필수 Proof와 명시적 Mode/외부사실·Demo 구분을 요구한다. AC-E2E-01/AC-DEMO-01 및 이 Proof에 매핑된 결정적 기능·권한·History Case가 PASS여야 한다. CHK-13의 통제 fallback/공통 경로는 PASS, 실제 Live 결과는 별도 보고한다. 당일 외부장애로 AC-COL-10이 BLOCKED여도 Snapshot Demo 준비도는 별도 판단할 수 있다. Mandatory Security/Version/Evidence FAIL이나 Demo bypass가 있으면 DEMO_READY 불가다.
 
-**BASELINE_IMPLEMENTATION_ACCEPTED**는 모든 MANDATORY Case가 실행되고 PASS, MANDATORY FAIL/BLOCKED/NOT_RUN 0, Security/Scope·Version/Approval/Proceed·Package/Submission/Evidence 위반 0, 핵심 Persistence PASS, CHK-01~14 Coverage/Evidence 완료, AG-01 구현·검증 완료, Main/필수 예외 재현, Secret 노출·Demo 우회 없음일 때만 판정한다. Phase-1의 실제 Bizinfo 기능도 AC-COL-10으로 검증돼야 한다. BLOCKED_EXTERNAL을 필수항목 면제/PASS로 취급하지 않으며 실행 가능 시 재검증한다.
+**BASELINE_IMPLEMENTATION_ACCEPTED**는 모든 MANDATORY Case가 실행되고 PASS, MANDATORY FAIL/BLOCKED/NOT_RUN 0, Security/Scope·Version/Approval/Proceed·Package/Submission/Evidence 위반 0, 핵심 Persistence PASS, CHK-01~15 Coverage/Evidence 완료, AG-01 구현·검증 완료, Main/필수 예외 재현, Secret 노출·Demo 우회 없음일 때만 판정한다. Phase-1의 실제 Bizinfo 기능도 AC-COL-10으로 검증돼야 한다. BLOCKED_EXTERNAL을 필수항목 면제/PASS로 취급하지 않으며 실행 가능 시 재검증한다.
 
 DEMO_READY ≠ 전체 Production 운영승인, BASELINE_IMPLEMENTATION_ACCEPTED ≠ DMP Production Go-Live Approved다. 실제 DMP 계약/Company·File API, Production Backup 정책/SLA·대규모 부하·보안진단·개인정보/AI 계약·전국기관 운영은 별도 범위다. 이번 문서에서 수치/제품/새 규정을 추정하지 않는다.
 
@@ -357,7 +358,7 @@ Permission/Scope/State/Version/Persistence/idempotency/Schema/API·Domain 결과
 | --- | --- | --- |
 | A Spec/실행/수용 분리 | 1/12절 | 정의됨 |
 | B 기본 NOT_RUN | 모든 AC 표 | 정의됨 |
-| C CHK-01~14 매핑 | 11절 | 연결 |
+| C CHK-01~15 매핑 | 11절 | 연결 |
 | D 결정적 Snapshot E2E | AC-E2E-01 | 정의됨 |
 | E Live/Fixture 구분 | AC-COL-10/AC-EXT-01 | 정의됨 |
 | F Collector 중복 | AC-COL-03~04/AC-IDEM | 정의됨 |
@@ -393,3 +394,18 @@ Permission/Scope/State/Version/Persistence/idempotency/Schema/API·Domain 결과
 구현 전 해당 Slice의 AG-01 저장·Upload/권한·Version 계약, 선택한 Stack/Adapter, 실제 의미있는 Sanitized Fixture/공식근거 대응관계, 지정 승인/Package 확인요건을 구체화해야 한다. 외부전송 Adapter는 실제 계약/보안범위를 확인하고 미확정 Provider/Rate/Retry 수치를 추정하지 않는다. 이 준비사항은 설계 동결을 막는 새로운 구조적 Blocker가 아니다.
 
 **승인된 Phase-1 Stack으로 개발환경 확인/준비 및 Skeleton 단계 진행 가능한가: YES. 실제 시스템 Acceptance가 완료됐는가: NO — NOT_TESTED.**
+
+## 16. 전주기 MVP 증분 Acceptance (Decision-002)
+
+기존 AC 번호·Negative·Evidence·판정은 보존한다. 아래는 모두 MANDATORY/NOT_RUN이다. AC-E2E-01/AC-DEMO-01은 09 H01~32·CHK-15·SCENARIO-A~F를 포함한다. DEMO_READY/BASELINE_IMPLEMENTATION_ACCEPTED는 이 추가 검증까지 충족해야 한다. 기존 Slice 테스트를 전주기 PASS로 전용하지 않으며 SYSTEM ACCEPTANCE: NOT_TESTED를 유지한다.
+
+| ID | 실행 / Expected Result 및 Negative | 필수 Evidence | Result |
+| --- | --- | --- | --- |
+| AC-MVP-01 | E가 Company/Site 자유서술을 카테고리 미선택 상태로 저장·제출, 선택적 사진/자료 및 수정본 저장. Catalog 밖 요구 정상 등록, 원문·수정/제출 Version·파일 보존. Refresh/재로그인 유지, 후보 덮어쓰기·사진 AI 확인 위장 없음. 기존 파일 보안/기술 제한 유지 | API/PostgreSQL 조회·실제 파일·원문/Version/History·재로그인 Proof | NOT_RUN |
+| AC-MVP-02 | 실제 CapabilityVersion/Assessment로 단일·복수 조합·부분 적합·미매칭 검토. 제공/제외범위·Prerequisite/Evidence 일치, 해결/미해결 구분, 원문·사유 보존. 허위 서비스/자동 제안 생성 없음, Proposal 시도에 기존 Guard 적용. 합성 역량 DEMO 표시 | 입력/Catalog Version·후보/Review/Evidence·미생성/차단 Proof | NOT_RUN |
+| AC-MVP-03 | 서비스 적합이나 공고 없음/자격 충돌/공급조건 미확인 변형 검토. 목적/자격/제외/기간/비용/문서 요건 독립 확인, 서비스 적합≠공식 적격. 허위 공고 추천/자동 PROPOSABLE 없음, 사유·미확인 조건/확인업무 보존 | MatchInputSnapshot/Version·Source/Evidence·Review/Request/History | NOT_RUN |
+| AC-MVP-04 | 모호·부족 원문→검토→추가정보 요청/응답/검증. NEED_MORE_INFO 후보와 기존 검토결과 구분, Unknown을 충족/0/부적합으로 추정하지 않음. Blocking 해소 전 기존 Proposal/Proceed Gate 차단 | 원문/후보/Review/Request/Response Version·차단/보완 Proof | NOT_RUN |
+| AC-MVP-05 | 같은 선정 Case로 H16~32 및 Refresh/재로그인 실행. 실제 신청·Package·제출/증빙·평가·협약·수행·검수·정산·CLOSED·사후관리 Task 완료/Review 저장. 부족근거/선행조건 차단, 제안 승인으로 신청 확인 대체 불가. Mock/Seed 완료·Case 자동 재개 없음, DEMO와 공식 사실 구분 | Case ID·API/DB/파일·각 Stage/Task/Evidence/Actor/Audit·승인/확인 Version·CHK-15 | NOT_RUN |
+| AC-MVP-06 | 승인 후 중요변경 및 타기업 URL/API/파일/제안/승인 접근. 과거 승인 보존·새 Version/Impact·재승인 Guard, 서버 DENY·자료 분리·E/O 승인 대행 없음 | 기존 Approval/Proceed/Security Case 대응 실행·거부/History/Scope Proof | NOT_RUN |
+
+기존 미선정 분기 검증도 유지한다. Capability 자료·AG-01·단계별 근거/완료조건이 준비되지 않으면 BLOCKED로 기록한다. DEMO 외부 결과도 기존 공식성/권한 Guard를 임의 우회하지 않는다. 별도 최종 신청 승인 정책은 Decision-002의 PENDING이며 새 State/Enum/Role/API를 확정하지 않는다.
