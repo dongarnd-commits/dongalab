@@ -8,7 +8,7 @@
 
 ## 2. 프로젝트 최종 목표
 
-기업의 현황, 기업자료, 현장문제 및 개선요구를 파악하고 DATCO 서비스/Capability와 적합한 정부지원사업을 연결하는 **DATCO 정부지원사업 운영관리 웹 애플리케이션**을 구축한다.
+기업의 현황, 기업자료, 현장문제 및 개선요구를 파악하고 DATCO 서비스/Capability와 적합한 정부지원사업을 연결하는 **DATCO 정부지원사업 3자 매칭 및 전주기 운영관리 MVP**를 구축한다.
 
 공고 수집 → 공고/신청서식 분석 → 기업정보 확보 → 기업 개선과제 분석 → DATCO Capability 분석 → 정부지원사업 Matching → 부족정보 확인/요청 → 기업 응답 → DATCO 검토 → 제안 → 기업 확인/승인 → DATCO 추진확정 → Support Case 생성 → 신청준비 → 정부 공식포털 제출 → 접수결과/증빙 관리 → 평가 → 선정/미선정 → 협약 → 수행 → 검수 → 정산 → 사후관리를 하나의 업무 흐름으로 관리한다. 선정/미선정 이후의 분기는 Case Life Cycle에 따른다.
 
@@ -205,7 +205,7 @@ Intelligence는 분석 후보를 제공한다. Phase-1 세부 데이터 소유�
 
 대표기업은 동아테크놀로지이며 확인되지 않은 정보는 DEMO로 표시한다.
 
-기업마당 API 또는 검증 Snapshot → Collector → Notice/NoticeVersion → 전체 공고 조회 → 동아테크놀로지 선택 → 기업문서 업로드 → 기업정보 Candidate → Human Review → Company Fact → 개선과제 입력/자료 → Improvement Analysis → DATCO Capability Analysis → 3-way Matching → Missing Information → 기업 Information Request → 기업 사용자 응답 → DATCO Review → Proposal v1 → 기업 승인 → Proceed Confirmation → Support Case → Dynamic Application → Fact Mapping → Application Package → 공식포털 제출결과 입력 → 접수증 → 신청완료.
+기업마당 API 또는 검증 Snapshot → Collector → Notice/NoticeVersion → 전체 공고 조회 → 동아테크놀로지 선택 → 기업문서 업로드 → 기업정보 Candidate → Human Review → Company Fact → 개선과제 입력/자료 → Improvement Analysis → DATCO Capability Analysis → 3-way Matching → Missing Information → 기업 Information Request → 기업 사용자 응답 → DATCO Review → Proposal v1 → 기업 승인 → Proceed Confirmation → Support Case → Dynamic Application → Fact Mapping → Application Package → 공식포털 제출결과 입력 → 접수증 → 신청완료 → 평가·선정 결과 → 선정 시 협약 → 수행 → 검수 → 정산·종료 → 사후관리 Task 완료 및 이력. 미선정은 기존 종료/재검토 분기를 따른다.
 
 외부 제출결과와 증빙의 Demo 자료는 실제 제출 사실과 구분하여 표시한다.
 
@@ -291,3 +291,15 @@ API Key, Password, Token, 실제 .env, 기업 개인정보, 민감 원본문서,
 - Import / Export: 필요한 업무데이터의 관리자 Import/Export와 Demo/Test 데이터 이동 가능성을 Architecture/Test에서 고려한다. 공고 Collector Import와 업무데이터 Export를 동일 기능으로 취급하지 않는다.
 
 이 항목들의 Phase-1 논리 데이터/State/Action 기준은 `03_DATA_MODEL.md`와 `04_STATE_ACTION_MODEL.md`를 따르며, 물리 Schema/제품과 운영수치는 구현·운영 단계의 미확정 사항으로 유지한다. 구조와 복구 경계는 System Architecture의 운영 안정성 절을 따른다.
+
+## 38. 전주기 MVP 최소 동기화 (Decision-002)
+
+2026-10-13 사용자 승인 범위의 보완이며 01~07의 Architecture/Data/State/Permission/Provider 계약은 유지한다. 더미 기업 데이터로도 독립 실행형 Web/API/PostgreSQL/Private File의 저장·조회·권한·Version·전이·Task/Evidence/Audit가 실제 동작해야 한다. Mock 화면·하드코딩 성공 결과만으로 완료하지 않는다. 공고는 실제 Live 또는 명시적 검증 Snapshot을 사용한다. 실제 기업 DB/DMP 연동은 MVP 선행조건이 아니며 향후 DMP 교체 경계는 유지한다.
+
+개선 요구사항은 산업·업무·공정·설비나 DATCO Capability 분류로 제한하지 않는다. 생산, 품질, 영업, 마케팅, 회계·문서업무, 물류, 고객 관리, 데이터 활용, 정보보안 등은 예시이며 제한 목록이 아니다. 자유서술을 기본으로 선택적 사진·문서·자료·보조정보를 받으며 Capability/업무 카테고리를 필수로 강제하지 않는다. Company/Site 식별·접근 권한·파일 보안·용량·형식 등 기존 기술적 제한은 유지한다. 원문과 수정 Version을 보존하고 구조화·분석 후보·사람 확인 결과를 구분한다. 사진 업로드를 AI 이해/확정으로 표시하지 않으며 OCR/이미지 AI는 필수 선행조건이 아니다.
+
+Capability는 실제 제공 기능·해결문제·서비스 조합·적용조건·제공/제외범위·필요 데이터/환경·Evidence·확인 상태·Version을 기존 Catalog/Assessment로 관리한다. 확인 자료 우선, 합성 역량은 DEMO 표시이며 미제공 기능을 만들어 추천하지 않는다. 적합/부분 적합/정보부족/미매칭은 기존 FIT/PARTIAL_FIT/NEED_MORE_INFO/MISMATCH 후보와 Human Review로 표현하는 정상 업무 결과다. 부분 적합은 해결/미해결 범위를 구분하고 정보부족은 추가정보 요청/검토 대기로 연결한다. 미매칭 원문·사유·이력을 보존하고 억지 추천·근거 없는 제안서 자동 생성을 하지 않는다. 새 State/Enum은 추가하지 않는다.
+
+서비스 적합과 정부사업 적합은 독립 검토한다. 공고 목적·범위, 기업 자격·제외조건, 요구되는 DATCO 공급자격/등록, 기간, 비용·자부담, 제출자료·미확인 조건을 Source/Evidence/입력 Version과 대조한다. 적합 공고가 확인되지 않으면 정부사업 연계/공식 적격으로 표시하지 않는다. 기존 MatchReview·Proposal·Proceed Guard를 유지한다.
+
+필수 시연은 자유입력부터 같은 선정 Case의 협약·수행·검수·정산·종료·사후관리 Task 완료까지다. Proposal 승인과 Application 확인/기업 Package 확인/Ready 판정은 별개이며 별도 최종 신청 승인 정책은 결정 대기다. 외부 제출은 담당자가 수행하고 시스템은 결과/증빙만 관리한다. 가상 접수·평가·선정·단계 증빙은 DEMO로 표시하며 실제 공식 사실로 위장하거나 기존 Guard를 우회하지 않는다.
