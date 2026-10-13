@@ -27,6 +27,16 @@ export function officialUrl(version: Version): string | undefined {
   } catch { return; }
 }
 export function text(value: unknown, fallback = "정보 없음"): string { return typeof value === "string" && value.trim() ? value : fallback; }
+// Display projection only: never render untrusted summary HTML as live markup.
+export function summaryText(value: unknown) {
+  const raw = text(value);
+  const separated = raw.replace(/<(?:br\b[^>]*|\/(?:p|div|li|h[1-6])\s*)>/gi, "\n");
+  if (typeof document === "undefined") return separated.replace(/<[^>]*>/g, "");
+  const template = document.createElement("template");
+  template.innerHTML = separated;
+  template.content.querySelectorAll("script,style").forEach(node => node.remove());
+  return (template.content.textContent ?? "").split("\n").map(line => line.trim()).filter(Boolean).join("\n");
+}
 export function record(value: unknown): Record<string, unknown> { return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}; }
 export function provenance(source: Source) { try { return record(JSON.parse(source.provenance)); } catch { return {}; } }
 export function dateLabel(value: unknown) {
@@ -73,6 +83,11 @@ const errors: Record<string, string> = {
   MISSING_REQUIRED_INFORMATION: "상충하는 근거에 대한 검토 의견이 필요합니다.",
   TRANSITION_NOT_ALLOWED: "현재 상태에서는 실행할 수 없습니다. 저장된 결과를 확인해 주세요.",
   STORAGE_UNAVAILABLE: "저장소에 연결할 수 없습니다. 잠시 후 다시 조회해 주세요.",
+  RULE_ANALYSIS_LIMITED: "명시된 한국어 절의 일부 요건만 분석했습니다. 표·예외·전체 범위는 원문 검토가 필요합니다.",
+  REQUIREMENT_STRUCTURE_NOT_RECOGNIZED: "텍스트 추출은 성공했으나 지원하는 요건 구조를 인식하지 못했습니다. 부적격 판정이 아닙니다.",
+  TEXT_EXTRACTION_EMPTY: "추출 가능한 텍스트가 없습니다. 원문을 직접 검토해 주세요.",
+  TEXT_EXTRACTION_FAILED: "텍스트 추출에 실패했습니다. 원문을 직접 검토해 주세요.",
+  SOURCE_UNSUPPORTED: "현재 지원하지 않는 원문 형식입니다. 자료 보완 또는 직접 검토가 필요합니다.",
   SOURCE_NOT_ACQUIRED: "자료를 확보하지 못했습니다.", SOURCE_FORMAT_UNSUPPORTED: "현재 지원하지 않는 파일 형식입니다.",
   SOURCE_NOT_VALID_PDF: "유효한 PDF로 확인되지 않았습니다.", SOURCE_NEEDS_MANUAL_REVIEW: "자료를 직접 확인해야 합니다.",
   SOURCE_MISSING_OR_UNREADABLE: "자료가 미확보되었거나 읽을 수 없습니다.", PARTIAL_PAGE_EXTRACTION: "일부 페이지를 추출하지 못했습니다.",

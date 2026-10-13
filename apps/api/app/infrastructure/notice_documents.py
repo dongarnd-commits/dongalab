@@ -38,7 +38,7 @@ class LocalPrivateFiles:
 
     def verify_location(self,source,location):
         spans=extract(source,self.read(source["storage_key"],source["digest"]))
-        if not any(span.text==location["text"] and span.page==location["page"] and span.descriptor==location["descriptor"] for span in spans):
+        if not evidence_exists(spans, Span(source["id"],location["descriptor"],location["text"],location["page"])):
             raise Denied("REQUIRED_EVIDENCE_MISSING")
 
 class HTMLSections(HTMLParser):
@@ -102,8 +102,8 @@ def extract_document(source,content):
     raise Denied("SOURCE_UNSUPPORTED")
 
 class DeterministicAnalysis:
-    # Only explicitly labelled source clauses are supported by this initial adapter.
-    version="labelled-clauses-v1"
+    # English labelled clauses and bounded Korean heading/body analysis.
+    version="labelled-clauses-ko-v3"
     prefixes={
         "Eligibility:":"ELIGIBILITY_REQUIREMENT",
         "Support scope:":"SUPPORT_SCOPE",
@@ -118,4 +118,31 @@ class DeterministicAnalysis:
                 if span.text.startswith(prefix):
                     outputs.append(CandidateOutput(kind,span.text[len(prefix):].strip(),
                         f"Direct source clause labelled {prefix}; human verification required.",span))
-        return outputs
+        from app.infrastructure.notice_korean import analyze_korean
+        return outputs + analyze_korean(spans)
+
+    def diagnostics(self, spans, outputs):
+        from app.infrastructure.notice_korean import diagnostics
+        return diagnostics(spans, outputs)
+
+
+def evidence_range(spans):
+    """Keep exact extracted lines; never normalize the saved evidence."""
+    if len(spans)==1:
+        return spans[0]
+    return Span(spans[0].source_id, spans[0].descriptor+" through "+spans[-1].descriptor,
+        "\n".join(s.text for s in spans), spans[0].page)
+
+
+def evidence_exists(spans, proposed):
+    if proposed in spans:
+        return True
+    for start, span in enumerate(spans):
+        if proposed.descriptor.startswith(span.descriptor+" through "):
+            for end in range(start+1, min(len(spans),start+160)):
+                last=spans[end]
+                if last.source_id!=span.source_id or last.page!=span.page:
+                    break
+                if evidence_range(spans[start:end+1])==proposed:
+                    return True
+    return False

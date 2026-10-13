@@ -146,7 +146,7 @@ Missing sources remain visible and confirmed scope is limited to selected clause
 Conflicting period clauses require an explicit human resolution note and retain both source values.
 Use the source download action to fetch immutable content through authorized Backend access; raw storage paths are never public URLs.
 
-The deterministic adapter handles explicitly labelled clauses only. General notice interpretation is not implemented.
+The deterministic adapter preserves English labelled clauses and supports bounded Korean heading/body clauses. General notice interpretation is not implemented.
 HTML extraction is for the inspectable fixtures; general government portal selectors are not established.
 pypdf 6.20.0 extracts the supplied text PDF's real pages. Image/scanned, encrypted, corrupted and empty documents require additional source/manual review; OCR and Korean PDF font accuracy are not claimed.
 Binary files live under ignored storage/private/notice; source/file metadata and evidence locations live in PostgreSQL.
@@ -220,8 +220,8 @@ and unauthorized requests. Controlled Live response tests are test doubles and d
 A limited real validation on 2026-10-12 performed 4 requests for one API record and its 3 references:
 metadata/Notice persistence and detail HTML succeeded; the API filename metadata identifies ZIP and HWP references, which were not valid supported PDFs and remain missing.
 The job is PARTIAL due to acquisition failures and the explicit one-page limit. Live PDF/whole-document analysis is not verified.
-The existing deterministic analyser still handles labelled clauses only; real Korean portal interpretation, OCR, HWP/HWPX,
-production heartbeat, scheduling and other business domains are outside this slice.
+The analyser now supports bounded Korean heading/body clauses in addition to English labels; general Korean portal interpretation, OCR, HWP/HWPX,
+production heartbeat, scheduling and other business domains remain outside this slice.
 
 Formal docs/10 acceptance stays NOT_RUN / system NOT_TESTED. No docs/00~11 or Probe artifacts are changed.
 
@@ -238,3 +238,65 @@ Basic requirement extraction is the existing limited labelled-clause rule adapte
 Raw IDs, provenance JSON and execution data are collapsed under technical details. Earlier versions, analysis and confirmation records remain available.
 Existing list/detail APIs, Backend guards and source download permissions are unchanged; no schema, contract or Worker change is required.
 Catalog detail hydration is for the current local slice; large-scale server pagination and aggregation are outside this UI change.
+
+
+## Korean notice requirement slice
+
+`labelled-clauses-ko-v3` recognizes explicit Korean headings and their body within each Source,
+including numbered headings, bullet summaries, split period text, PDF pages and submission tables.
+It maps eligibility, application period, support scope, required documents, exclusion conditions
+(`CONDITIONAL_REQUIREMENT`) and evaluation criteria into existing Candidate kinds. Values remain
+verbatim source text; complex table cells, legal exceptions and page continuations require human review.
+Keyword mentions, heading-only contents and attachment-reference-only headings are not requirements.
+
+Multiple-line Evidence keeps exact extracted text and a bounded first/last block or line descriptor,
+within one Source and PDF page. FileProvider reconstructs the same contiguous range before confirmation;
+old single-line HTML/PDF locations remain valid. HTML extraction boundaries are unchanged to protect
+historical evidence. This does not add DOM selectors, coordinates, OCR, HWP/HWPX or ZIP support.
+
+Worker diagnostics reuse `AnalysisRun.missing`: acquired/extracted text with no recognized requirements
+is distinguished from missing/unsupported files and extraction failure. A zero-candidate run stays FAILED
+with `NO_VALID_REQUIREMENT_CANDIDATE`; a diagnostic Run preserves inspected scope without candidates.
+Korean rule coverage remains PARTIAL with recognized/unrecognized kinds and manual-review limitations;
+neither execution status nor an unrecognized field is an eligibility decision. Invalid provider output
+still cannot be published. Successful English labelled fixture statuses retain their previous behavior.
+
+Verification uses stored public Live sources read-only and copies them into rollback-only PostgreSQL
+schemas. No original Live NoticeVersion, Candidate, Review or Confirmed Requirement is changed.
+The opt-in local real-source regression requires both previously acquired notices and fails if inputs
+are missing; no full public raw document, contact data or PDF is added to Git.
+
+~~~powershell
+cd apps/api
+$env:DATCO_TEST_STORED_KO = "1"
+uv run pytest
+Remove-Item Env:DATCO_TEST_STORED_KO
+cd ../web
+npm.cmd run lint
+npm.cmd run build
+npm.cmd run test:e2e
+~~~
+
+`tests/korean-requirements.spec.ts` starts its own localhost test API using copies of stored Korean
+HTML/PDF input in an isolated schema. Browser requests are forwarded to the actual test API, which uses
+existing session/Origin guards and the same `process_one` Worker path. The test checks source download,
+PDF page 15 evidence, human confirmation and refresh; shutdown rolls back the entire test schema.
+The existing runtime API/Web/Worker are reused without termination. A running production-like Worker
+keeps its already imported adapter until the operator restarts it; new isolated test executions use v3.
+No Schema, API Contract, Permission, State, Dependency or docs/00~11 change is required.
+Formal system acceptance remains NOT_TESTED; this slice does not implement downstream matching.
+
+
+### Korean accuracy review
+
+Period conflict comparison recognizes explicit equivalent date formats, split HTML lines and a short
+quoted year with an omitted end year. An unspecified cutoff time is unknown; a PDF-only explicit time
+remains in its original Candidate/Evidence. Different dates or conflicting explicit times remain conflicts,
+as do unparseable/conditional periods. The announcement period is not substituted for the application period.
+All source expressions and locations are retained, including when comparison finds no conflict.
+
+Scoped overview clauses retain their original department/track wording (for example a named award division)
+and are not converted into a notice-wide eligibility condition. Downstream matching must use reviewed
+scope and exceptions, not flatten these texts into common requirements.
+Summary HTML is projected into inert plain text for display. Long required-document content can be expanded,
+with original line breaks; stored Candidate, Evidence and historical review snapshots are unchanged.
