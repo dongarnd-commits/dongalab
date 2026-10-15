@@ -301,3 +301,9 @@ Provider/Library/수치 선택은 해당 실행 구현 전에 필요한 선택�
 08~10은 기존 후속문서 책임을 구체화하여 개발범위를 닫는 실행계약이며 새로운 Architecture 재설계나 과도한 대형 문서로 확장하지 않는다. 08_SCREEN_ACTION_SPEC은 실제 화면/Screen Group·표시 데이터·Action/Button·Visibility/Disabled Reason·Backend Action 연결, 09_DEMO_SCENARIO는 1차 Standalone E2E 시연범위·Demo/Seed/Snapshot Fixture·정상/핵심 예외 시나리오, 10_TEST_ACCEPTANCE는 정상/예외/권한/Version/Evidence/Persistence의 실행 Test와 구현 완료 Acceptance 기준을 다룬다.
 
 **현재 00~07 기준으로 08_SCREEN_ACTION_SPEC 설계 착수: READY.** Intelligence 각 기능은 최소 구현 착수 수준으로 설계되었으나, 프로젝트 전체 애플리케이션 개발 착수는 08_SCREEN_ACTION_SPEC, 09_DEMO_SCENARIO, 10_TEST_ACCEPTANCE 완료 후 최종 판단한다. 다음 작업은 **docs/08_SCREEN_ACTION_SPEC.md 신규 설계**다. 이 문서는 Stack 선택이나 구현을 실제 수행하지 않는다.
+
+## Decision-004 실행 계보와 자동화 설계 경계
+
+공통 Run/Candidate/Review를 CapabilityAssessment 및 SupportMatching에 실제 typed 관계로 연결한다. 동기 평가에는 Job/Notice SourceLocation을 강제하지 않으며 실제 입력/설정/실행 Actor·시각·후보/Evidence와 검토를 고정한다. Assessment는 ImprovementVersion × CapabilityVersion이고 실제 조합에 귀속할 때만 CompositionVersion을 연결한다. 재평가·새 매칭 실행은 새 Run/후보이며 기존 검토를 보존한다. 공통 Review 유형은 업무 outcome을 위장하거나 대체하지 않는다. Notice 분기의 기존 공식 Source/Evidence/Review/Version 조건은 유지한다.
+
+Decision-004의 R-07 승인은 상세설계만이다. 기존 IN/NOT_IN Comparator와 Confirmed 입력/UNKNOWN/MISMATCH 후보·Human Review Guard는 유지한다. 자동 증빙 추출/범용 조건 정규화/AST/지역 계층/숫자·기간·예외 평가는 reviews/R07_REVIEWED_CONDITION_DESIGN.md의 제안이며 운영용 구현 완료로 보지 않는다. 자동 추출 후보는 Confirmed Fact/ReviewedConditionVersion이 아니다. 필수 공식 Human Review는 자동 정합성 검사로 제거하지 않는다. 연구원 Company/Fact/Improvement Provider 미연결 시 정상 503을 유지한다.

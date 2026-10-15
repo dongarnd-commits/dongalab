@@ -1,7 +1,7 @@
 # DATCO Phase-1 Skeleton
 
 Minimal runtime path: Browser -> Next.js -> FastAPI -> SQLAlchemy/Psycopg -> PostgreSQL.
-The first Notice Requirement review slice adds local session, controlled source files, persistent analysis jobs and human confirmation. Other business domains remain unimplemented.
+The first Notice Requirement review slice adds local session, controlled source files, persistent analysis jobs and human confirmation. Capability Catalog, Composition and reviewed Matching foundations are also available; Proposal production and downstream lifecycle domains remain unimplemented.
 Approved stack: [Decision-001](docs/11_DECISION_LOG.md). Product and module boundaries remain in [Baseline](docs/00_PROJECT_BASELINE.md) and [Architecture](docs/01_SYSTEM_ARCHITECTURE.md).
 
 ## Requirements
@@ -300,3 +300,86 @@ and are not converted into a notice-wide eligibility condition. Downstream match
 scope and exceptions, not flatten these texts into common requirements.
 Summary HTML is projected into inert plain text for display. Long required-document content can be expanded,
 with original line breaks; stored Candidate, Evidence and historical review snapshots are unchanged.
+
+## Capability Catalog development slice
+
+The approved Inventory/Capability/Composition extension uses additive migration `b730cf01a649`.
+The private source is `_local_inputs/dmp_features_649.json`; it is ignored by Git. Never synthesize the 649 inputs.
+From `apps/api`, validate it with `uv run python -m app.infrastructure.dmp_inventory`, apply
+`uv run alembic upgrade head` to the explicitly verified local development DB, then invoke
+`uv run python -m app.capability.import_source`. Import is atomic and identical inputs replay without new revisions.
+This CLI records a system import, not a human Capability approval.
+
+`/capability` contains DMP inventory, Capability management, Composer and matching review tabs.
+The API prefix is `/capability`; web requests go through `/api/capability`.
+`DATCO_ADMIN` can save/publish Catalog versions; `DATCO_OPERATOR` can browse and use authorized business context.
+An existing local account with the appropriate role is required. The slice does not silently create production Admins.
+The proxy uses `CAPABILITY_API_ORIGIN`, then `API_ORIGIN`, then the normal API default.
+For this local validation session, a separate project API runs at port 8011; its local proxy setting is untracked.
+Existing API/Worker processes are not stopped.
+
+Company/Improvement authority is provided through `ImprovementReader`. Until the collaborator's authoritative
+reader is connected, normal runtime composition and matching commands fail closed with
+`IMPROVEMENT_PROVIDER_NOT_CONNECTED`; general Catalog search is available. Browser/integration fixtures use
+rollback-only PostgreSQL schemas and explicit TEST Company context, never normal-runtime fake Companies.
+Composition versions preserve exact Capability/Feature revisions and coverage. Candidates retain
+`NEED_MORE_INFO` until conditions are reviewed; this slice does not invent eligibility/score policy or implement Proposal/Case.
+
+New regression files: `test_dmp_inventory.py`, `test_confirmed_notice_reader.py`, `test_capability_catalog.py`,
+and `capability.spec.ts`. The browser harness prints ephemeral credentials only to its private test pipe;
+never save these as assets or user accounts. Screenshots are under ignored `storage/private/runtime/capability-browser`.
+
+
+### Isolated test execution
+
+Writing tests now fail closed unless the dedicated runner verifies an actual `datco_test_*` database
+and its restricted role. Existing development Web/API/Worker processes are never reused by the runner.
+From `apps/api` in PowerShell:
+
+```powershell
+$env:PYTHONPATH = "."
+.venv/Scripts/python.exe tests/isolated_run.py verify
+```
+
+`baseline` records the pre-fix scenario results; `ui` repeats browser/lint/build/type checks when only
+Web isolation changes. The runner creates a nonce database/role, migrates that database, reads existing
+public Korean documents without changing them, and prepares explicit test copies and synthetic accounts.
+It launches its own API/Worker/Web, checks the real DB identity and Proxy Import, and removes only its
+owned database/role/processes. Shared-table before/after fingerprints and logs are under ignored
+`storage/private/runtime/test-isolation/<nonce>`. Credentials and database URLs are never logged.
+Test-only adapters use the normal authentication and worker functions; normal runtime has no test routes.
+Pure tests can still run with `uv run pytest -m "not integration"`.
+R-04 typed analysis lineage and the bounded R-07 IN/NOT_IN Comparator are implemented.
+The R-07 general condition engine is proposed design only; scenario/technical success does not mean full system acceptance.
+
+### Sharing and reproducing this development snapshot
+
+The actual DMP source is **not included in Git**. Obtain it through a separately approved private channel
+and place it at `_local_inputs/dmp_features_649.json` before import or inventory-dependent tests.
+Expected SHA-256: `28b1967ed77360d0fcc6d5525f6d7395fd899865b2e01e358402edc347d1d368`.
+From `apps/api`, run `uv run python -m app.infrastructure.dmp_inventory` to verify the hash, 649 features,
+10 systems and 88 system/group pairs. After reviewing the target **development** database and migrations,
+run `uv run python -m app.capability.import_source`. A fresh clone has no prepopulated inventory;
+missing source data must not be replaced with fabricated 649-item data.
+
+Current Alembic head is `c941a0042026`, following inventory/catalog/composition/matching revision
+`b730cf01a649`. The new typed lineage migration preserves legacy and Notice history; downgrade refuses
+unsafe loss of typed history. This sharing operation does not migrate the normal business database.
+
+Use `tests/isolated_run.py backend` and then `tests/isolated_run.py ui` from `apps/api` with `PYTHONPATH=.`
+to run the backend/integration/migration and browser/lint/build/type checks separately. Both use disposable,
+restricted PostgreSQL test databases. The runner also requires the two previously stored public Korean
+notice inputs; a fresh environment without those inputs fails closed instead of reporting a pass.
+Normal database writing tests and reuse of existing Web/API/Worker processes are prohibited.
+
+Verified on 2026-10-16 before this documentation-only sharing update: Backend 199 passed / 1 skipped,
+Integration 123 passed / 1 skipped, Playwright 20 passed / 1 skipped; zero failures. Migration/model,
+lint/build, API types, isolated resource cleanup and unchanged shared-DB fingerprints passed.
+The backend skip requires explicit stored-source opt-in; the browser skip requires a deliberately unavailable API.
+Private runtime evidence is not published. Reviewable test implementations are included in this branch.
+
+Matching exposes only a read-only Proposal creation-conditions check. Actual Company/Fact/Improvement
+Provider integration, general R-07 region/age/amount/compound-condition evaluation, operational document
+extraction, Proposal creation/review/version/enterprise approval/DOCX/PDF, and Phase 1/2 integrated E2E remain
+unfinished. `SYSTEM_ACCEPTANCE: NOT_TESTED`. See `docs/reviews/DATCO_PHASE1_PHASE2_E2E_GAP.md` and
+`docs/reviews/R07_REVIEWED_CONDITION_DESIGN.md`; proposed design is not an approved implementation contract.

@@ -96,3 +96,30 @@ PostgreSQL 확정은 03의 94 Logical Entity를 94 Physical Table로 자동 생�
 - 별도 최종 신청 승인 필요 여부 및 기존 CONFIRM_APPLICATION/CONFIRM_COMPANY_PACKAGE/MARK_PACKAGE_READY 외 Actor·횟수·재확인 정책: **PENDING**. 제안 승인과 신청 문서 확인을 분리하고 05의 기존 권한/Open Decision 유지.
 - 사업별 협약·수행·검수·정산·사후관리 Task/Evidence·완료조건 및 의미 있는 Demo 자료 준비: **PENDING**. 미정 조건을 충족으로 추정하거나 단계 스킵하지 않음.
 - 실제 DATCO 자료/확인 상태, 기업 입력 AG-01 Slice 계약 및 실제 구현 충족: **확인 필요**. 다른 연구원의 Company/Site/Intake/Fact/Improvement 코드나 Feature Branch를 변경/재작성하지 않음.
+
+## Decision-003 — Capability Catalog 개발 재개 및 최소 논리 계약 확장
+
+- Status: **ACCEPTED — 사용자 명시 승인 범위에 한정**
+- Date: **2026-10-14**
+- 근거: 「DATCO Capability Catalog 3단계 개발 재개 — 승인된 데이터 계약 적용 및 실제 기능 구현」의 사용자 승인.
+- 승인 범위: Feature Root/Revision/Import, Feature–CapabilityVersion, 기업별 Composition/Version·복수 구성·Coverage, Matching의 정확한 조합 Version 참조 및 해당 물리 구현·API·Web·테스트.
+
+기존 Architecture/State/Permission/Approval/Proposal/Case 정책은 유지한다. 기능 ID는 원천의 명시적 해시 규칙을 검증한다. 실제 649개 원천은 로컬 입력으로 보존하고 Git에서 제외한다. 신규 논리 관계는 03의 승인 확장 절과 동기화한다. 과거 Decision-001/002 및 승인·Version·Evidence 이력을 변경하지 않는다.
+
+기업 입력·Membership의 권위 있는 제공자가 없는 경우 기존 Company Scope 검사를 우회하지 않으며 테스트용 기업 Context를 정상 실행에 넣지 않는다. 기존 Notice 분석기는 유지하고 확정 요건 소비 Adapter를 재사용한다. 미확정 자격판정·점수산식·선정확률·새 공식 승인 정책은 승인 범위 밖이며 후보/근거·Human Review만 구현한다. 실제 Proposal/Case 전체, DMP 실서비스 연동·정부 포털 자동제출·LLM/Vector DB 도입은 포함하지 않는다.
+
+실제 기업 제공자 연결과 자격·부분적합 집계정책은 PENDING이다. 문서 승인·구현·개별 테스트는 전체 SYSTEM ACCEPTANCE 완료를 의미하지 않는다. 이번 지시는 Commit/Push/Merge/PR 생성을 허용하지 않는다.
+
+## Decision-004 — 공통 Typed 분석 계보 구현 및 범용 조건 자동화 상세설계
+
+- Status: **ACCEPTED — R-04 구현 / R-07 상세설계에 한정**
+- Date: **2026-10-14**
+- 근거: 사용자의 「DATCO R-04 공통 분석 계보 구현 + R-07 자동화 기반 범용 정부지원사업 조건 매칭 상세설계」 최종 통합 명령의 명시적 승인 및 보완 조건.
+
+기존 공통 AnalysisRun/Candidate/Review에 Notice/CapabilityAssessment/SupportMatching typed 관계를 구현한다. Assessment의 입력은 ImprovementVersion × CapabilityVersion이며 CompositionVersion은 실제 조합에 연결될 때만 선택적으로 참조한다. 재분석은 새 불변 Run/후보를 생성하고 과거 Review를 보존한다. Notice 필수 Version/Attempt, 공식 검토 유일성, Source/Evidence/이력을 보호한다. 동기 분석에 가짜 Job/NoticeVersion/SourceLocation을 만들지 않는다. 기존 미연결 Capability/Matching 이력은 legacy로 보존하고 가짜 계보로 보정하지 않는다.
+
+공통 물리 관계/FK/Check/Index/필요한 deferred 무결성, 새 Alembic Migration, 서비스/API/계보 조회/최소 UI/생성 타입/격리 테스트 및 docs/03·07 동기화를 승인한다. 기존 Migration은 수정하지 않는다. 실제 존재하는 DB 대상만 FK로 연결하며 외부 Improvement/Fact는 권위 있는 Provider가 Scope/Version/Evidence를 검증한다. 동일 입력 재요청은 멱등 처리하고 실제 재평가·재검토는 별도 이력으로 기록한다.
+
+R-07의 자동 증빙 추출·공고 구조화·범용 Condition AST·지역/업종/기간/예외·3값 논리·Human Review/DTO/Provider/UI/Test는 **상세설계만 승인**한다. 운영용 R-07 Migration/자동 판정정책/새 업무 State·Role·Permission/OCR·LLM Provider 구현은 승인하지 않는다. 기존 Comparator를 유지한다. 다른 연구원 Provider 통합은 대기하며 정상 환경의 503 차단을 유지한다.
+
+Decision-001~003, 기존 Architecture/업무 상태·권한·Human Review·공식 승인 Guard를 보존한다. 운영 DB 적용·데이터 삭제·Git Stage/Commit/Push/Merge/PR은 승인 범위 밖이다. 문서 승인과 개별 회귀 PASS는 SYSTEM ACCEPTANCE 완료가 아니다.

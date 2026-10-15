@@ -170,7 +170,7 @@ export default function Review() {
     return (!term || (n.title + " " + text(version?.metadata.agency, "")).toLocaleLowerCase().includes(term)) && (demoContext ? (!mode || (mode === "LIVE" ? version?.mode === "LIVE" : !!version && isDemoMode(version.mode))) : version?.mode === "LIVE") && (!reviewFilter || reviewLabel(version) === reviewFilter);
   });
   return <div className="operator-app">
-    <aside className="operator-sidebar"><a className="brand" href="/notice">DATCO<span>정부지원사업 운영관리</span></a><p className="sidebar-caption">공고 업무</p>
+    <aside className="operator-sidebar"><a className="brand" href="/notice">DATCO<span>정부지원사업 운영관리</span></a><a href="/capability" style={{color:"inherit"}}>역량·서비스 조합</a><p className="sidebar-caption">공고 업무</p>
       <nav aria-label="공고 업무 메뉴"><button className={view === "list" ? "active" : ""} aria-current={view === "list" ? "page" : undefined} onClick={() => navigate("list")}>공고 목록</button><button className={view === "review" ? "active" : ""} aria-current={view === "review" ? "page" : undefined} onClick={() => navigate("review")}>공고 상세·요건 검토</button></nav>
       {actor?.role === "DATCO_OPERATOR" && <><p className="sidebar-caption">운영 도구</p><nav aria-label="운영 도구"><button className={view === "collection" ? "active" : ""} aria-current={view === "collection" ? "page" : undefined} onClick={() => navigate("collection")}>공고 수집관리</button></nav><details className="demo-entry"><summary>테스트·시연</summary><button onClick={() => navigate("list", "", true)}>테스트·시연 모드 열기</button></details></>}
       <div className="sidebar-footer">원천 근거 → 분석 후보<br />사람 검토 → 선택 요건 확정</div></aside>

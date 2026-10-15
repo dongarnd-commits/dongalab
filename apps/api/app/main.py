@@ -29,3 +29,6 @@ async def input_error(request,exc):
 @app.exception_handler(SQLAlchemyError)
 async def storage_error(request,exc):
     return JSONResponse(status_code=503,content=ErrorResponse(reason="STORAGE_UNAVAILABLE").model_dump())
+
+from app.api.capability import router as capability_router
+app.include_router(capability_router)

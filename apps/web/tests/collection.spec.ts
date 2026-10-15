@@ -1,10 +1,6 @@
 import { test, expect } from "@playwright/test";
-import { readFileSync } from "node:fs";
-function account() {
-  const env = readFileSync("../../.env", "utf8");
-  const value = (key: string) => env.split(/\r?\n/).find(line => line.startsWith(key + "="))?.slice(key.length + 1) ?? "";
-  return { username: value("DEMO_OPERATOR_USER"), password: value("DEMO_OPERATOR_PASSWORD") };
-}
+import { isolatedAccount } from "./isolated-account";
+const account = isolatedAccount;
 test("Operator snapshot collection persists, deduplicates and enters existing human review", async ({ page }) => {
   const credentials = account();
   await page.route("**/api/notice/collections", async route => {
@@ -66,7 +62,7 @@ test("Operator snapshot collection persists, deduplicates and enters existing hu
   expect(latest.versions[0].confirmed.some((v: { id: string }) => v.id === requirement.id)).toBeTruthy();
 });
 test("unauthenticated browser cannot request or read collection using a spoofed role", async ({ request }) => {
-  const headers = { "Origin": "http://localhost:3000", "X-Role": "DATCO_OPERATOR" };
+  const headers = { "Origin": process.env.WEB_ORIGIN!, "X-Role": "DATCO_OPERATOR" };
   const result = await request.post("/api/notice/collections", { headers, data: { mode: "SNAPSHOT", idempotency_key: "spoofed-browser-role" } });
   expect(result.status()).toBe(401);
   expect((await result.json()).reason).toBe("AUTHENTICATION_REQUIRED");

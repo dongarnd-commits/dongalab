@@ -657,3 +657,28 @@ erDiagram
 
 현재 04는 State/Transition/Guard/Action, 05는 Role/Permission/Scope, 06은 실제 API Mapping/Pagination/Retry/Duplicate/Change/Attachment, 07은 Extraction/OCR/LLM/Analyzer/Candidate/Confidence의 Phase-1 기준을 담당한다. 08은 Screen/Action과 조회·변경 Object, 09는 Demo Scenario/Fixture·시연 Data, 10은 Test/Acceptance와 Constraint/Version/Scope/Evidence/Recovery 실행 검증 기준을 담당한다.
 **현재 03 Logical Data Model은 Phase-1 구현 기준으로 사용 가능하다.** Physical Schema는 Decision-001의 PostgreSQL/SQLAlchemy/Alembic 기준 아래 각 Vertical Slice에서 필요한 범위만 구현하고, State Guard와 데이터 무결성을 함께 검증한다.
+
+## 승인된 Capability Slice 확장 — 2026-10-14 / Decision-003
+
+사용자는 Feature Inventory Root/Revision/Import, Feature–CapabilityVersion 관계, 기업별 Composition/Version·복수 구성·Coverage 및 Matching의 정확한 조합 Version 참조를 명시 승인했다. 기존 Capability/Assessment/Match/Proposal 의미, 01/02/04/05/07 계약과 역할·State·Approval 정책은 유지한다.
+
+- Feature Root는 원천 Feature ID와 내부 ID를 분리한다. 원천 ID는 UTF-8(system + U+001F + feature_group + U+001F + name)의 SHA-256 앞 16 hex 문자 대문자에 DMP-를 붙인다. 설명·출처·원천 행·제공 전제는 불변 Revision으로 보존한다.
+- Import는 원본 digest/metadata 및 정확한 Feature Revision membership을 가진다. 같은 원본 재Import는 동일 Snapshot, 변경 내용은 새 Revision이며 과거 참조를 삭제하지 않는다.
+- CapabilityVersion.functions는 Feature Revision N:M typed 관계로 구현한다. 발행 근거는 연결된 원천 Revision과 관리자의 검토 설명이며 원천 기능 제공 가능성과 기업 도입조건을 구분한다. 작성본과 불변 발행본을 분리한다.
+- Composition Root는 권위 있는 입력 제공자가 검증한 Company 범위에 속한다. Version은 정확한 ImprovementVersion, CapabilityVersion 집합, 선택·제외 Feature 및 요구사항별 역할/해결·미해결/부족정보 Coverage를 보존한다. Case 생성 전 존재하며 ApplicationPackage가 아니다.
+- Composition 수정은 새 Version이다. expected_version, 재송 fingerprint, Transaction/Audit를 적용한다. 기능 중복은 Revision으로 제거하고 같은 Root의 다른 Revision 충돌은 자동 덮어쓰지 않는다.
+- MatchInputSnapshot은 검증한 CompositionVersion과 Confirmed RequirementVersion 및 당시 입력/Evidence를 고정한다. Snapshot/후보/Review는 별도 기록이며 기존 Fit/Review 의미를 유지한다.
+
+현재 물리안은 feature_imports/dmp_features/dmp_feature_revisions/feature_import_members, capabilities/capability_versions/capability_version_features/capability_assessments, service_compositions/service_composition_versions/composition_capabilities, capability_match_snapshots/capability_match_candidates/capability_match_reviews 및 slice 재송/Audit 기록이다. Coverage는 CompositionVersion의 검증된 구조화 값으로 저장하여 별도 중복 Root를 만들지 않는다.
+
+다른 연구원의 Company/Site/Intake/Fact/Improvement 테이블·API는 생성/변경하지 않는다. 해당 제공자가 없는 정상 실행은 기업별 Action을 서버에서 차단한다. 테스트 Fixture는 rollback-only 별도 PostgreSQL schema이며 업무 기업/회원으로 위장하지 않는다. 미확정 자격·점수·부분적합 집계 정책은 구현하지 않고 NEED_MORE_INFO 후보와 검토 근거를 보존한다. 별도 공식 승인 정책 추가는 이번 확장에 포함되지 않는다.
+
+## 승인된 공통 분석 계보 확장 — Decision-004
+
+공통 Run은 NOTICE_REQUIREMENT_ANALYSIS/CAPABILITY_ASSESSMENT/SUPPORT_MATCHING을 구분한다. Notice의 NoticeVersion/JobAttempt는 계속 필수이며 동기 Capability/Matching은 해당 FK를 NULL로 두고 실제 typed context를 필수로 연결한다. Assessment context는 고정 ImprovementVersion/Company Scope/CapabilityVersion/Assessment와 선택적 CompositionVersion을 가진다. 외부 ImprovementVersion은 Provider 검증 대상이며 없는 물리 FK나 대상 행을 생성하지 않는다. Matching context는 실제 Snapshot/Candidate를 연결하고 CompositionVersion/RequirementVersion은 Snapshot의 기존 FK에서 추적한다.
+
+공통 Candidate는 Notice SourceLocation 또는 실제 CapabilityAssessment 또는 MatchCandidate 중 정확히 한 종류를 참조하며 Run/context와 일치한다. 공통 Review의 기술적 유형과 도메인 업무 outcome을 구분한다. Notice는 기존 단일 공식 Review를 보존하고, 도메인 검토는 실제 Assessment 검토/Audit 또는 MatchReview와 typed 관계로 연결한다. HOLD를 Notice CONFIRM으로 바꾸지 않는다. 이들은 새 업무 State가 아니다.
+
+Run/context/common Candidate/Review는 불변이다. 재평가는 동일한 입력 Version 대상의 새 Assessment 후보/Run을 생성하며 재실행·새 Version 분석과 멱등 재요청을 구분한다. Context 관계에 assessment_id/match_candidate_id 전역 UNIQUE를 두어 실제 이력 다중성을 차단하지 않는다. 기존 도메인 미연결 행은 legacy로 남기고 새 결과부터 실제 Run FK를 요구한다. 새 typed 데이터가 있으면 자동 Migration Down을 거부한다.
+
+R-07 운영용 ReviewedConditionVersion/기업 자동 추출 구조는 이 문서의 확정 물리 모델에 추가하지 않는다. 상세 제안은 reviews/R07_REVIEWED_CONDITION_DESIGN.md이며 구현 승인 전이다.
