@@ -392,3 +392,24 @@ Migration `d752a0012026` freezes snapshots/referenced input versions and validat
 It preserves existing rows and refuses automatic downgrade while snapshots exist.
 From `apps/api`, `tests/isolated_run.py p1` runs committed two-session and database/migration regressions
 in the same guarded disposable environment. Normal business database migration remains a separate action.
+
+
+### GitHub Actions CI (public synthetic inputs)
+
+`.github/workflows/datco-ci.yml` runs on PRs targeting main, main pushes and manual dispatch.
+It uses Python 3.13, uv 0.13.0 (`uv sync --frozen`), Node 24 (`npm ci`), and PostgreSQL 17.
+Actions are pinned to official release commits; the token has contents:read only.
+
+- Backend Unit: synthetic inventory validation and the pure R07 comparator. The existing actual-source test explicitly skips when private input is absent.
+- PostgreSQL Integration: `tests/ci_run.py integration` runs migrations/check plus Notice, Korean, collector, confirmed-reader, R04, R07 matching, all 23 P1 assertions and Proposal-entry guards. A three-feature synthetic test authority replaces only test harness preparation; product import validation and existing assertions are unchanged.
+- Frontend Quality: OpenAPI/TypeScript equality, lint and production build.
+- Playwright Public E2E: `tests/ci_run.py e2e` runs the existing smoke and Notice browser specs with fresh API/Worker/Web, public demo inputs and a dedicated database. It does not claim the full private-source browser suite.
+
+CI provisioning requires `DATCO_CI_ADMIN_URL` pointing only to the disposable loopback `datco_ci_admin` service.
+It never falls back to `.env`/normal DATABASE_URL. Child tests run as a nonce database owner without superuser/createdb/createrole.
+The provisioner URL is removed from child environments; only owned processes/database/role are cleaned up.
+No live API key, private DMP JSON, stored Live Notice or business DB is supplied.
+The synthetic fixture is NOT a real 649-feature import. Actual DMP catalog/search/scenario suites and stored real Korean sources retain their separate local isolated verification requirement.
+Runtime evidence stays private; the workflow does not upload raw data, credentials or browser traces.
+CI does not implement Company Provider, general R07 automation, Proposal output or Phase2.
+SYSTEM_ACCEPTANCE remains NOT_TESTED. Review and main protection settings require a separate owner decision.

@@ -175,7 +175,12 @@ def scenario_environment(directory):
  factory=sessionmaker(bind=connection,join_transaction_mode='create_savepoint')
  from lineage_test_support import install_test_lineage
  install_test_lineage(connection,schema,factory)
- env=ScenarioEnvironment(factory,LocalPrivateFiles(directory/'sources'),directory)
+ environment_class=ScenarioEnvironment
+ import os
+ if os.environ.get('DATCO_CI_SYNTHETIC')=='1':
+     from ci_synthetic import SyntheticEnvironment
+     environment_class=SyntheticEnvironment
+ env=environment_class(factory,LocalPrivateFiles(directory/'sources'),directory)
  old_overrides=dict(app.dependency_overrides);old_cap,old_notice=cap_api.application,notice_api.application
  def sessions():
   with factory() as session:yield session

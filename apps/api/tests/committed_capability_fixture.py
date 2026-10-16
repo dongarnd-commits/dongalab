@@ -28,7 +28,12 @@ def committed_environment(directory,protect_inputs=True):
         if protect_inputs:install_inputs(connection,schema)
     factory=sessionmaker(bind=engine)
     directory.mkdir(parents=True,exist_ok=True)
-    e=ScenarioEnvironment(factory,LocalPrivateFiles(directory/'sources'),directory)
+    environment_class=ScenarioEnvironment
+    import os
+    if os.environ.get('DATCO_CI_SYNTHETIC')=='1':
+        from ci_synthetic import SyntheticEnvironment
+        environment_class=SyntheticEnvironment
+    e=environment_class(factory,LocalPrivateFiles(directory/'sources'),directory)
     e.schema=schema;e.engine=engine
     overrides=dict(app.dependency_overrides);old_cap,old_notice=cap_api.application,notice_api.application
     def sessions():
