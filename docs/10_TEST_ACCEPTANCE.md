@@ -409,3 +409,8 @@ Permission/Scope/State/Version/Persistence/idempotency/Schema/API·Domain 결과
 | AC-MVP-06 | 승인 후 중요변경 및 타기업 URL/API/파일/제안/승인 접근. 과거 승인 보존·새 Version/Impact·재승인 Guard, 서버 DENY·자료 분리·E/O 승인 대행 없음 | 기존 Approval/Proceed/Security Case 대응 실행·거부/History/Scope Proof | NOT_RUN |
 
 기존 미선정 분기 검증도 유지한다. Capability 자료·AG-01·단계별 근거/완료조건이 준비되지 않으면 BLOCKED로 기록한다. DEMO 외부 결과도 기존 공식성/권한 Guard를 임의 우회하지 않는다. 별도 최종 신청 승인 정책은 Decision-002의 PENDING이며 새 State/Enum/Role/API를 확정하지 않는다.
+
+
+## Proposal P01-P05 승인된 구현 증분 — 2026-10-16
+
+Proposal P01-P05 구현 검증 대상: Root/Manifest/Version 불변성·현재성·동시 수정·Rollback·별도 내용 Review·정확한 지정 승인·과거 승인 비승계·DOCX/PDF 한글 및 내용/digest·Cross-company/직접 URL·미연결 503. 시스템이 제시한 검토항목의 누락/충돌/잘못된 Evidence는 PROPOSABLE 및 생성 차단. 상태는 실제 실행 전 NOT_RUN이며 전체 Phase1/Phase2 Acceptance와 구분한다.

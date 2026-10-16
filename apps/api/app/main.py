@@ -32,3 +32,6 @@ async def storage_error(request,exc):
 
 from app.api.capability import router as capability_router
 app.include_router(capability_router)
+
+from app.api.proposal import router as proposal_router
+app.include_router(proposal_router)

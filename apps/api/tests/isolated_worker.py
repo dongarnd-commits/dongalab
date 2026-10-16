@@ -11,7 +11,13 @@ factory=get_session_factory();files=LocalPrivateFiles(Path(os.environ['DATCO_TES
 ready=Path(os.environ['DATCO_TEST_WORKER_READY'])
 temporary=ready.with_suffix('.tmp')
 temporary.write_text(json.dumps(identity),encoding='utf-8')
-temporary.replace(ready)
+# Windows antivirus/indexer may briefly hold a newly written file.
+for attempt in range(100):
+ try:
+  temporary.replace(ready);break
+ except PermissionError:
+  if attempt==99:raise
+  time.sleep(.05)
 while True:
  process_collection_one(factory,files)
  process_one(factory,files)

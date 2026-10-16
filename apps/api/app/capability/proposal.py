@@ -1,6 +1,6 @@
 """Read-only Proposal entry guard. No draft, approval or document is created."""
 
-def proposal_blockers(detail):
+def proposal_blockers(detail,service=None,actor=None):
     blockers = []
     if not detail['current_valid']:
         blockers.append('STALE_INPUT_VERSION')
@@ -11,7 +11,12 @@ def proposal_blockers(detail):
     if latest is None or latest['outcome'] != 'PROPOSABLE':
         blockers.append('MATCH_NOT_PROPOSABLE')
     candidate = detail['candidate']
-    if candidate['fit'] in ('NEED_MORE_INFO', 'MISMATCH') or candidate['data']['missing']:
+    complete=False
+    if service is not None and latest and latest['outcome']=='PROPOSABLE':
+        from app.proposal.policy import verified_completion
+        complete=verified_completion(service,actor,detail,latest)
+    if candidate['fit']=='MISMATCH' or (not complete and (candidate['fit']=='NEED_MORE_INFO' or candidate['data']['missing'])):
+
         blockers.append('MISSING_REQUIRED_INFORMATION')
     return blockers
 
@@ -22,12 +27,22 @@ def preparation(application, actor, candidate_id):
     detail = application.match(actor, candidate_id)
     snapshot = detail['snapshot']
     cv = application.get(S.composition_versions, snapshot['composition_version_id'])
-    blockers = proposal_blockers(detail)
+    blockers = proposal_blockers(detail,application,actor)
+    evidence=[]; company_confirmed=False
+    if getattr(application.inputs,'proposal_basis',None) is not None:
+        from app.proposal.policy import basis
+        context=snapshot['input']['company']; b=basis(application,actor,context['company_id'],context['improvement_version_id'])
+        company_confirmed=b.company_confirmed and b.current_valid
+        evidence=[dict(id=p.id,version_id=p.version_id,confirmed=p.confirmed,current_valid=p.current_valid) for p in b.proofs]
     return {
         'candidate_id': candidate_id,
-        'can_create': False,
+        'source_summary': {'company_input': snapshot['input']['company'], 'service_composition':snapshot['input']['composition'],'notice':snapshot['input']['notice'],'comparisons':detail['candidate']['data']['dimensions']['eligibility'].get('comparisons',[])},
+        'can_create': not blockers,
         'policy_blockers': blockers,
-        'implementation_blockers': ['PROPOSAL_PERSISTENCE_CONTRACT_PENDING', 'PROPOSAL_OUTPUT_FORMAT_PENDING'],
+        'implementation_blockers': [],
+        'review_evidence': evidence,
+        'company_confirmed': company_confirmed,
+        'review_tasks': __import__('app.proposal.policy',fromlist=['tasks']).tasks(detail),
         'source_refs': {
             'match_input_snapshot_id': snapshot['id'],
             'composition_version_id': cv['id'],

@@ -135,7 +135,7 @@ for (const [caseId, heading, fit] of [["F1","확인된 조건 충돌","MISMATCH"
   const proposal=page.getByRole("region",{name:"제안서 생성조건"});
   await expect(proposal).toContainText("제안서 생성이 차단되었습니다.");
   await expect(proposal).toContainText("현재 담당자 검토가 제안 가능으로 확정되지 않았습니다.");
-  await expect(proposal).toContainText("제안서 저장·버전 물리계약 승인 대기");
+  await expect(proposal.getByRole("link",{name:"제안서 작성·항목별 검토 화면",exact:true})).toHaveAttribute("href",/\/proposal\?candidate=/);
   await expect(proposal.getByRole("button",{name:"저장",exact:true})).toHaveCount(0);
   await page.getByText("정확한 입력 Version과 근거 Snapshot",{exact:true}).click();
   await expect(page.locator("pre")).toContainText('"comparison"');

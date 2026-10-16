@@ -24,7 +24,8 @@ def test_proposal_entry_preserves_real_sources_and_blocks_draft(env, scenario, c
     result=e.call('operator','/capability/matches/'+candidate+'/proposal-preparation')
     assert result['can_create'] is False
     assert set(result['policy_blockers'])=={'MATCH_NOT_PROPOSABLE','MISSING_REQUIRED_INFORMATION'}
-    assert result['implementation_blockers']==['PROPOSAL_PERSISTENCE_CONTRACT_PENDING','PROPOSAL_OUTPUT_FORMAT_PENDING']
+    assert result['implementation_blockers']==[]
+    assert len(result['review_tasks'])>=3
     refs=result['source_refs']
     assert refs['match_input_snapshot_id']==before['snapshot']['id']
     assert refs['composition_version_id']==r['composition']['version_id']

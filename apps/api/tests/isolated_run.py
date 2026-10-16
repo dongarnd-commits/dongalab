@@ -126,10 +126,12 @@ def main():
   browser_env=dict(env,WEB_ORIGIN=origin,DATCO_E2E_BASE_URL=origin,DATCO_E2E_USER=username,DATCO_E2E_PASSWORD=actor_password,DATCO_E2E_SERVER_READY='1',API_ORIGIN='http://127.0.0.1:'+str(api_port),CAPABILITY_API_ORIGIN='http://127.0.0.1:'+str(api_port),DATCO_TEST_DIST_DIR='.next/datco-e2e-'+nonce)
   test_tsconfig=WEB/browser_env['DATCO_TEST_DIST_DIR'].replace('datco-e2e-','datco-config-')/'tsconfig.json';test_tsconfig.parent.mkdir(parents=True,exist_ok=True)
   test_tsconfig.write_text(json.dumps({'extends':'../../tsconfig.json','compilerOptions':{'paths':{'@/*':[str(WEB/'src/*')]}},'include':[str(WEB/'next-env.d.ts'),str(WEB/'src/**/*.ts'),str(WEB/'src/**/*.tsx'),str(WEB/'tests/**/*.ts'),str(WEB/browser_env['DATCO_TEST_DIST_DIR']/'types/**/*.ts'),str(WEB/browser_env['DATCO_TEST_DIST_DIR']/'dev/types/**/*.ts')],'exclude':[str(WEB/'node_modules')]}),encoding='utf-8')
+  browser_env.update(DATCO_TEST_PROPOSAL='1',DATCO_TEST_PROPOSAL_SOURCE='private',DATCO_TEST_PROPOSAL_READY=str(directory/'proposal-ready.json'))
   start('api',[sys.executable,'-m','uvicorn','isolated_server:app','--host','127.0.0.1','--port',str(api_port)],API,browser_env)
   identity=wait_url(browser_env['API_ORIGIN']+'/__test/identity')
   if identity['database']!=dbname or identity['nonce']!=nonce:raise RuntimeError('ISOLATED_API_IDENTITY_MISMATCH')
   report['api_identity']=identity;report['api_url']=browser_env['API_ORIGIN'];report['web_url']=origin
+  browser_env['DATCO_PROPOSAL_CONTEXT']=json.dumps(json.loads((directory/'proposal-ready.json').read_text(encoding='utf-8')))
   worker=start('worker',[sys.executable,'tests/isolated_worker.py'],API,browser_env)
   worker_ready=directory/'worker-ready.json';until=time.monotonic()+15
   while not worker_ready.exists():

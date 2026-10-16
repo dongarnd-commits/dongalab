@@ -6,9 +6,9 @@ import psycopg
 from psycopg import sql
 from sqlalchemy.engine import make_url
 ROOT=Path(__file__).resolve().parents[3];API=ROOT/'apps/api';WEB=ROOT/'apps/web'
-TESTS=['test_notice_slice.py','test_notice_korean.py','test_bizinfo.py','test_confirmed_notice_reader.py','test_analysis_lineage.py','test_analysis_migration.py','test_capability_matching_comparison.py','test_matching_integrity.py','test_proposal_preparation.py']
+TESTS=['test_notice_slice.py','test_notice_korean.py','test_bizinfo.py','test_confirmed_notice_reader.py','test_analysis_lineage.py','test_analysis_migration.py','test_capability_matching_comparison.py','test_matching_integrity.py','test_proposal_preparation.py','test_proposal_production.py']
 def main():
- phase=sys.argv[1];assert phase in ('integration','e2e')
+ phase=sys.argv[1];assert phase in ('integration','proposal','e2e')
  # No fallback to DATABASE_URL or .env. CI admin only provisions this disposable service.
  url=make_url(os.environ['DATCO_CI_ADMIN_URL'])
  assert url.host in ('127.0.0.1','localhost') and url.database=='datco_ci_admin'
@@ -18,7 +18,9 @@ def main():
  env.pop('DATCO_CI_ADMIN_URL',None)
  admin=psycopg.connect(host=url.host,port=url.port,dbname=url.database,user=url.username,password=url.password,autocommit=True)
  made_db=made_role=False;children=[];logs=[]
- def run(command,cwd=API):subprocess.run(command,cwd=cwd,env=env,check=True)
+ def run(command,cwd=API):
+  if os.name=='nt' and command[0]=='npm':command=['cmd.exe','/c','npm.cmd',*command[1:]]
+  subprocess.run(command,cwd=cwd,env=env,check=True)
  def port():
   with socket.socket() as s:s.bind(('127.0.0.1',0));return s.getsockname()[1]
  def wait(address):
@@ -33,7 +35,8 @@ def main():
   raise RuntimeError('CI_SERVICE_TIMEOUT')
  def start(label,command,cwd):
   log=(out/(label+'.log')).open('w');logs.append(log)
-  children.append(subprocess.Popen(command,cwd=cwd,env=env,stdout=log,stderr=subprocess.STDOUT,start_new_session=True))
+  if os.name=='nt' and command[0]=='npm':command=['cmd.exe','/c','npm.cmd',*command[1:]]
+  children.append(subprocess.Popen(command,cwd=cwd,env=env,stdout=log,stderr=subprocess.STDOUT,start_new_session=os.name!='nt',creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0))
  try:
   admin.execute(sql.SQL('CREATE ROLE {} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT PASSWORD {}').format(sql.Identifier(role),sql.Literal(password)));made_role=True
   admin.execute(sql.SQL('CREATE DATABASE {} OWNER {}').format(sql.Identifier(db),sql.Identifier(role)));made_db=True
@@ -41,7 +44,7 @@ def main():
   run([sys.executable,'-c','from isolation import require_test_database; import json; print(json.dumps(require_test_database()))'])
   run([sys.executable,'-m','alembic','upgrade','head'])
   run([sys.executable,'-m','alembic','check'])
-  if phase=='integration':run([sys.executable,'-m','pytest',*[str(Path('tests')/t) for t in TESTS],'-v','--junitxml='+str(out/'integration.xml')])
+  if phase in ('integration','proposal'):run([sys.executable,'-m','pytest',*[str(Path('tests')/t) for t in (TESTS if phase=='integration' else ['test_proposal_production.py'])],*(['--maxfail=1'] if phase=='proposal' else []),'-v','--tb=short','--junitxml='+str(out/'integration.xml')])
   else:
    api_port,web_port=port(),port()
    while web_port==api_port:web_port=port()
@@ -52,16 +55,21 @@ def main():
    env.update(DATCO_E2E_USER=user,DATCO_E2E_PASSWORD=pw)
    code="from app.infrastructure.database import get_engine; from sqlalchemy.orm import sessionmaker; from app.infrastructure.notice_store import SqlNoticeStore; from app.infrastructure.notice_documents import LocalPrivateFiles; from app.infrastructure.local_auth import hash_password; from app.demo import load_input; import os; from pathlib import Path\nwith sessionmaker(bind=get_engine()).begin() as s:\n st=SqlNoticeStore(s);st.add('actors',username=os.environ['DATCO_E2E_USER'],role='DATCO_OPERATOR',password_hash=hash_password(os.environ['DATCO_E2E_PASSWORD']));[load_input(st,LocalPrivateFiles(Path(os.environ['DATCO_TEST_FILES'])),name) for name in ('normal','conflict','partial')]"
    run([sys.executable,'-c',code])
+   env.update(DATCO_TEST_PROPOSAL='1',DATCO_TEST_PROPOSAL_READY=str(out/'proposal-ready.json'),DATCO_TEST_DIST_DIR='.next/datco-e2e-'+nonce)
+   config=WEB/('.next/datco-config-'+nonce)/'tsconfig.json';config.parent.mkdir(parents=True,exist_ok=True)
+   config.write_text(json.dumps({'extends':'../../tsconfig.json','compilerOptions':{'paths':{'@/*':[str(WEB/'src/*')]}},'include':[str(WEB/'next-env.d.ts'),str(WEB/'src/**/*.ts'),str(WEB/'src/**/*.tsx'),str(WEB/'tests/**/*.ts'),str(WEB/env['DATCO_TEST_DIST_DIR']/'types/**/*.ts')],'exclude':[str(WEB/'node_modules')]}))
    start('api',[sys.executable,'-m','uvicorn','isolated_server:app','--host','127.0.0.1','--port',str(api_port)],API)
    identity=wait(env['API_ORIGIN']+'/__test/identity');assert identity['database']==db and identity['db_user']==role and identity['nonce']==nonce
+   proposal=json.loads((out/'proposal-ready.json').read_text(encoding='utf-8'));env['DATCO_PROPOSAL_CONTEXT']=json.dumps(proposal)
    start('worker',[sys.executable,'tests/isolated_worker.py'],API)
    deadline=time.monotonic()+30
    while not (out/'worker-ready.json').exists():
+    if children[-1].poll() is not None:raise RuntimeError('CI_WORKER_EXITED')
     if time.monotonic()>deadline:raise RuntimeError('CI_WORKER_TIMEOUT')
     time.sleep(.1)
    worker=json.loads((out/'worker-ready.json').read_text());assert worker['database']==db and worker['db_user']==role
    start('web',['npm','run','dev','--','--port',str(web_port)],WEB);wait(origin)
-   run(['npm','run','test:e2e','--','tests/smoke.spec.ts','tests/notice.spec.ts','--workers=1','--reporter=line'],WEB)
+   run(['npm','run','test:e2e','--','tests/smoke.spec.ts','tests/notice.spec.ts','tests/proposal.spec.ts','--workers=1','--reporter=line'],WEB)
  except Exception:
   for log in logs:log.flush()
   for name in ('api','worker','web'):
@@ -75,9 +83,13 @@ def main():
  finally:
   for p in reversed(children):
    if p.poll() is None:
-    os.killpg(p.pid,signal.SIGTERM)
+    if os.name=='nt':subprocess.run(['taskkill','/PID',str(p.pid),'/T','/F'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    else:os.killpg(p.pid,signal.SIGTERM)
     try:p.wait(timeout=15)
-    except subprocess.TimeoutExpired:os.killpg(p.pid,signal.SIGKILL);p.wait()
+    except subprocess.TimeoutExpired:
+     if os.name=='nt':p.kill()
+     else:os.killpg(p.pid,signal.SIGKILL)
+     p.wait()
   for log in logs:log.close()
   if made_db:
    assert admin.execute('select pg_get_userbyid(datdba) from pg_database where datname=%s',(db,)).fetchone()==(role,)

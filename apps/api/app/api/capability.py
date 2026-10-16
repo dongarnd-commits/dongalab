@@ -105,7 +105,15 @@ class MatchRequest(Command):
     notice_id:str
     requirement_version_id:str
     idempotency_key:str=Field(min_length=1,max_length=100)
+class CompletionItem(Command):
+    task_id:str
+    decision:Literal['CONFIRMED','NOT_APPLICABLE']
+    note:str=Field(min_length=1,max_length=5000)
+    proof_ids:list[str]=Field(min_length=1,max_length=100)
+    notice_evidence_id:str|None=None
+
 class Review(Command):
+    completion_items:list[CompletionItem]|None=None
     outcome:Literal['PROPOSABLE','REQUEST_MORE_INFO','HOLD','EXCLUDE']
     note:str=Field(min_length=1,max_length=5000)
     idempotency_key:str=Field(min_length=1,max_length=100)
@@ -185,7 +193,7 @@ def match_detail(candidate_id:str,session:Annotated[Session,Depends(get_session)
     return application(session).match(who,candidate_id)
 @router.post('/matches/{candidate_id}/review',response_model=ReviewReceipt,dependencies=[Depends(trusted_origin)],responses=errors(401,403,404,409,422,503))
 def review(candidate_id:str,body:Review,session:Annotated[Session,Depends(get_session)],who=Depends(actor)):
-    result=application(session).review_match(who,candidate_id,body.outcome,body.note,body.idempotency_key)
+    result=application(session).review_match(who,candidate_id,body.outcome,body.note,body.idempotency_key,[i.model_dump() for i in body.completion_items] if body.completion_items is not None else None)
     session.commit(); return result
 
 class AssessmentReview(Command):
@@ -225,10 +233,14 @@ def reassess(assessment_id:str,body:AssessmentRequest,session:Annotated[Session,
 
 class ProposalPreparation(BaseModel):
     candidate_id: str
-    can_create: Literal[False]
+    can_create: bool
     policy_blockers: list[str]
     implementation_blockers: list[str]
     source_refs: dict
+    source_summary:dict
+    review_tasks:list[dict]
+    review_evidence:list[dict]
+    company_confirmed:bool
 
 @router.get('/matches/{candidate_id}/proposal-preparation', response_model=ProposalPreparation,
             responses=errors(401,403,404,503))

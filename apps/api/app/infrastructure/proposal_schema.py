@@ -1,0 +1,14 @@
+"""Approved P01-P05 physical records; no new workflow states or Company master."""
+from sqlalchemy import Column,String,Integer,Text,Boolean,UniqueConstraint,CheckConstraint,ForeignKeyConstraint
+from sqlalchemy.dialects.postgresql import JSONB
+from app.infrastructure.notice_schema import table,ref
+roots=table('proposals',Column('company_id',String(100),nullable=False),ref('match_review_id','capability_match_reviews'),Column('current_ordinal',Integer,nullable=False),CheckConstraint('current_ordinal>0'))
+versions=table('proposal_versions',ref('proposal_id','proposals'),Column('ordinal',Integer,nullable=False),ref('match_snapshot_id','capability_match_snapshots'),ref('match_review_id','capability_match_reviews'),Column('title',Text,nullable=False),Column('sections',JSONB,nullable=False),Column('manifest',JSONB,nullable=False),Column('content_digest',String(64),nullable=False),ref('actor_id','local_actors'),UniqueConstraint('proposal_id','ordinal'),CheckConstraint('ordinal>0'))
+reviews=table('proposal_content_reviews',ref('version_id','proposal_versions'),ref('actor_id','local_actors'),Column('confirmed',Boolean,nullable=False),Column('note',Text,nullable=False))
+requests=table('proposal_approval_requests',ref('version_id','proposal_versions'),ref('intended_approver','local_actors'),ref('requested_by','local_actors'),Column('state',String(10),nullable=False),Column('closure_reason',String(20)),UniqueConstraint('version_id'),UniqueConstraint('id','version_id','intended_approver'),CheckConstraint("(state='OPEN' AND closure_reason IS NULL) OR (state='CLOSED' AND closure_reason IN ('DECIDED','SUPERSEDED'))"))
+decisions=table('proposal_approval_decisions',Column('request_id',String(36),nullable=False),ref('version_id','proposal_versions'),ref('actor_id','local_actors'),Column('outcome',String(20),nullable=False),Column('reason',Text,nullable=False),UniqueConstraint('request_id'),ForeignKeyConstraint(['request_id','version_id','actor_id'],['proposal_approval_requests.id','proposal_approval_requests.version_id','proposal_approval_requests.intended_approver'],ondelete='RESTRICT'),CheckConstraint("outcome IN ('APPROVE','REVISION_REQUEST','REJECT')"))
+files=table('proposal_document_files',ref('version_id','proposal_versions'),ref('content_review_id','proposal_content_reviews'),Column('kind',String(4),nullable=False),Column('storage_key',String(64),nullable=False),Column('digest',String(64),nullable=False),Column('size',Integer,nullable=False),ref('actor_id','local_actors'),UniqueConstraint('version_id','kind','content_review_id'),CheckConstraint("kind IN ('DOCX','PDF')"),CheckConstraint('size>0'))
+IMMUTABLE_TABLES=(versions,reviews,decisions,files)
+
+completions=table('match_review_completions',ref('review_id','capability_match_reviews'),Column('basis',JSONB,nullable=False),Column('items',JSONB,nullable=False),UniqueConstraint('review_id'))
+IMMUTABLE_TABLES=(*IMMUTABLE_TABLES,completions)

@@ -197,3 +197,24 @@ PR 범위 E2E는 실제 기능 검색→Capability/Composition 저장→확정 T
 - Backend/Integration SKIP은 저장 실제 한국어 원문 opt-in 미설정, Browser SKIP은 의도적 API 중단 시나리오다. 저장된 실제 한국어 원문 Browser 검증은 통과했다. 하위 집중 건수를 전체에 중복 합산하지 않는다.
 - P1_01_FIXED/P1_02_FIXED=YES. PR 구현범위 격리 E2E=PASS. 운영 Company Provider 통합은 PENDING_PROVIDER, PHASE1_E2E=NOT_COMPLETED, PHASE2_E2E/SYSTEM_ACCEPTANCE=NOT_TESTED.
 - CI/필수 리뷰/브랜치 보호는 저장소 운영조건이며 이번에 임의 구성하거나 PR을 Ready로 바꾸지 않는다. 코드 차단 해소와 최종 Merge 승인은 구분한다.
+
+
+## 12. Proposal P-01~P-05 구현 증분 (2026-10-16)
+
+이 절이 이전 절의 Proposal 미구현/정책 승인 대기 현황을 갱신한다. 기존 기록은 당시 검토 이력으로 보존한다.
+사용자는 `PROPOSAL_MATCH_REVIEW_POLICY.md`의 시스템 선제시 → 기업 사실확인 → DATCO 항목별 Evidence 검토 → 차단 사유 해소 후 진행을 명시적으로 승인했다. Decision-005 및 03/04/05/08/10 기준문서에 증분을 반영했다.
+
+- P-01: PostgreSQL Root/불변 Version, 실제 API/UI, 기대 Version/Root 잠금으로 동시 편집 보호.
+- P-02: 실제 Company/Fact/Improvement/Capability/Feature/Composition/Notice/Requirement/Snapshot/Review/Evidence 참조 Manifest 고정.
+- P-03: 근거 기반 11개 목차 초안, 항목별 편집/새 Version/과거 조회, 별도 Content Review. 분석/Match 검토를 내용 확정으로 대체하지 않는다.
+- P-04: Provider가 지정한 COMPANY_APPROVER의 정확한 Version 승인/수정요청/거부. 과거 결정은 보존하며 새 Version에 승계하지 않는다.
+- P-05: 실제 편집 가능한 DOCX와 한글 폰트를 포함한 PDF, 기존 Private Storage 재사용, SHA256/권한 검사.
+- 신규 Migration `e863p0012026`: Proposal 관련 7개 테이블/불변성/참조 Guard. 기존 Migration은 변경하지 않고 업무 DB에는 적용하지 않았다.
+- 기존 Matching NEED_MORE_INFO와 미확인 항목은 원래 분석에 보존한다. 별도의 불변 MatchReview Completion으로 모든 항목의 실제 근거/사람 판단을 검증하며 MISMATCH/반대 근거/stale/Provider 미연결은 차단한다.
+- 기존 격리 Runner의 전체 Backend 250 PASS/1 SKIP, Browser 21 PASS/1 SKIP 및 lint/build/API 타입 비교 PASS. 전체 Integration 169 PASS/1 SKIP/81 deselected 및 Migration/model check PASS. GitHub 최신 Head CI는 PR/완료보고에 실제 실행 결과로 기록한다.
+- 실제 비공개 DMP 649건을 사용하는 로컬 회귀와 합성 3건의 공개 CI를 구분한다. 공용 DB 변경 없음과 테스트 DB/계정 정리를 각 Runner 보고서에서 확인한다. 테스트용 한국어 원문 검증은 운영 데이터 변경을 의미하지 않는다.
+
+A(기업 입력/문서 분석/자료보완)는 실제 Company Provider 미연결로 BLOCKED_BY_PROVIDER다. B(3자 매칭)와 C(제안서 생산)는 격리 환경에서 구현·검증한다. D(신청정보 대조·보완), E(신청·평가·협약), F(수행·정산·사후관리)는 이번 범위에서 구현하지 않는다.
+CompanyBasis/Proof는 소비측 인터페이스이며 실제 DMP/기업 연동 계약을 임의 확정하지 않는다. 향후 담당 연구원의 권위 있는 Company/Fact/Improvement/Evidence/승인자 계약을 연결하고 실제 기업 통합 E2E를 검증해야 한다.
+
+PROPOSAL_ISOLATED_E2E는 실제 격리 성공에 한해 PASS, COMPANY_PROVIDER_INTEGRATION은 BLOCKED_BY_PROVIDER, PHASE1_FULL_E2E는 NOT_COMPLETED, PHASE2_FULL_E2E와 SYSTEM_ACCEPTANCE는 NOT_TESTED를 유지한다. 정부 포털 자동제출/범용 R07/자료보완 Domain/Phase2를 구현 완료로 주장하지 않는다.

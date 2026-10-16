@@ -309,3 +309,8 @@ Demo/Seed도 같은 Screen/Role/Scope/Guard/Version/Audit를 사용한다. LIVE/
 | 결과·사후관리 | SCR-RESULT-01/SCR-CASE-01 ↔ SCR-TASK-01. 선정 Case 협약·수행·검수·정산·종료 및 CLOSED Case 사후관리 Task 생성·배정·진행·완료검토·완료 이력. Case 자동 재개 없음 |
 
 기업은 자기 Scope의 공개 Projection만 조회한다. 가상 외부 결과는 DEMO로 표시한다. 별도 최종 신청 승인 정책은 PENDING이며 기존 정의 이상의 State/권한을 만들지 않는다. AG-01 등 실제 구현 여부는 별도 확인한다.
+
+
+## Proposal P01-P05 승인된 구현 증분 — 2026-10-16
+
+Proposal AG-01: O가 expected Version과 내용을 제출하면 Root 잠금/현재 입력 Guard/권한을 확인해 새 Version·Audit를 원자 저장한다. 내용 Review는 MatchReview와 별개다. 승인요청은 현재 Version/내용 확인/지정 기업 승인자를 고정하며 새 Version에서 이전 OPEN Request를 SUPERSEDED 처리한다. Private 출력은 정확한 내용 검토본과 Version을 고정하고 서버 다운로드 Scope/digest를 검사한다.

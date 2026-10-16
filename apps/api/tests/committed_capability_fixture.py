@@ -26,6 +26,8 @@ def committed_environment(directory,protect_inputs=True):
         Base.metadata.create_all(connection);metadata.create_all(connection)
         install(connection,schema)
         if protect_inputs:install_inputs(connection,schema)
+        from app.infrastructure.proposal_constraints import install as install_proposal
+        install_proposal(connection,schema)
     factory=sessionmaker(bind=engine)
     directory.mkdir(parents=True,exist_ok=True)
     environment_class=ScenarioEnvironment

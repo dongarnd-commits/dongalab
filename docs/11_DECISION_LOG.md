@@ -123,3 +123,8 @@ PostgreSQL 확정은 03의 94 Logical Entity를 94 Physical Table로 자동 생�
 R-07의 자동 증빙 추출·공고 구조화·범용 Condition AST·지역/업종/기간/예외·3값 논리·Human Review/DTO/Provider/UI/Test는 **상세설계만 승인**한다. 운영용 R-07 Migration/자동 판정정책/새 업무 State·Role·Permission/OCR·LLM Provider 구현은 승인하지 않는다. 기존 Comparator를 유지한다. 다른 연구원 Provider 통합은 대기하며 정상 환경의 503 차단을 유지한다.
 
 Decision-001~003, 기존 Architecture/업무 상태·권한·Human Review·공식 승인 Guard를 보존한다. 운영 DB 적용·데이터 삭제·Git Stage/Commit/Push/Merge/PR은 승인 범위 밖이다. 문서 승인과 개별 회귀 PASS는 SYSTEM ACCEPTANCE 완료가 아니다.
+
+
+## Decision-005 — Proposal P01-P05 구현 및 항목별 검토 Gate
+
+Decision-005 — 사용자 명시 승인: P01-P05 실제 Proposal Root/불변 Version/Manifest/내용 Review/지정 기업 승인/실제 DOCX·PDF 출력 및 시스템 선행 파악→항목별 사람 확인 Gate를 구현한다. 세부 검토 기준은 docs/reviews/PROPOSAL_MATCH_REVIEW_POLICY.md. 기존 Role/State/Outcome/Architecture/공식 승인 의미를 유지한다. 실제 Company Provider 미연결은 차단하고 합성 격리 검증과 구분한다. 범용 R07 엔진·기업문서 추출기·Phase2/Case/Package·main Merge는 승인 범위 밖이다. 출력은 OOXML DOCX 및 ReportLab 임베디드 한글 TTF PDF, 기존 Private File Provider를 사용한다. 사용자 승인 지시: 기존 VSCode Proposal 브랜치에서 구현·검증·Commit/Push·Draft PR; 기존 Stash/외부 백업은 보존한다.
