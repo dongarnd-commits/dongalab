@@ -327,15 +327,29 @@ class CapabilityApplication:
         try: ConfirmedNoticeReader(SqlNoticeStore(self.session),self.files).read(actor,snapshot['input']['notice']['notice_id'],snapshot['requirement_version_id'])
         except Denied: current=False
         return {'candidate':candidate,'snapshot':snapshot,'reviews':self.rows(S.match_reviews,candidate_id=key),'current_valid':current,'lineage':AnalysisLineage(self).detail(candidate,match=True)}
-    def review_match(self,actor,candidate_id,outcome,note,key):
+    def review_match(self,actor,candidate_id,outcome,note,key,completion_items=None):
         self.operator(actor); result=self.match(actor,candidate_id)
-        if outcome=='PROPOSABLE': raise Denied('MISSING_REQUIRED_INFORMATION')
-        if outcome not in ('REQUEST_MORE_INFO','HOLD','EXCLUDE') or not note.strip(): raise Denied('REQUIRED_DATA_MISSING')
+        if outcome=='PROPOSABLE' and completion_items is None: raise Denied('MISSING_REQUIRED_INFORMATION')
+        if outcome not in ('PROPOSABLE','REQUEST_MORE_INFO','HOLD','EXCLUDE') or not note.strip(): raise Denied('REQUIRED_DATA_MISSING')
         def execute():
             result=self.match(actor,candidate_id)
+            # Same input-root lock order as matching and Proposal creation.
+            cv=self.get(S.composition_versions,result['snapshot']['composition_version_id'])
+            self.get(S.compositions,cv['composition_id'],True)
+            for cid in sorted({self.get(S.versions,l['capability_version_id'])['capability_id'] for l in self.rows(S.composition_links,version_id=cv['id'])}):self.get(S.capabilities,cid,True)
+            from app.infrastructure.notice_schema import notices
+            self.get(notices,result['snapshot']['input']['notice']['notice_id'],True)
+            self.get(S.match_candidates,candidate_id,True)
+            result=self.match(actor,candidate_id)
             if not result['current_valid']: raise Denied('STALE_INPUT_VERSION')
+            if outcome=='PROPOSABLE':
+                from app.proposal.policy import validate_completion
+                validate_completion(self,actor,result,completion_items)
             common=AnalysisLineage(self).common_review(actor,result['candidate'],note,match=True)
             review=self.add(S.match_reviews,candidate_id=candidate_id,actor_id=actor.id,outcome=outcome,note=note,analysis_review_id=common['id'],legacy_lineage=False,created_at=common['created_at'])
             self.add(A.review_contexts,review_id=common['id'],assessment_review_id=None,match_review_id=review['id'])
+            if outcome=='PROPOSABLE':
+                from app.proposal.policy import attach
+                attach(self,actor,result,review,completion_items)
             self.record(actor,'REVIEW_MATCH',review_id=review['id']); return {'id':review['id'],'outcome':outcome}
-        return self.command(actor,key,[candidate_id,outcome,note],execute)
+        return self.command(actor,key,[candidate_id,outcome,note,completion_items] if completion_items is not None else [candidate_id,outcome,note],execute)

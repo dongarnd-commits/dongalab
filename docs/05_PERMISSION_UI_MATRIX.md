@@ -246,3 +246,8 @@ DMP User / Role / Company Mapping → 내부 UserIdentity / Membership / Permiss
 | OD-09 | 기업의 독립 공고 탐색/별도 Proposal 공유 시점 | 전달된 업무의 공고/Version만 조회. 독립 탐색/별도 공유 Action은 08 제품요구 확인 |
 
 상위문서와 충돌한 항목은 없다. Open Decision은 권한을 무제한 확대하는 근거가 아니다. **06_BIZINFO_COLLECTOR 상세설계 착수 가능: YES.** 수집 요청 Human 권한/Global Source 경계와 Worker 분리가 정의되어 있고 남은 조직·공개정책은 Collector 상세설계를 막지 않는다.
+
+
+## Proposal P01-P05 승인된 구현 증분 — 2026-10-16
+
+P01-P05 구현은 기존 O의 생성/작성/내용검토/승인요청과 지정 P의 Version별 APPROVE/REVISION_REQUEST/REJECT를 적용한다. 운영 Company Provider 미연결은 503으로 차단한다. 내부 MatchReview Memo/전체 Manifest는 기업 Projection/출력에 자동 공개하지 않는다. 기업은 지정 승인 대상과 공개 제안내용·근거 식별자만 조회한다.

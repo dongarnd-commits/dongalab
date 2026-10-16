@@ -26,7 +26,7 @@ class AnalysisLineage:
         candidate=next((c for c in candidates if c[target]==domain['id']),None)
         if candidate is None:raise Denied('REQUIRED_EVIDENCE_MISSING')
         return self.s.add(N.reviews,candidate_id=candidate['id'],actor_id=actor.id,
-            analysis_kind='SUPPORT_MATCHING' if match else 'CAPABILITY_ASSESSMENT',outcome=None,official_verified=None,note=note)
+            analysis_kind='SUPPORT_MATCHING' if match else 'CAPABILITY_ASSESSMENT',outcome=None,official_verified=None,note=note,created_at=__import__('datetime').datetime.now(__import__('datetime').timezone.utc))
     def detail(self,domain,match=False):
         context_table=A.match_contexts if match else A.capability_contexts
         target='match_candidate_id' if match else 'assessment_id'

@@ -682,3 +682,8 @@ erDiagram
 Run/context/common Candidate/Review는 불변이다. 재평가는 동일한 입력 Version 대상의 새 Assessment 후보/Run을 생성하며 재실행·새 Version 분석과 멱등 재요청을 구분한다. Context 관계에 assessment_id/match_candidate_id 전역 UNIQUE를 두어 실제 이력 다중성을 차단하지 않는다. 기존 도메인 미연결 행은 legacy로 남기고 새 결과부터 실제 Run FK를 요구한다. 새 typed 데이터가 있으면 자동 Migration Down을 거부한다.
 
 R-07 운영용 ReviewedConditionVersion/기업 자동 추출 구조는 이 문서의 확정 물리 모델에 추가하지 않는다. 상세 제안은 reviews/R07_REVIEWED_CONDITION_DESIGN.md이며 구현 승인 전이다.
+
+
+## Proposal P01-P05 승인된 구현 증분 — 2026-10-16
+
+P01-P05 물리 구현: Proposal Root의 Company/현재 ordinal, 불변 ProposalVersion(정확한 MatchReview/Snapshot·Manifest·11개 내용항목·작성자·digest), 별도 불변 내용 Review, 특정 Version/지정 APPROVER의 ApprovalRequest/Decision, Version별 Private DOCX/PDF File을 추가한다. 외부 Company/Fact 참조는 신뢰된 소비 Provider 검증 대상이며 가짜 Company FK를 만들지 않는다. Match 검토완료 근거는 Candidate/Review에 연결된 불변 별도 Record로 저장한다.

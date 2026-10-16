@@ -19,3 +19,7 @@ cap_api.application=lambda s:CapabilityApplication(s,files)
 collection_api.application=lambda s:CollectionApplication(SqlNoticeStore(s),files)
 @app.get('/__test/identity')
 def test_identity():return dict(identity,nonce=os.environ['DATCO_TEST_NONCE'])
+
+if os.environ.get('DATCO_TEST_PROPOSAL')=='1':
+ from proposal_browser_setup import prepare
+ proposal_environment=prepare()

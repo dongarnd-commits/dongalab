@@ -639,3 +639,8 @@ Action은 03의 기존 Entity와 Attribute/검토 Record 의미를 사용한다.
 | DB/ORM/ID/API Route/HTTP Error/물리 enum 저장·제약 | 물리구현/08/10 |
 
 **05_PERMISSION_UI_MATRIX 설계 착수 가능: YES.** 핵심 Business Transition과 현재유효성/Version/증빙 Gate가 정의돼 있다. 남은 승인자·역할·공개범위는 05의 설계 대상이며 핵심 Workflow 전체를 미확정으로 넘기지 않는다.
+
+
+## Proposal P01-P05 승인된 구현 증분 — 2026-10-16
+
+승인된 Proposal 생성 선행 검토: docs/reviews/PROPOSAL_MATCH_REVIEW_POLICY.md의 항목별 근거·확인완료 Gate를 적용한다. 분석 NEED_MORE_INFO는 보존하되, 현재 모든 Blocking 정보를 실제 Evidence로 사람 검토해 해소한 정확한 PROPOSABLE Review가 있어야 생성한다. MISMATCH/확인된 충돌·stale·legacy는 차단한다. 새 State/Action은 추가하지 않는다. 저장은 항상 새 불변 Version이며 과거 내용 Review/Approval은 승계하지 않는다.
