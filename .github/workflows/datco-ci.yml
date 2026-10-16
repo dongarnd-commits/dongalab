@@ -30,7 +30,7 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y fonts-nanum
       - name: Synthetic inventory and comparator unit tests
         working-directory: apps/api
-        run: uv run --frozen pytest tests/test_dmp_inventory.py tests/test_capability_comparison.py tests/test_proposal_documents.py -v --junitxml=unit.xml
+        run: uv run --frozen pytest tests/test_dmp_inventory.py tests/test_capability_comparison.py tests/test_proposal_documents.py tests/test_company_documents.py -v --junitxml=unit.xml
   integration:
     name: PostgreSQL Integration
     runs-on: ubuntu-24.04
