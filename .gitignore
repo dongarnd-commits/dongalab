@@ -38,3 +38,6 @@ Thumbs.db
 playwright-report/
 test-results/
 *.tsbuildinfo
+
+# User-provided DMP source; never commit without explicit approval
+/_local_inputs/

@@ -22,6 +22,8 @@ from test_notice_korean import stored_inputs
 
 
 def main():
+    from isolation import require_test_database
+    require_test_database()
     inputs=stored_inputs()
     connection=get_engine().connect().execution_options(schema_translate_map={None:'test_ko_browser_'+uuid4().hex})
     transaction=connection.begin()

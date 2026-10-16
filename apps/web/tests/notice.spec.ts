@@ -1,12 +1,7 @@
 import { test, expect } from "@playwright/test";
-import { readFileSync } from "node:fs";
+import { isolatedAccount } from "./isolated-account";
 
-function localAccount() {
-  // Read only this test runner's private local account values; never log them.
-  const content = readFileSync("../../.env", "utf8");
-  const value = (key: string) => content.split(/\r?\n/).find(line => line.startsWith(key + "="))?.slice(key.length + 1) ?? "";
-  return { username: value("DEMO_OPERATOR_USER"), password: value("DEMO_OPERATOR_PASSWORD") };
-}
+const localAccount = isolatedAccount;
 
 test("operator reviews actual Worker candidate, evidence and persistent confirmation", async ({ page }) => {
   const account = localAccount();

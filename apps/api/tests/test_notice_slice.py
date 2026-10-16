@@ -22,6 +22,8 @@ pytestmark=pytest.mark.integration
 
 @pytest.fixture
 def context(tmp_path):
+    from isolation import require_test_database
+    require_test_database()
     schema_name="test_notice_"+uuid4().hex
     connection=get_engine().connect().execution_options(schema_translate_map={None:schema_name})
     outer=connection.begin()

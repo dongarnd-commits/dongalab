@@ -1,13 +1,12 @@
 
 import { test, expect, type Page } from "@playwright/test";
-import { readFileSync } from "node:fs";
+import { isolatedAccount } from "./isolated-account";
 
 async function login(page: Page) {
-  const env = readFileSync("../../.env", "utf8");
-  const value = (key: string) => env.split(/\r?\n/).find(line => line.startsWith(key + "="))?.slice(key.length + 1) ?? "";
+  const account=isolatedAccount();
   await page.goto("/notice");
-  await page.getByLabel("아이디", { exact: true }).fill(value("DEMO_OPERATOR_USER"));
-  await page.getByLabel("비밀번호", { exact: true }).fill(value("DEMO_OPERATOR_PASSWORD"));
+  await page.getByLabel("아이디", { exact: true }).fill(account.username);
+  await page.getByLabel("비밀번호", { exact: true }).fill(account.password);
   await page.getByRole("button", { name: "로그인", exact: true }).click();
   await expect(page.getByRole("heading", { name: "지원사업 공고", exact: true })).toBeVisible();
 }
@@ -143,5 +142,5 @@ test("a URL or test-context flag cannot bypass backend session permission", asyn
   await expect(page.getByRole("button", { name: "로그인", exact: true })).toBeVisible();
   await expect(page.getByTestId("notice-version")).toHaveCount(0);
   expect((await request.get("/api/notice/" + id, { headers: { "X-Role": "DATCO_OPERATOR" } })).status()).toBe(401);
-  expect((await request.post("/api/notice/collections", { headers: { Origin: "http://localhost:3000", "X-Role": "DATCO_OPERATOR" }, data: { mode: "SNAPSHOT", idempotency_key: "url-context-is-not-permission" } })).status()).toBe(401);
+  expect((await request.post("/api/notice/collections", { headers: { Origin: process.env.WEB_ORIGIN!, "X-Role": "DATCO_OPERATOR" }, data: { mode: "SNAPSHOT", idempotency_key: "url-context-is-not-permission" } })).status()).toBe(401);
 });
