@@ -50,12 +50,16 @@ def render(version,kind):
   b=BytesIO()
   def para(value):return '<w:p><w:r><w:rPr><w:rFonts w:ascii="Malgun Gothic" w:eastAsia="맑은 고딕"/></w:rPr><w:t xml:space="preserve">'+xml_escape(value)+'</w:t></w:r></w:p>'
   with zipfile.ZipFile(b,'w',zipfile.ZIP_DEFLATED) as z:
-   z.writestr('[Content_Types].xml','<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>')
-   z.writestr('_rels/.rels','<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>')
+   def write(name,data):
+    # ZIP timestamps must not create another blob after a rolled-back export.
+    info=zipfile.ZipInfo(name,date_time=(1980,1,1,0,0,0));info.compress_type=zipfile.ZIP_DEFLATED
+    z.writestr(info,data)
+   write('[Content_Types].xml','<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>')
+   write('_rels/.rels','<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>')
    body=''.join(para(line) for p in paragraphs for line in p.splitlines())
    # Editable source-reference table as part of the same version's content.
    table='<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/></w:tblPr>'+''.join('<w:tr><w:tc>'+para(k)+'</w:tc><w:tc>'+para(text(v))+'</w:tc></w:tr>' for k,v in version['manifest']['refs'].items())+'</w:tbl>'
-   z.writestr('word/document.xml','<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+body+table+'<w:sectPr/></w:body></w:document>')
+   write('word/document.xml','<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+body+table+'<w:sectPr/></w:body></w:document>')
   return b.getvalue()
  if kind!='PDF':raise Denied('INVALID_REQUEST',422)
  try:
@@ -74,8 +78,11 @@ def render(version,kind):
   story=[]
   for p in paragraphs:
    for line in p.splitlines() or ['']:story.extend([Paragraph(escape(line) or ' ',style),Spacer(1,4)])
-  rows=[[Paragraph(escape(k),style),Paragraph(escape(text(v)),style)] for k,v in version['manifest']['refs'].items()]
+  # Each reference gets a bounded row so long lists can flow across pages.
+  rows=[[Paragraph(escape(k),style),Paragraph(escape(text(item)),style)]
+        for k,value in version['manifest']['refs'].items()
+        for item in (value if isinstance(value,list) and value else [value])]
   if rows:story.append(Table(rows,colWidths=[145,330],style=TableStyle([('VALIGN',(0,0),(-1,-1),'TOP')]),splitByRow=1))
-  b=BytesIO();SimpleDocTemplate(b,title=title,author='DATCO',rightMargin=50,leftMargin=50).build(story);return b.getvalue()
+  b=BytesIO();SimpleDocTemplate(b,title=title,author='DATCO',rightMargin=50,leftMargin=50,invariant=1).build(story);return b.getvalue()
  except Denied:raise
  except Exception:raise Denied('PROPOSAL_DOCUMENT_GENERATION_FAILED',503) from None

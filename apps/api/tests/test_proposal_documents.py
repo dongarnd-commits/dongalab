@@ -32,3 +32,22 @@ def test_invalid_document_content_is_not_reported_as_success():
 def test_invalid_xml_text_never_produces_corrupt_document():
  v=sample();v['sections'][0]['body']='TEST\x01invalid'
  with pytest.raises(Denied,match='PROPOSAL_INVALID_DOCUMENT_TEXT'):render(v,'DOCX')
+
+
+@pytest.mark.parametrize('kind',['DOCX','PDF'])
+def test_retry_of_same_version_is_byte_stable(kind):
+ import time
+ v=sample();first=render(v,kind)
+ # Move the renderer wall clock without sleeping; content/Version are identical.
+ from unittest.mock import patch
+ with patch('time.time',return_value=time.time()+10):second=render(v,kind)
+ assert first==second
+
+
+def test_pdf_preserves_large_valid_feature_reference_table_across_pages():
+ v=sample();refs=[str(i).zfill(36) for i in range(150)]
+ v['manifest']['refs']['feature_revision_ids']=refs
+ reader=PdfReader(io.BytesIO(render(v,'PDF')));content=''.join(p.extract_text() for p in reader.pages)
+ assert len(reader.pages)>1
+ assert all(ref in content for ref in refs)
+ assert all(section['heading'] in content and section['body'] in content for section in v['sections'])

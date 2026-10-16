@@ -434,7 +434,7 @@ DOCX uses editable OOXML; PDF embeds an installed Korean TrueType font (Windows 
 An explicit `DATCO_PROPOSAL_FONT` may select an installed TTF. Missing fonts/glyphs or rendering failures fail generation; no success File record is written.
 Generated files are private, content-addressed and bound to the exact reviewed ProposalVersion; downloads recheck parent permissions and SHA256. Internal Match review notes/full manifest are not automatically included in company projections or documents.
 
-CI adds Proposal API/Migration/concurrency/document tests to PostgreSQL Integration, five document unit tests, and an actual authenticated operator/approver Browser flow.
+CI adds Proposal API/Migration/concurrency/document tests to PostgreSQL Integration, eight document unit tests, and an actual authenticated operator/approver Browser flow.
 Use `uv run python tests/ci_run.py proposal` for focused Proposal DB tests against a disposable `DATCO_CI_ADMIN_URL`; `integration` runs public regressions and `e2e` owns fresh API/Worker/Web.
 The runner supports Windows/Linux and its own Next output directory. Private DMP 649 input is still excluded; the public CI fixture has only three synthetic features.
 PHASE1_FULL_E2E remains NOT_COMPLETED while the real provider is missing. PHASE2_FULL_E2E/SYSTEM_ACCEPTANCE remain NOT_TESTED.

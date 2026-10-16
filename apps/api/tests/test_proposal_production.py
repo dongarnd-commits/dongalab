@@ -151,3 +151,80 @@ def test_file_cannot_use_content_review_of_another_version(env):
  review=e.call('operator','/proposal/versions/'+v+'/review',dict(confirmed=True,note='TEST exact second version',idempotency_key=e.nonce()))
  with pytest.raises(IntegrityError,match='PROPOSAL_LINK_MISMATCH'):
   with e.factory.begin() as s:s.execute(P.files.insert().values(version_id=p['version_id'],content_review_id=review['id'],kind='DOCX',storage_key='a'*64,digest='a'*64,size=1,actor_id=e.accounts['operator']['id']))
+
+
+@pytest.mark.parametrize('kind',['DOCX','PDF'])
+@pytest.mark.parametrize('failure_point',['before_commit','after_commit'])
+def test_export_commit_failure_has_safe_reference_and_bounded_retry(env,monkeypatch,kind,failure_point):
+ from fastapi.testclient import TestClient
+ from sqlalchemy.orm import Session
+ from app.main import app
+ from app.core.config import get_settings
+ from unittest.mock import patch
+ import time
+ e=env;p,_,_=create(e);v=p['version_id']
+ e.call('operator','/proposal/versions/'+v+'/review',dict(confirmed=True,note='TEST reviewed exact export version',idempotency_key=e.nonce()))
+ before={p.name for p in e.files.root.iterdir() if p.is_file()}
+ body=dict(kind=kind,idempotency_key=e.nonce());url='/proposal/versions/'+v+'/export';original=Session.commit
+ def fail(session):
+  if failure_point=='after_commit':original(session)
+  raise RuntimeError('TEST_COMMIT_RESPONSE_FAILURE')
+ with TestClient(app,raise_server_exceptions=False) as client:
+  client.cookies.update(e.clients['operator'].cookies)
+  with monkeypatch.context() as m:
+   m.setattr(Session,'commit',fail)
+   for offset in (10,20):
+    with patch('time.time',return_value=time.time()+offset):
+     response=client.post(url,json=body,headers={'Origin':get_settings().web_origin})
+    assert response.status_code==500
+ after={p.name for p in e.files.root.iterdir() if p.is_file()};created=after-before
+ assert len(created)==1
+ with e.factory() as session:
+  rows=list(session.execute(select(P.files).where(P.files.c.version_id==v)).mappings())
+ assert len(rows)==(1 if failure_point=='after_commit' else 0)
+ # Retry reattaches the same bytes after rollback or replays the committed receipt.
+ receipt=e.call('operator',url,body);assert e.call('operator',url,body)==receipt
+ assert {p.name for p in e.files.root.iterdir() if p.is_file()}==after
+ assert receipt['digest'] in created
+ with e.factory() as session:assert session.scalar(select(func.count()).select_from(P.files).where(P.files.c.version_id==v))==1
+ response=e.clients['approver'].get('/proposal/files/'+receipt['id']+'/download')
+ assert response.status_code==404  # Not shared with the approver yet.
+ e.call('other','/proposal/files/'+receipt['id']+'/download',status=404)
+
+@pytest.mark.parametrize('outcome',['REVISION_REQUEST','REJECT'])
+def test_company_nonapproval_decisions_are_exact_and_idempotent(env,outcome):
+ e=env;p,_,_=create(e);v=p['version_id'];e.call('operator','/proposal/versions/'+v+'/review',dict(confirmed=True,note='TEST exact content',idempotency_key=e.nonce()))
+ q=e.call('operator','/proposal/versions/'+v+'/approval',dict(idempotency_key=e.nonce()))
+ body=dict(outcome=outcome,reason='TEST company decision, not approval',idempotency_key=e.nonce())
+ decision=e.call('approver','/proposal/approvals/'+q['id']+'/decision',body)
+ assert e.call('approver','/proposal/approvals/'+q['id']+'/decision',body)==decision
+ detail=e.call('operator','/proposal/'+p['proposal_id'])
+ assert detail['decisions']==[dict(detail['decisions'][0],outcome=outcome,version_id=v)]
+ assert detail['requests'][0]['state']=='CLOSED'
+
+
+def test_partial_migration_failure_rolls_back_and_can_retry(monkeypatch):
+ from uuid import uuid4
+ from alembic.operations import Operations
+ from alembic.migration import MigrationContext
+ from sqlalchemy import inspect
+ from app.infrastructure.database import Base,get_engine
+ from app.infrastructure import notice_schema as N
+ from isolation import require_test_database
+ require_test_database();schema='test_proposal_partial_'+uuid4().hex;new={P.roots,P.versions,P.reviews,P.requests,P.decisions,P.files,P.completions}
+ with get_engine().connect().execution_options(schema_translate_map={None:schema}) as c:
+  transaction=c.begin();c.exec_driver_sql('CREATE SCHEMA '+schema);Base.metadata.create_all(c,tables=[t for t in Base.metadata.tables.values() if t not in new]);c.exec_driver_sql('SET LOCAL search_path='+schema+',public')
+  old=c.execute(N.notices.insert().values(external_key='TEST partial migration',title='TEST source preserved',current_ordinal=1).returning(N.notices)).mappings().one()
+  with Operations.context(MigrationContext.configure(c)):
+   migration=migration_module();execute=migration.op.execute;calls=[]
+   def fail(statement,*args,**kwargs):
+    calls.append(statement)
+    if len(calls)==3:raise RuntimeError('TEST_PARTIAL_DDL_FAILURE')
+    return execute(statement,*args,**kwargs)
+   with pytest.raises(RuntimeError,match='TEST_PARTIAL_DDL_FAILURE'):
+    with c.begin_nested():
+     with monkeypatch.context() as m:m.setattr(migration.op,'execute',fail);migration.upgrade()
+   assert not ({t.name for t in new}&set(inspect(c).get_table_names(schema=schema)))
+   assert dict(c.execute(select(N.notices).where(N.notices.c.id==old['id'])).mappings().one())==dict(old)
+   migration.upgrade();assert {t.name for t in new}<=set(inspect(c).get_table_names(schema=schema))
+  transaction.rollback()
