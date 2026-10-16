@@ -201,7 +201,11 @@ class CapabilityApplication:
                 raise Denied('TARGET_VERSION_MISMATCH')
         if composition_id and self.get(S.compositions,composition_id)['company_id']!=context['company_id']: raise Denied('OBJECT_NOT_FOUND',404)
         def execute():
+            # Shared order with prepare_match: Composition root, then sorted Capability roots.
+            if composition_id: self.get(S.compositions,composition_id,True)
             self.context(actor,data['improvement_version_id'])
+            for capability_id in sorted({v['capability_id'] for v in selected}):
+                self.get(S.capabilities,capability_id,True)
             for selected_version in selected:
                 if self.get(S.capabilities,selected_version['capability_id'])['current_ordinal']!=selected_version['ordinal']: raise Denied('STALE_INPUT_VERSION')
             if composition_id:
@@ -273,13 +277,21 @@ class CapabilityApplication:
         return self.command(actor,command_key,[key,decision,note],execute)
     def prepare_match(self,actor,composition_version_id,notice_id,requirement_version_id,key):
         self.require_input_provider(actor); cv=self.get(S.composition_versions,composition_version_id)
-        self.composition(actor,cv['composition_id']); root=self.get(S.compositions,cv['composition_id'])
+        self.composition(actor,cv['composition_id'])
         def execute():
+            # Do not reuse a root read before command's idempotency lock.
+            root=self.get(S.compositions,cv['composition_id'],True)
             if root['current_ordinal']!=cv['ordinal']: raise Denied('STALE_INPUT_VERSION')
             context=self.context(actor,cv['improvement_version_id'])
-            for link in self.rows(S.composition_links,version_id=cv['id']):
-                v=self.get(S.versions,link['capability_version_id'])
+            links=self.rows(S.composition_links,version_id=cv['id'])
+            versions=[self.get(S.versions,link['capability_version_id']) for link in links]
+            for capability_id in sorted({v['capability_id'] for v in versions}):
+                self.get(S.capabilities,capability_id,True)
+            for v in versions:
                 if self.get(S.capabilities,v['capability_id'])['current_ordinal']!=v['ordinal']: raise Denied('STALE_INPUT_VERSION')
+            # Notice confirmation/collection also lock this root before changing current input.
+            from app.infrastructure.notice_schema import notices
+            self.get(notices,notice_id,True)
             notice=frozen_json(ConfirmedNoticeReader(SqlNoticeStore(self.session),self.files).read(actor,notice_id,requirement_version_id))
             comparison_inputs=read_comparison_inputs(self.inputs,actor,context,notice)
             comparison=compare(comparison_inputs,context['company_id'],context.get('site_id'),notice)

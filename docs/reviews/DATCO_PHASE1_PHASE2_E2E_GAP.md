@@ -155,3 +155,45 @@ PHASE1_INTEGRATED_E2E는 PENDING_PROVIDER이며 정책·저장계약도 미충�
 Evidence 경로 Root는 `storage/private/runtime/test-isolation/`이며 Git 제외다. Backend/Integration SKIP은 저장된 실제 한국어 원문 테스트의 opt-in 미설정이다. 브라우저에서는 저장된 실제 한국어 원문 격리 검증이 통과했다. Playwright SKIP은 API를 의도적으로 중단해야 하는 기존 장애 안내 시나리오로, 이번 정상 API 실행에서는 미실행이다. 테스트 PASS를 제안서 파일 생성이나 전체 E2E 성공으로 해석하지 않는다.
 
 R04_REGRESSION=PASS, R07_COMPARATOR_REGRESSION=PASS. PROPOSAL_IMPLEMENTATION=PARTIAL_READ_ONLY_GUARD, PROPOSAL_DOCUMENT_GENERATION=NOT_IMPLEMENTED, PROPOSAL_VERSION_HISTORY=NOT_IMPLEMENTED. PHASE1_ISOLATED_E2E=BLOCKED, PHASE1_INTEGRATED_E2E=PENDING_PROVIDER(정책/저장계약도 미충족), PHASE2_IMPLEMENTATION_GAP=DOCUMENTED, PHASE2_E2E=NOT_TESTED. TEST_ISOLATION/PUBLIC_DB_INTEGRITY/FROZEN_COMPLIANCE/ARCHITECTURE_PRESERVED/RESEARCHER_SCOPE_PRESERVED=PASS. CAPABILITY_PR_READY=CONDITIONAL(기존 Provider/Proposal 계약 미완료, Git 작업 미수행), SYSTEM_ACCEPTANCE=NOT_TESTED. APPROVAL_REQUIRED=P-01~04. NEXT_DEVELOPMENT_SLICE=계약/Provider 확인 후 Proposal 저장·검토·불변 Version·지정 승인·출력.
+
+
+## 11. PR #7 P1 보완 및 최신 main 통합 — 2026-10-16
+
+기준 main은 `1305954fb7c62b1692743c48d929517059ef7119`, 보완 전 PR Head는 `16cc8003450b21ef608b7185af157391db6f8dfb`다. main은 PR의 조상이며 신규 main Commit이 없어서 불필요한 Merge를 만들지 않았다. 다른 연구원의 Company/Fact/Improvement 구현은 이 main checkout에 없으며 다른 브랜치에도 없다고 단정하지 않는다.
+
+### 현재성·불변성의 실제 보완
+
+- P1-01: Matching Command 실행 트랜잭션 안에서 Composition Root를 FOR UPDATE로 다시 읽고 요청 Version과 비교한다. Composition 갱신도 같은 Root 잠금을 사용한다. 획득 순서는 Composition Root → 정렬된 Capability Root → (Matching에서) Notice Root다. Notice 확정/수집의 기존 Root 잠금을 재사용하여 현재 공고/요건 검사를 고정한다. 외부 Company/Fact의 현재성은 기존 권위 있는 Provider 계약이며 새 Master를 만들지 않는다.
+- 서로 다른 Session/실제 Commit의 두 승자 순서에서 잠금 대기를 확인한다. v2 저장이 먼저면 v1 매칭은409이며 Snapshot/Candidate/Matching Run 부분 생성이 없다. v1 Matching이 먼저면 정상 저장 후 v2에 의해 stale이 되고 과거 Snapshot/Review는 보존된다. 동일 요청 재전송은 과거 receipt를 반환하며 현재 유효성을 뜻하지 않는다. 현재성은 상세 조회에서 별도로 계산한다.
+- P1-02: 새 Migration `d752a0012026`이 Snapshot 및 CompositionVersion/CapabilityVersion/FeatureRevision/Feature Root와 연결 행의 UPDATE/DELETE를 DB에서 거부한다. 연결 행 추가로 의미를 바꾸지 못하도록 부모의 고정 Version JSON과 정확한 링크 집합을 deferred 검사한다. 신규 Version 생성의 같은 트랜잭션에서 필요한 링크를 모두 INSERT할 수 있다.
+- 기존 `b730cf01a649`/`c941a0042026`은 수정하지 않는다. 기존 행을 재작성하지 않고 Trigger/Function만 추가한다. Snapshot이 있으면 자동 Down을 거부하며 삭제로 강행하지 않는다. Snapshot 없는 안전한 Down/Up은 기존 데이터를 보존한다. 외부 Fact/Evidence Domain을 재구현하거나 허위 FK를 만들지 않는다.
+- 테스트 Worker 준비 신호는 임시 파일 작성 후 atomic replace로 발행한다. 이는 테스트 시작 안정성 보완이며 제품 Worker/업무 State 변경이 아니다.
+
+### 최종 목표 A~F: 구현과 후속 Slice
+
+| 단계 | 실제 소스/API/DB/UI | 검증/판정 | 미구현·의존·후속 |
+|---|---|---|---|
+| A 기업 입력/확인 | ImprovementReader 소비 경계, 정상 UnavailableImprovement503 | PENDING_PROVIDER; TEST Context 통과는 운영 통합이 아님 | Company/Site/Membership/Fact/Evidence/Improvement 권위 계약 소비. 다른 연구원 영역 변경 없음 |
+| B DMP/Capability/Composer/Notice 3자 매칭 | capability_schema/application/API/Web, ConfirmedNoticeReader, 공통 분석 계보, 기본 Comparator | IMPLEMENTED_AND_TESTED(격리); 운영 기업 통합은 IMPLEMENTED_NOT_INTEGRATED/PENDING_PROVIDER | R07 범용 조건 엔진은 DESIGN_ONLY, 자동 적격/PROPOSABLE 아님 |
+| C 제안서 생산 | proposal-preparation 읽기 전용 API/화면 | 생성조건 조회만 IMPLEMENTED_AND_TESTED; 생산 NOT_IMPLEMENTED | P-01~05는 사용자 승인된 별도 후속 개발 범위. Proposal/Review/기업 승인/DOCX/PDF는 아직 생성하지 않음 |
+| D 신청정보 재사용·누락 요청 | 02 FLOW-13/19/20, 03 Request/Application 논리설계 | DESIGN_ONLY / NOT_IMPLEMENTED | 확인 Fact/서류/유효기간 대조, 필요한 항목만 요청/응답 Version·재검증 |
+| E 신청·평가·협약 | 기존 Case/Package/제출/공식증빙/Stage 설계 | DESIGN_ONLY / NOT_IMPLEMENTED | 실제 Package/Case/외부 수동 제출·접수증/선정·미선정·협약 |
+| F 수행·검수·정산·사후관리 | 기존 Stage/Task/산출물/Evidence 설계 | DESIGN_ONLY / NOT_IMPLEMENTED | 동일 Case의 선행조건·완료 검토·파일·Audit·사후관리; 사업별 상세 근거/미확정 신청 확인 정책은 기존 PENDING 유지 |
+
+실제 FK는 Capability/Composition/Match Snapshot/Requirement/Analysis typed 관계에 있다. Improvement/Company/Fact의 외부 참조는 소비 Provider 검증 대상이다. ProposalVersion→ApplicationPackage→Case 이후의 실제 DB/API/UI는 없다. 기존 Version·Evidence를 이 후속 객체에서 재사용할 설계는 유지한다. MatchReview와 Proposal 내용 Review를 합치지 않는다.
+
+종전 §5의 승인 요청 문구는 당시 검토 이력이다. 이번 사용자 지시는 P-01~P-05 후속 범위 승인을 명시했지만 이번 PR에 생산 기능을 추가하라는 지시는 아니다. 구체적 구현 계약은 후속 Slice에서 기존 State/권한/Approval Guard 안에서 적용한다. 본 보완은 기존 계약의 강제이며 새 업무 State/Role/Permission을 승인하거나 FROZEN 목표를 변경하지 않는다.
+
+PR 범위 E2E는 실제 기능 검색→Capability/Composition 저장→확정 TEST 공고 비교→Candidate/Review/Version/Evidence까지다. PHASE1_E2E는 실제 Provider 및 제안서 생산·검토·저장·출력 없이는 NOT_COMPLETED다. PHASE2_E2E 및 SYSTEM_ACCEPTANCE는 NOT_TESTED로 유지한다. 아래 최신 실행 결과가 이전 단계 판정과 함께 최종 상태를 구분한다.
+
+
+### PR #7 보완 후 실제 실행 결과 — 2026-10-16
+
+- P1 집중 회귀: 23 PASS / 0 FAIL / 0 SKIP (`d8b6e25df0be`). 원래 두 재현을 회귀에 포함하고 서로 다른 실제 Session의 Commit 순서/잠금 대기를 검증했다.
+- Backend 전체: 222 PASS / 0 FAIL / 1 SKIP; Integration: 146 PASS / 0 FAIL / 1 SKIP / 76 deselected (`b733f6444b50`). 기존 R04/R07/Notice/권한/Catalog/Composer/생성조건 검증 유지.
+- Playwright 전체: 20 PASS / 0 FAIL / 1 SKIP; lint/build/API_TYPES_MATCH PASS (`5fa43307e966`). API/Web/Worker 실제 DB identity와 Proxy Import 일치 확인.
+- 새 Migration Up/기존 Snapshot 보존/SQL UPDATE·DELETE·JSONB·참조 Version·연결 추가 차단/안전 Down·재Up 및 ORM 정합성 PASS. b730/c941 원문 불변.
+- 세 실행 모두 공용 DB changed_tables=[] 및 소유 테스트 DB/계정 정리 확인. 정상 업무 DB Migration은 미적용.
+- Backend/Integration SKIP은 저장 실제 한국어 원문 opt-in 미설정, Browser SKIP은 의도적 API 중단 시나리오다. 저장된 실제 한국어 원문 Browser 검증은 통과했다. 하위 집중 건수를 전체에 중복 합산하지 않는다.
+- P1_01_FIXED/P1_02_FIXED=YES. PR 구현범위 격리 E2E=PASS. 운영 Company Provider 통합은 PENDING_PROVIDER, PHASE1_E2E=NOT_COMPLETED, PHASE2_E2E/SYSTEM_ACCEPTANCE=NOT_TESTED.
+- CI/필수 리뷰/브랜치 보호는 저장소 운영조건이며 이번에 임의 구성하거나 PR을 Ready로 바꾸지 않는다. 코드 차단 해소와 최종 Merge 승인은 구분한다.

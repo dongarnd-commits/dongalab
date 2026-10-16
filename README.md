@@ -362,7 +362,7 @@ From `apps/api`, run `uv run python -m app.infrastructure.dmp_inventory` to veri
 run `uv run python -m app.capability.import_source`. A fresh clone has no prepopulated inventory;
 missing source data must not be replaced with fabricated 649-item data.
 
-Current Alembic head is `c941a0042026`, following inventory/catalog/composition/matching revision
+Current Alembic head is `d752a0012026`, following typed lineage `c941a0042026` and inventory/catalog/composition/matching revision
 `b730cf01a649`. The new typed lineage migration preserves legacy and Notice history; downgrade refuses
 unsafe loss of typed history. This sharing operation does not migrate the normal business database.
 
@@ -383,3 +383,12 @@ Provider integration, general R-07 region/age/amount/compound-condition evaluati
 extraction, Proposal creation/review/version/enterprise approval/DOCX/PDF, and Phase 1/2 integrated E2E remain
 unfinished. `SYSTEM_ACCEPTANCE: NOT_TESTED`. See `docs/reviews/DATCO_PHASE1_PHASE2_E2E_GAP.md` and
 `docs/reviews/R07_REVIEWED_CONDITION_DESIGN.md`; proposed design is not an approved implementation contract.
+
+
+PR #7 P1 hardening adds transaction-held Composition currentness locks and immutable matching inputs.
+The root lock order is Composition, sorted Capability roots, then Notice for matching. Existing idempotent
+receipts remain historical results; re-read the match detail to determine current validity.
+Migration `d752a0012026` freezes snapshots/referenced input versions and validates exact child links.
+It preserves existing rows and refuses automatic downgrade while snapshots exist.
+From `apps/api`, `tests/isolated_run.py p1` runs committed two-session and database/migration regressions
+in the same guarded disposable environment. Normal business database migration remains a separate action.

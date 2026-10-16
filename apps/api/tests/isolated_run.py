@@ -55,7 +55,7 @@ def wait_url(url,seconds=90):
  raise RuntimeError('ISOLATED_SERVICE_NOT_READY')
 
 def main():
- parser=argparse.ArgumentParser();parser.add_argument('phase',choices=['baseline','verify','ui','backend','r04']);args=parser.parse_args()
+ parser=argparse.ArgumentParser();parser.add_argument('phase',choices=['baseline','verify','ui','backend','r04','p1']);args=parser.parse_args()
  nonce=uuid4().hex[:12];dbname='datco_test_'+nonce;role='datco_test_role_'+nonce
  directory=ROOT/'storage/private/runtime/test-isolation'/nonce;directory.mkdir(parents=True)
  normal=get_engine();before=digest_shared(normal);public_inputs=read_public_inputs(normal)
@@ -115,7 +115,10 @@ def main():
   if args.phase=='r04':
    run('r04',[sys.executable,'-m','pytest','tests/test_analysis_lineage.py','tests/test_analysis_migration.py','tests/test_capability_scenarios.py','-q','--tb=short'],API)
    run('migration-check',[sys.executable,'-m','alembic','check'],API)
-  if args.phase in ('backend','r04'):
+  if args.phase=='p1':
+   run('p1',[sys.executable,'-m','pytest','tests/test_matching_integrity.py','-q','--tb=short'],API)
+   run('migration-check',[sys.executable,'-m','alembic','check'],API)
+  if args.phase in ('backend','r04','p1'):
    return 1 if any(step['exit'] for step in report['commands']) else 0
   api_port,web_port=free_port(),free_port()
   while web_port==api_port:web_port=free_port()
