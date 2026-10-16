@@ -84,6 +84,8 @@ jobs:
       - run: npm ci --prefix apps/web
       - name: API type equality
         working-directory: apps/api
+        env:
+          PYTHONPATH: .
         run: uv run --frozen python tests/verify_api_types.py ../../storage/private/runtime/ci-types
       - run: npm run lint --prefix apps/web
       - run: npm run build --prefix apps/web

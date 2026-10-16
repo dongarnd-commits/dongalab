@@ -46,7 +46,7 @@ def main():
    api_port,web_port=port(),port()
    while web_port==api_port:web_port=port()
    origin='http://localhost:'+str(web_port)
-   env.update(WEB_ORIGIN=origin,API_ORIGIN='http://127.0.0.1:'+str(api_port),CAPABILITY_API_ORIGIN='http://127.0.0.1:'+str(api_port),DATCO_E2E_BASE_URL=origin,DATCO_E2E_SERVER_READY='1',DATCO_TEST_DIST_DIR='.next/ci-'+nonce)
+   env.update(WEB_ORIGIN=origin,API_ORIGIN='http://127.0.0.1:'+str(api_port),CAPABILITY_API_ORIGIN='http://127.0.0.1:'+str(api_port),DATCO_E2E_BASE_URL=origin,DATCO_E2E_SERVER_READY='1')
    # Seed public demo Notice only; private DMP and stored Live documents are never read.
    user='TEST_CI_'+nonce;pw=secrets.token_urlsafe(24)
    env.update(DATCO_E2E_USER=user,DATCO_E2E_PASSWORD=pw)
@@ -62,6 +62,16 @@ def main():
    worker=json.loads((out/'worker-ready.json').read_text());assert worker['database']==db and worker['db_user']==role
    start('web',['npm','run','dev','--','--port',str(web_port)],WEB);wait(origin)
    run(['npm','run','test:e2e','--','tests/smoke.spec.ts','tests/notice.spec.ts','--workers=1','--reporter=line'],WEB)
+ except Exception:
+  for log in logs:log.flush()
+  for name in ('api','worker','web'):
+   path=out/(name+'.log')
+   if path.exists():
+    tail=path.read_text(errors='replace')[-4000:]
+    for secret in (password,url.password,env.get('DATCO_E2E_PASSWORD'),env['DATABASE_URL']):
+     if secret:tail=tail.replace(secret,'[REDACTED]')
+    print('CI_CHILD_DIAGNOSTIC '+name+'\n'+tail,flush=True)
+  raise
  finally:
   for p in reversed(children):
    if p.poll() is None:
