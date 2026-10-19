@@ -165,3 +165,17 @@ def test_common_company_lineage_rejects_unpaired_run(env):
    with session.begin_nested():
     CompanyApplication(session,e['files']).add(N.runs,analysis_kind='COMPANY_FACT_EXTRACTION',actor_id=e['people']['operator']['id'],provider_version='TEST',extractor_version='TEST',missing=[],conflicts=[])
     session.execute(__import__('sqlalchemy').text('SET CONSTRAINTS ALL IMMEDIATE'))
+
+
+def test_explicit_financial_rules_keep_source_and_reject_guessed_context(env):
+ e=env;c,site,p=fresh(e);cid=c['id']
+ raw='기업명: TEST document first\n사업장 소재지: TEST Seoul\n직원수: 42\n매출액(2025,원,KRW): 1800000000\n매출액: 999\n매출액(0000,원,KRW): 888'.encode()
+ r=e['clients']['editor'].post('/company/'+cid+'/files',content=raw,headers={'Origin':get_settings().web_origin,'X-Upload-Name':'TEST-finance-context.txt'});assert r.status_code==200
+ f=r.json();call(e,'editor','/company/files/'+f['id']+'/parse',{})
+ d=call(e,'editor','/company/'+cid);candidates=[x for x in d['candidates'] if x['mode']=='RULE_BASED_EXTRACTION']
+ finance=[x for x in candidates if x['field']=='revenue'];assert len(finance)==1
+ value=finance[0];assert (value['value'],value['period'],value['unit'],value['currency'])==('1800000000','2025','원','KRW')
+ ev=next(x for x in d['evidence'] if x['id']==value['evidence_id']);assert ev['file_id']==f['id'] and ev['descriptor']=='TEXT line 4' and value['value'] in ev['text']
+ assert any(x['field']=='employees' and x['value']=='42' for x in candidates)
+ assert not d['facts'];assert d['inputs'][-1]['data']['financials']==p['financials']
+ call(e,'other','/company/files/'+f['id']+'/parse',{},status=404)

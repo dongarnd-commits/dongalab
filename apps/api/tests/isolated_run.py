@@ -56,12 +56,12 @@ def wait_url(url,seconds=90):
 
 def main():
  global WEB
- parser=argparse.ArgumentParser();parser.add_argument('phase',choices=['baseline','verify','ui','backend','r04','p1','company','company-ui','workspace','workspace-ui']);args=parser.parse_args()
+ parser=argparse.ArgumentParser();parser.add_argument('phase',choices=['baseline','verify','ui','backend','r04','p1','company','company-ui','workspace','workspace-ui','document-ui']);args=parser.parse_args()
  nonce=uuid4().hex[:12];dbname='datco_test_'+nonce;role='datco_test_role_'+nonce
  directory=ROOT/'storage/private/runtime/test-isolation'/nonce;directory.mkdir(parents=True)
  web_source=WEB
  global_web=WEB
- if args.phase in ('ui','verify','company-ui','workspace-ui'):
+ if args.phase in ('ui','verify','company-ui','workspace-ui','document-ui'):
   import shutil
   web_source=directory/'web';web_source.mkdir()
   for entry in WEB.iterdir():
@@ -84,7 +84,7 @@ def main():
  report={'phase':args.phase,'nonce':nonce,'database':dbname,'role':role,'source_hash':source_hash,'commands':[]}
  env=os.environ.copy();test_url=base.set(database=dbname,username=role,password=password,query={'application_name':'datco-tests-'+nonce,'sslmode':'disable'})
  env.update(DATABASE_URL=test_url.render_as_string(hide_password=False),DATCO_TEST_DATABASE=dbname,DATCO_TEST_DB_ROLE=role,DATCO_TEST_NONCE=nonce,PYTHONPATH=str(API)+os.pathsep+str(API/'tests'),PYTHONIOENCODING='utf-8',WEB_ORIGIN='http://localhost:3000',DATCO_TEST_FILES=str(directory/'notice'),DATCO_TEST_WORKER_READY=str(directory/'worker-ready.json'))
- if args.phase in ('ui','verify','company-ui','workspace-ui'):WEB=web_source
+ if args.phase in ('ui','verify','company-ui','workspace-ui','document-ui'):WEB=web_source
  # An inherited Live key cannot be used in any isolated subprocess.
  env['BIZINFO_API_KEY']=''
  def run(label,command,cwd,child_env=env):
@@ -176,8 +176,9 @@ def main():
   if page['total']!=649 or page['import']['id']!=expected_import:raise RuntimeError('WEB_PROXY_TEST_DATABASE_MISMATCH')
   report['web_proxy_database_verified']=True
   command=['cmd.exe','/c','npm.cmd','run','test:e2e','--']
+  if args.phase=='document-ui':command+=['tests/company-document-first.spec.ts']
   if args.phase=='company-ui':command+=['tests/company.spec.ts']
-  if args.phase=='workspace-ui':command+=['tests/workspace.spec.ts','tests/company.spec.ts','tests/proposal.spec.ts']
+  if args.phase=='workspace-ui':command+=['tests/workspace.spec.ts','tests/company.spec.ts','tests/proposal.spec.ts','tests/company-document-first.spec.ts']
   if args.phase=='baseline':command+=['tests/capability-scenarios.spec.ts']
   command+=['--workers=1']
   run('playwright',command,WEB,browser_env)

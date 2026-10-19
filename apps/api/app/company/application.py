@@ -105,16 +105,22 @@ class CompanyApplication:
   for loc in p.locations:
    e=self.add(S.evidence,actor_id=who.id,company_id=f['company_id'],site_id=f['site_id'],file_id=file_id,input_version_id=None,parse_id=run['id'],descriptor=loc.descriptor,page=loc.page,text=loc.text,mode='RULE_BASED_EXTRACTION')
    # Only explicit labelled text, no inferred units/years or eligibility.
-   labels={'회사명':'company_name','기업명':'company_name','업종':'industry','소재지':'address','대표자':'representative','사업자번호':'business_number','사업자등록번호':'business_number'}
+   labels={'회사명':'company_name','기업명':'company_name','업종':'industry','소재지':'address','대표자':'representative','사업자번호':'business_number','사업자등록번호':'business_number','상호':'company_name','상호명':'company_name','사업장 소재지':'address','직원수':'employees','근로자수':'employees'}
    for line in loc.text.splitlines():
     m=re.fullmatch(r'\s*([^:：]{1,20})[:：]\s*(.{1,500})\s*',line)
-    if m and m[1].strip() in labels:
+    financial=re.fullmatch(r'\s*매출액\s*\(\s*([0-9]{4})\s*,\s*([^,()]{1,30})\s*,\s*([^,()]{1,10})\s*\)[:：]\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*',line)
+    field=labels.get(m[1].strip()) if m else None
+    value=m[2].strip() if field else None
+    period=unit=currency=''
+    if financial and 1900<=int(financial[1])<=2200:
+     field='revenue';period,unit,currency,value=[x.strip() for x in financial.groups()]
+    if field:
      from app.infrastructure import notice_schema as N
      if analysis_run is None:
-      analysis_run=self.add(N.runs,analysis_kind='COMPANY_FACT_EXTRACTION',actor_id=who.id,provider_version='company-labelled-rule-v1',extractor_version=p.parser_version,missing=list(p.limitations),conflicts=[])
+      analysis_run=self.add(N.runs,analysis_kind='COMPANY_FACT_EXTRACTION',actor_id=who.id,provider_version='company-labelled-rule-v2',extractor_version=p.parser_version,missing=list(p.limitations),conflicts=[])
       self.add(S.analysis_contexts,run_id=analysis_run['id'],file_id=file_id,parse_id=run['id'],company_id=f['company_id'])
      aid=identity()
-     c=self.add(S.candidates,company_id=f['company_id'],site_id=f['site_id'],evidence_id=e['id'],field=labels[m[1].strip()],value=m[2].strip(),period='',unit='',currency='',valid_from=date.today().isoformat(),mode='RULE_BASED_EXTRACTION',actor_id=who.id,analysis_candidate_id=aid)
+     c=self.add(S.candidates,company_id=f['company_id'],site_id=f['site_id'],evidence_id=e['id'],field=field,value=value,period=period,unit=unit,currency=currency,valid_from=date.today().isoformat(),mode='RULE_BASED_EXTRACTION',actor_id=who.id,analysis_candidate_id=aid)
      self.add(N.candidates,id=aid,run_id=analysis_run['id'],analysis_kind='COMPANY_FACT_EXTRACTION',company_candidate_id=c['id'],kind='COMPANY_FACT_EXTRACTION',content=c['value'],reason='Exact labelled source value; rule-based candidate, not confirmed fact')
   self.record(who,f['company_id'],'PARSE_COMPANY_FILE',file_id=file_id);return run
  def manual_evidence(self,who,cid,file_id,site_id,descriptor,transcription):

@@ -41,8 +41,8 @@ test('UI1 CASE-01 company entry, password visibility, failed login and permissio
   await page.screenshot({path:test.info().outputPath('ui1-company-home.png'),fullPage:true});
   const home=page.getByRole('region',{name:'업무 시작'});
   await home.getByRole('link',{name:'기업 증빙자료 제출하기',exact:true}).click();
-  await expect(page).toHaveURL(/tab=files/);
-  await expect(page.getByRole('heading',{name:'제출자료',exact:true})).toBeVisible();
+  await expect(page).toHaveURL(/tab=onboarding/);
+  await expect(page.getByRole('heading',{name:'기업 증빙자료 제출',exact:true})).toBeVisible();
   const nav=page.getByRole('navigation',{name:'전체 업무 메뉴'});
   await nav.getByRole('link',{name:'기업정보',exact:true}).click();
   await expect(page).toHaveURL(/tab=profile/);

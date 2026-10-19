@@ -22,7 +22,7 @@ export default function Home() {
     }
     return u.pathname+u.search;
   }
-  const next=admin?['Catalog·Version 관리','/capability?view=catalog']:approver?['제안서 확인·승인','/proposal']:operator?['기업자료·Fact 검토하기','/company?tab=facts']:['기업 증빙자료 제출하기','/company?tab=files'];
+  const next=admin?['Catalog·Version 관리','/capability?view=catalog']:approver?['제안서 확인·승인','/proposal']:operator?['기업자료·Fact 검토하기','/company?tab=facts']:['기업 증빙자료 제출하기','/company?tab=onboarding'];
   return <section className="workspace-home">
     <header className="workspace-home-heading"><div><p className="workspace-eyebrow">{roles[data.actor.role]} · {data.actor.username}</p><h1>{admin?'운영 대시보드':operator?'업무 대시보드':'내 기업 홈'}</h1><p>{admin?'관리자 대시보드':operator?'운영자 대시보드':'수요기업 업무 홈'} · {company?.name??(admin?'기준정보와 접근권한 관리':'상단에서 업무 기업을 선택해 주세요')}</p></div><button onClick={refresh}>업무 현황 새로고침</button></header>
     <section className="workspace-start" aria-label="업무 시작"><div><p className="workspace-eyebrow">다음 업무</p><h2>{admin?'확인된 서비스와 접근관계를 관리하세요':approver?'전달받은 제안서의 정확한 Version을 확인하세요':operator?'기업의 원문과 개선요구부터 검토하세요':'기업 증빙자료부터 제출해 주세요'}</h2><p>{admin?'기능 원천 → Capability 검토 → 발행·Version → 기업 접근관계':approver?'지정된 승인 요청에 한해 승인·수정요청·거절을 기록합니다.':operator?'기업 선택 → Fact·Evidence → 개선요구 → 서비스 조합 → 매칭 → 제안서': '자료 제출 → 추출 후보 확인 → 기업정보 확인 → 개선요구 → DATCO 검토'}</p></div><a className="workspace-primary" href={href(next[1])}>{next[0]}</a></section>
