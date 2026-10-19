@@ -1,0 +1,11 @@
+import {build} from "esbuild";
+import {mkdir} from "node:fs/promises";
+import {createRequire} from "node:module";
+import {execFileSync} from "node:child_process";
+import path from "node:path";
+const require=createRequire(import.meta.url),base=import.meta.dirname,out=process.argv[2]?path.resolve(process.argv[2]):null;
+if(!out)throw Error("Preview output directory required");
+await mkdir(out,{recursive:true});
+await build({entryPoints:[path.join(base,"src/ui-preview/company/entry.tsx")],outfile:path.join(out,"preview.js"),bundle:true,platform:"browser",format:"iife",jsx:"automatic",minify:true,define:{"process.env.NODE_ENV":'"production"'}});
+const cli=path.join(path.dirname(require.resolve("@tailwindcss/cli/package.json")),"dist/index.mjs");
+execFileSync(process.execPath,[cli,"-i",path.join(base,"src/ui-preview/company/preview.css"),"-o",path.join(out,"preview.css"),"--minify"],{cwd:base,stdio:"pipe"});
