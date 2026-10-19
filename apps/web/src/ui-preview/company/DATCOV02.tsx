@@ -25,6 +25,8 @@ type Doc = {
   siteId: number | null;
   improvement: string;
   editing: boolean;
+  savedInfo?: {category:string;description:string;siteId:number|null;improvement:string};
+  siteRemoved?: boolean;
 };
 type FieldData = {
   company: string;
@@ -190,7 +192,8 @@ export const DATCOV02 = () => {
   const [limits, setLimits] = useState('기존 ERP 연동 가능 여부와 현장 데이터 수집 방식 확인이 필요합니다.');
   const [needSaved, setNeedSaved] = useState(false);
   const [documents, setDocuments] = useState<Doc[]>([]);
-  const [docCategory, setDocCategory] = useState('사업자등록증');
+  const [dragging, setDragging] = useState(false);
+  const dragDepth = useRef(0);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [candidateSource] = useState('');
   const [changing, setChanging] = useState<number | null>(null);
@@ -231,15 +234,30 @@ export const DATCOV02 = () => {
   };
   useEffect(()=>{const back=()=>{const p=new URLSearchParams(window.location.search).get('screen');setLoggedIn(!!p&&p!=='login');if(menu.flatMap(g=>g.items).some(x=>x.id===p))setPage(p as Screen);setMobileMenu(false);};window.addEventListener('popstate',back);return()=>window.removeEventListener('popstate',back);},[]);
   const doLogin=(ev:React.FormEvent)=>{ev.preventDefault();setPassword('');setLoginErr('');setLoggedIn(true);goto('home');};
-  const receive=async(fileList:FileList|null,toReplace:number|null=null)=>{
+  const receive=async(fileList:FileList|File[]|null,toReplace:number|null=null)=>{
     if(!fileList?.length)return;
+    const errors:string[]=[];
+    if(fileList.length>5)errors.push('한 번에 최대 5개 파일만 추가할 수 있습니다. 나머지는 다시 선택해 주세요.');
     for(const [j,f] of Array.from(fileList).slice(0,5).entries()){
+      if(!/\.(txt|csv|json|pdf|docx|xlsx|jpg|jpeg|png)$/i.test(f.name)){errors.push(f.name+': 지원하지 않는 파일 형식입니다.');continue;}
+      if(f.size>15*1024*1024){errors.push(f.name+': 파일당 15MB 이하만 선택할 수 있습니다.');continue;}
       const old=toReplace!==null&&j===0?documents[toReplace]:undefined;
-      const item:Doc={id:old?.id??Date.now()+j,name:f.name,size:(f.size/1024).toFixed(1)+' KB',type:f.type,category:docCategory,version:(old?.version??0)+1,status:'미리보기 · 미업로드',history:old?[...old.history,old.name+' · 미리보기']:[],file:f,description:old?.description??'',siteId:old?.siteId??null,improvement:old?.improvement??'',editing:old?.editing??true};
+      const item:Doc={id:old?.id??Date.now()+j,name:f.name,size:(f.size/1024).toFixed(1)+' KB',type:f.type,category:old?.category??'기타',version:(old?.version??0)+1,status:'미리보기 · 미업로드',history:old?[...old.history,old.name+' · 미리보기']:[],file:f,description:old?.description??'',siteId:old?.siteId??null,improvement:old?.improvement??'',editing:old?.editing??true,savedInfo:old?.savedInfo,siteRemoved:old?.siteRemoved};
       setDocuments(prev=>old?prev.map((v,k)=>k===toReplace?item:v):[...prev,item]);
       setAudit(a=>['미리보기 목록 변경: '+f.name,...a]);
     }
-    notify('파일명·크기 미리보기만 표시합니다. 업로드·파싱·서버 저장은 다음 단계에서 연결합니다.');
+    notify(errors.length?errors.join(' '):'파일명·크기 미리보기만 표시합니다. 업로드·파싱·서버 저장은 다음 단계에서 연결합니다.');
+  };
+  const infoOf=(doc:Doc)=>({category:doc.category,description:doc.description,siteId:doc.siteId,improvement:doc.improvement});
+  const isDirty=(doc:Doc)=>!doc.savedInfo||JSON.stringify(infoOf(doc))!==JSON.stringify(doc.savedInfo);
+  const removeSite=(id:number)=>{
+    if(!window.confirm('이 사업장 입력 카드를 미리보기에서 삭제할까요? 연결된 자료는 사업장을 다시 선택해야 합니다. 실제 DB는 변경하지 않습니다.'))return;
+    setSites(a=>a.filter(x=>x.id!==id));
+    setDocuments(a=>a.map(x=>x.siteId===id||x.savedInfo?.siteId===id?{...x,siteId:x.siteId===id?null:x.siteId,savedInfo:x.savedInfo?{...x.savedInfo,siteId:x.savedInfo.siteId===id?null:x.savedInfo.siteId}:undefined,siteRemoved:true}:x));
+  };
+  const saveDocumentInfo=(id:number)=>{
+    setDocuments(a=>a.map(x=>x.id===id?{...x,savedInfo:infoOf(x),siteRemoved:x.siteRemoved&&x.siteId===null}:x));
+    notify('자료정보를 현재 UI 미리보기 세션에 반영했습니다. PostgreSQL·서버 저장은 수행하지 않았습니다.');
   };
   const onUpload = async (ev: React.ChangeEvent<HTMLInputElement>) => {
     await receive(ev.target.files);
@@ -313,8 +331,8 @@ export const DATCOV02 = () => {
 
     {page === 'home' && <>
      <Header eyebrow="COMPANY DASHBOARD" title="기업 홈" sub="우리 기업의 업무 진행 현황과 다음 할 일을 확인하세요." />
-     <Card className="relative overflow-hidden bg-[#123D70] p-7 text-white md:p-9"><div className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full border-[44px] border-white/5" /><p className="text-[11px] font-semibold tracking-[.2em] text-blue-200">WELCOME TO DATCO ONE</p><h2 className="mt-4 text-[25px] font-bold leading-[1.45]">{data.company || '우리 기업'}의 성장과 혁신을<br />함께 준비합니다.</h2><p className="mt-3 text-[12px] leading-6 text-blue-100">기업정보 및 개선과제를 등록하고 맞춤형 솔루션과 지원사업 제안서를 확인해 보세요.</p><button className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-[12px] font-bold text-blue-700" onClick={() => goto('onboarding')}>기업정보 등록 시작 <ArrowRight size={16} /></button></Card>
-     <Card className="mt-5 p-6"><div className="mb-4 flex items-center justify-between"><h3 className="text-[15px] font-bold">업무 진행 단계</h3><span className="text-[12px] font-semibold text-blue-600">{progress.filter(Boolean).length} / 5</span></div><div className="mb-5 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-blue-600" style={{
+
+     <Card className="p-6"><div className="mb-4 flex items-center justify-between"><h3 className="text-[15px] font-bold">업무 진행 단계</h3><span className="text-[12px] font-semibold text-blue-600">{progress.filter(Boolean).length} / 5</span></div><div className="mb-5 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-blue-600" style={{
                   width: progress.filter(Boolean).length * 20 + '%'
                 }} /></div><div className="grid gap-2 sm:grid-cols-5">{[{
                   t: '기업 등록',
@@ -412,7 +430,7 @@ export const DATCOV02 = () => {
                   notify('미연결: 기업정보 저장은 다음 단계에서 연결합니다. 실제 저장하지 않았습니다.');
                   notify('미연결: 실제 저장·분석·제출·승인은 수행하지 않았습니다. 다음 단계에서 연결합니다.');
                 }}><Check size={15} /> 기업정보 저장</button><button className={S} onClick={() => goto('finance')}>재무정보 이동 <ArrowRight size={15} /></button></div></Card>
-<Card className="mt-5 p-6"><div className="flex flex-wrap items-center justify-between gap-3"><h3 className="text-[16px] font-bold">사업장 목록</h3><button className={P} onClick={()=>setSites(a=>[...a,{id:Date.now(),name:'',address:'',person:'',open:true}])}><Plus size={15}/> 사업장 추가</button></div><p className="mt-3 text-[12px] text-slate-500">미리보기 입력 · 현재 화면 세션에서만 유지되며 실제 DB에 저장되지 않습니다.</p><div className="mt-5 space-y-4">{sites.map((site,i)=><section key={site.id} aria-label={'사업장 '+(i+1)} className="rounded-xl border border-slate-200 p-4"><div className="flex items-center justify-between gap-3"><h4 className="text-[14px] font-bold">사업장 {i+1} — {site.name||'이름 입력 필요'}</h4><button className={S} aria-expanded={site.open} onClick={()=>setSites(a=>a.map(x=>x.id===site.id?{...x,open:!x.open}:x))}>{site.open?'접기':'수정 · 펼치기'}</button></div>{site.open&&<div className="mt-4 grid gap-4 sm:grid-cols-2">{([{key:'name',label:'사업장명'},{key:'address',label:'사업장 소재지'},{key:'person',label:'사업장 담당자'}] as const).map(f=><Label key={f.key} name={f.label}><input className={I} value={site[f.key]} onChange={e=>setSites(a=>a.map(x=>x.id===site.id?{...x,[f.key]:e.target.value}:x))}/></Label>)}</div>}</section>)}</div></Card>    </>}
+<Card className="mt-5 p-6"><div className="flex flex-wrap items-center justify-between gap-3"><h3 className="text-[16px] font-bold">사업장 목록</h3><button className={P} onClick={()=>setSites(a=>[...a,{id:Date.now(),name:'',address:'',person:'',open:true}])}><Plus size={15}/> 사업장 추가</button></div><p className="mt-3 text-[12px] text-slate-500">미리보기 입력 · 현재 화면 세션에서만 유지되며 실제 DB에 저장되지 않습니다.</p><div className="mt-5 space-y-4">{sites.map((site,i)=><section key={site.id} aria-label={'사업장 '+(i+1)} className="rounded-xl border border-slate-200 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><h4 className="text-[14px] font-bold">사업장 {i+1} — {site.name||'이름 입력 필요'}</h4><button className={S} onClick={()=>removeSite(site.id)}><Trash2 size={15}/> 사업장 삭제</button><button className={S} aria-expanded={site.open} onClick={()=>setSites(a=>a.map(x=>x.id===site.id?{...x,open:!x.open}:x))}>{site.open?'접기':'수정 · 펼치기'}</button></div>{site.open&&<div className="mt-4 grid gap-4 sm:grid-cols-2">{([{key:'name',label:'사업장명'},{key:'address',label:'사업장 소재지'},{key:'person',label:'사업장 담당자'}] as const).map(f=><Label key={f.key} name={f.label}><input className={I} value={site[f.key]} onChange={e=>setSites(a=>a.map(x=>x.id===site.id?{...x,[f.key]:e.target.value}:x))}/></Label>)}</div>}</section>)}</div></Card>    </>}
 
 
     {page === 'finance' && <>
@@ -442,23 +460,23 @@ export const DATCOV02 = () => {
 
     {page === 'files' && <>
      <Header eyebrow="DOCUMENTS / 06" title="첨부자료 관리" sub="자료 추가, 분류 변경, 파일 교체, 이력 확인을 한곳에서 관리합니다." />
-     <Card className="p-5 md:p-7"><div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/30 p-6"><div><h2 className="text-[15px] font-bold">기업 서류와 증빙자료 등록</h2><p className="mt-2 text-[12px] text-slate-500">TXT, CSV, JSON, PDF, DOCX, XLSX, JPG, PNG · 파일당 15MB 이하</p></div><div className="flex flex-wrap gap-2"><select aria-label="자료 분류" className={I + ' !w-auto'} value={docCategory} onChange={e => setDocCategory(e.target.value)}>{['사업자등록증', '재무자료', '기업소개서', '공정·현장자료', '지원사업 이력', '기타'].map(v => <option key={v}>{v}</option>)}</select><input ref={upload} type="file" multiple accept=".txt,.csv,.json,.pdf,.docx,.xlsx,.jpg,.jpeg,.png" onChange={onUpload} className="hidden" /><button className={P} disabled={busy} onClick={() => upload.current?.click()}><Plus size={16} /> 파일 추가</button></div></div>
+     <Card className="p-5 md:p-7"><div data-preview-dropzone data-dragging={dragging} onDragEnter={e=>{e.preventDefault();dragDepth.current++;setDragging(true);}} onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect='copy';}} onDragLeave={e=>{e.preventDefault();if(--dragDepth.current<=0){dragDepth.current=0;setDragging(false);}}} onDrop={e=>{e.preventDefault();dragDepth.current=0;setDragging(false);void receive(e.dataTransfer.files);}} className={'flex flex-wrap items-center justify-between gap-4 rounded-2xl border-2 border-dashed p-6 '+(dragging?'border-blue-600 bg-blue-100 ring-4 ring-blue-100':'border-blue-200 bg-blue-50/30')}><div><h2 className="text-[15px] font-bold">기업 서류와 증빙자료 등록</h2><p className="mt-2 text-[12px] text-blue-700">파일을 이곳에 끌어다 놓거나 파일 추가 버튼을 눌러 주세요.</p><p className="mt-2 text-[12px] text-slate-500">TXT, CSV, JSON, PDF, DOCX, XLSX, JPG, PNG · 파일당 15MB 이하</p></div><div className="flex flex-wrap gap-2"><input ref={upload} type="file" multiple accept=".txt,.csv,.json,.pdf,.docx,.xlsx,.jpg,.jpeg,.png" onChange={onUpload} className="hidden" /><button className={P} disabled={busy} onClick={() => upload.current?.click()}><Plus size={16} /> 파일 추가</button></div></div>
       <div className="mb-4 mt-7 flex items-center justify-between"><h3 className="text-[15px] font-bold">등록된 자료 <span className="text-blue-600">{documents.length}</span></h3><button onClick={() => goto('onboarding')} className={S}>서류로 정보 가져오기 <ArrowRight size={15} /></button></div>
       <input type="file" ref={replace} accept=".txt,.csv,.json,.pdf,.docx,.xlsx,.jpg,.jpeg,.png" onChange={onReplace} className="hidden" />
-      <div className="space-y-3">{documents.length === 0 ? <div className="rounded-xl border border-dashed border-slate-200 p-9 text-center text-[13px] text-slate-400">등록된 파일이 없습니다. 새 파일을 추가해 주세요.</div> : documents.map((doc, i) => <div key={doc.id} data-preview-document={doc.id} className="rounded-xl border border-slate-100 px-4 py-4"><div className="flex flex-wrap items-center gap-3"><FileIcon name={doc.name} /><div className="min-w-[175px] flex-1"><p className="break-all text-[12px] font-bold">{doc.name}</p><p className="mt-1 text-[11px] text-slate-400">{doc.size} · v{doc.version} · {doc.category}</p></div><Chip color={doc.status.includes('후보') ? 'green' : 'amber'}>{doc.status}</Chip><button className={S} onClick={() => {
+      <div className="space-y-3">{documents.length === 0 ? <div className="rounded-xl border border-dashed border-slate-200 p-9 text-center text-[13px] text-slate-400">등록된 파일이 없습니다. 새 파일을 추가해 주세요.</div> : documents.map((doc, i) => <div key={doc.id} data-preview-document={doc.id} className="rounded-xl border border-slate-100 px-4 py-4"><div className="flex flex-wrap items-center gap-3"><FileIcon name={doc.name} /><div className="min-w-[175px] flex-1"><p className="break-all text-[12px] font-bold">{doc.name}</p><p className="mt-1 text-[11px] text-slate-400">{doc.size} · v{doc.version} · {doc.savedInfo?.category??'자료정보 미반영'}</p><p className="mt-2 whitespace-pre-wrap text-[12px] text-slate-600">{doc.savedInfo?.description||'반영된 자료 설명 없음'}</p><p className="mt-1 text-[11px] text-amber-700">{isDirty(doc)?'미저장 변경사항 · 미리보기 반영 필요':'미리보기 반영됨 · 서버 미저장'}</p></div><Chip color={doc.status.includes('후보') ? 'green' : 'amber'}>{doc.status}</Chip><button className={S} onClick={() => {
                       setChanging(i);
                       replace.current?.click();
                     }}><RefreshCw size={15} /> 교체</button><button className={S} onClick={() => {
                       setDocuments(a => a.filter((_, idx) => idx !== i));
                       setAudit(a => ['자료 제외: ' + doc.name, ...a]);
                       notify('자료를 현재 목록에서 제외했습니다. 실제 저장소 파일은 변경되지 않습니다.');
-                    }}><Trash2 size={15} /> 제외</button></div><div className="mt-3 flex flex-wrap items-center justify-between border-t border-slate-100 pt-3"><Label name="자료 유형"><select value={doc.category} onChange={e => {
+                    }}><Trash2 size={15} /> 제외</button></div><div className="mt-3 flex flex-wrap items-center justify-between border-t border-slate-100 pt-3"><Label name="자료 유형"><select aria-label="자료 유형" value={doc.category} onChange={e => {
                         setDocuments(a => a.map((x, idx) => idx === i ? {
                           ...x,
                           category: e.target.value
                         } : x));
                         setAudit(a => ['분류 변경: ' + doc.name, ...a]);
-                      }} className={I + ' !w-[190px]'}>{['사업자등록증', '재무자료', '기업소개서', '공정·현장자료', '지원사업 이력', '기타'].map(x => <option key={x}>{x}</option>)}</select></Label><p className="text-[11px] text-slate-400">{doc.history.length ? '이전 버전: ' + doc.history.join(', ') : '등록된 변경 이력 없음'}</p></div><div className="mt-4 border-t border-slate-100 pt-4"><div className="mb-3 flex items-center justify-between"><h4 className="text-[13px] font-bold">자료 설명 및 연결</h4><button className={S} onClick={()=>setDocuments(a=>a.map(x=>x.id===doc.id?{...x,editing:!x.editing}:x))}>{doc.editing?'설명 편집 접기':'설명 수정'}</button></div>{doc.editing?<div className="grid gap-4 sm:grid-cols-2"><div className="sm:col-span-2"><Label name="자료 설명"><textarea aria-label="자료 설명" className={I+' min-h-[110px] resize-y'} placeholder="자료의 내용과 확인할 사항을 입력해 주세요." value={doc.description} onChange={e=>setDocuments(a=>a.map(x=>x.id===doc.id?{...x,description:e.target.value}:x))}/></Label></div><Label name="관련 사업장"><select className={I} value={doc.siteId??''} onChange={e=>setDocuments(a=>a.map(x=>x.id===doc.id?{...x,siteId:e.target.value?Number(e.target.value):null}:x))}><option value="">선택하지 않음</option>{sites.map((x,i)=><option key={x.id} value={x.id}>사업장 {i+1} — {x.name||'이름 입력 필요'}</option>)}</select></Label><Label name="관련 개선과제"><select className={I} value={doc.improvement} onChange={e=>setDocuments(a=>a.map(x=>x.id===doc.id?{...x,improvement:e.target.value}:x))}><option value="">선택하지 않음</option><option value="current">현재 작성 중인 개선과제</option></select></Label></div>:<div className="space-y-2 text-[12px] text-slate-600"><p className="whitespace-pre-wrap">{doc.description||'자료 설명 미입력'}</p><p>관련 사업장: {sites.find(x=>x.id===doc.siteId)?.name||'선택하지 않음'}</p><p>관련 개선과제: {doc.improvement?'현재 작성 중인 개선과제':'선택하지 않음'}</p></div>}<p className="mt-3 text-[11px] text-slate-400">미리보기 입력 · 실제 자료 설명 저장/연결은 미연결</p></div></div>)}</div>
+                      }} className={I + ' !w-[190px]'}>{['사업자등록증', '재무자료', '기업소개서', '공정·현장자료', '지원사업 이력', '기타'].map(x => <option key={x}>{x}</option>)}</select></Label><p className="text-[11px] text-slate-400">{doc.history.length ? '이전 버전: ' + doc.history.join(', ') : '등록된 변경 이력 없음'}</p></div><div className="mt-4 border-t border-slate-100 pt-4"><div className="mb-3 flex items-center justify-between"><h4 className="text-[13px] font-bold">자료 설명 및 연결</h4><button className={S} onClick={()=>setDocuments(a=>a.map(x=>x.id===doc.id?{...x,editing:!x.editing}:x))}>{doc.editing?'설명 편집 접기':'설명 수정'}</button></div>{doc.editing?<div className="grid gap-4 sm:grid-cols-2"><div className="sm:col-span-2"><Label name="자료 설명"><textarea aria-label="자료 설명" className={I+' min-h-[110px] resize-y'} placeholder="자료의 내용과 확인할 사항을 입력해 주세요." value={doc.description} onChange={e=>setDocuments(a=>a.map(x=>x.id===doc.id?{...x,description:e.target.value}:x))}/></Label></div><Label name="관련 사업장"><select aria-label="관련 사업장" className={I} value={doc.siteId??''} onChange={e=>setDocuments(a=>a.map(x=>x.id===doc.id?{...x,siteId:e.target.value?Number(e.target.value):null}:x))}><option value="">선택하지 않음</option>{sites.map((x,i)=><option key={x.id} value={x.id}>사업장 {i+1} — {x.name||'이름 입력 필요'}</option>)}</select></Label><Label name="관련 개선과제"><select aria-label="관련 개선과제" className={I} value={doc.improvement} onChange={e=>setDocuments(a=>a.map(x=>x.id===doc.id?{...x,improvement:e.target.value}:x))}><option value="">선택하지 않음</option><option value="current">현재 작성 중인 개선과제</option></select></Label></div>:<div className="space-y-2 text-[12px] text-slate-600"><p className="whitespace-pre-wrap">{doc.description||'자료 설명 미입력'}</p><p>관련 사업장: {sites.find(x=>x.id===doc.siteId)?.name||'선택하지 않음'}</p><p>관련 개선과제: {doc.improvement?'현재 작성 중인 개선과제':'선택하지 않음'}</p></div>}<p className="mt-3 text-[11px] text-slate-400">미리보기 입력 · 실제 자료 설명 저장/연결은 미연결</p>{doc.siteRemoved&&<p role="alert" className="mt-2 text-[12px] text-amber-700">연결한 사업장이 삭제되었습니다. 관련 사업장을 다시 선택하고 자료정보 저장을 눌러 주세요.</p>}<button className={P+' mt-3'} onClick={()=>saveDocumentInfo(doc.id)}>자료정보 저장</button></div></div>)}</div>
      </Card><Card className="mt-5 p-6"><div className="flex items-center gap-2"><History size={18} className="text-blue-600" /><h3 className="text-[14px] font-bold">자료 변경 이력</h3></div><div className="mt-3 space-y-2">{audit.length ? audit.slice(0, 8).map((a, i) => <p className="text-[12px] text-slate-500" key={i}>{a}</p>) : <p className="text-[12px] text-slate-400">변경 이력이 없습니다.</p>}</div></Card>
     </>}
 

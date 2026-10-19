@@ -53,3 +53,12 @@ UI_VISUAL_PREVIEW_COMPLETE: YES (기술 검증). BACKEND_INTEGRATION / AI_ANALYS
 완료 판정은 UI_PREVIEW_REVISION_COMPLETE에 한정한다. BACKEND_INTEGRATION/AI_ANALYSIS는 범위 밖이며 USER_ACCEPTANCE는 사용자 승인 대기다.
 
 최종 v0.2.1 검증: 격리 Runner 4a5d6e07-7fd. Playwright 3 PASS / 0 FAIL / 0 SKIP, lint/typecheck/build/production 404 PASS. 업무 API 요청 및 신규 Cookie 0. 기존 실제 업무 소스는 변경하지 않았으며 이번 실행은 업무 서버 전체 E2E 검증이 아니다.
+
+## v0.2.2 사용자 검수 반영
+C-01의 WELCOME 카드만 제거하고 업무 진행 단계 카드를 위로 정리했다. C-04 사업장 삭제는 브라우저 확인 후 미리보기 카드만 제거하며 기업 기본정보와 나머지 사업장 입력을 보존한다. 연관 파일의 편집값·반영값에서 삭제한 사업장 ID를 해제하고 재선택 안내를 표시한다.
+
+C-07은 파일 선택/드롭/교체가 동일한 receive 검증을 사용한다. 허용 확장자(TXT/CSV/JSON/PDF/DOCX/XLSX/JPG/JPEG/PNG), 파일당 15MB, 한 번에 최대 5개를 검사하며 오류를 안내한다. 기존 상단 분류 select는 제거하고 파일별 유형 입력은 유지한다. 자료정보 저장은 category/description/siteId/improvement의 UI snapshot만 반영한다. 편집 중 값과 반영한 값은 분리하고 미저장 변경을 표시한다. 목록 요약은 반영한 유형·설명을 표시하며 미저장 편집과 이전 반영값 모두 메뉴 이동 중 보존된다. 파일 교체는 설명·연결·UI 반영값을 보존한다. 관련 개선과제는 기존 미리보기의 현재 작성 중인 과제 또는 선택하지 않음을 사용하며 실제 과제 API를 추가하지 않는다.
+
+로그인과 C-02/03/05/06/08/09/10 JSX는 시작 HEAD 0b0011e와 동일하다. DB/API/AI/인증/업무 모듈 및 FROZEN 기준은 변경하지 않는다. 브라우저 메모리만 사용하며 새로고침 후 영구 저장은 제공하지 않는다. 완료 판정은 UI_PREVIEW_REVISION_V022에 한정하고 실제 파일 영속화/Backend 연동/AI/사용자 승인은 완료로 표시하지 않는다.
+
+최종 v0.2.2 검증: 격리 Runner deef2fdd-530. Playwright 4 PASS / 0 FAIL / 0 SKIP, lint/typecheck/build/production 404 PASS. 드롭과 파일 선택, 형식/크기 오류, 삭제 취소/확인, 나머지 기업·사업장 보존, 연결 해제/재선택, UI 저장/미저장 구분, 교체 후 설명 보존, 모바일 카드와 기존 11개 화면을 검증했다. 업무 API 요청 및 신규 Cookie 0. DB/API/Worker는 시작하지 않았다.
