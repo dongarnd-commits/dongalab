@@ -1,0 +1,554 @@
+{
+  "schemaVersion": "0.1",
+  "dataNature": "모든 기업명·문서·지원사업·결과는 시연용 가상 데이터이며 실제 정책 또는 공고가 아님",
+  "operator": {
+    "id": "USER-OP-001",
+    "displayName": "DATCO 운영자",
+    "role": "DATCO_OPERATOR"
+  },
+  "companies": [
+    {
+      "id": "COMP-001",
+      "name": "㈜한빛정밀",
+      "siteId": "SITE-001",
+      "site": "제1사업장",
+      "industry": "금속가공 제조업",
+      "address": "경기도 성남시 분당구 (시연용)",
+      "companyUser": "김담당 (가상)",
+      "businessNo": "123-45-67890 (가상)",
+      "stage": "자료·Fact 검토",
+      "owner": "DATCO 운영자 A",
+      "lastUpdated": "2026-10-19",
+      "requestCount": 1,
+      "improvement": {
+        "id": "IMP-001",
+        "version": 1,
+        "title": "재고·생산·품질관리 개선",
+        "asis": "재고 수량이 실제 수량과 다르고 입출고를 수기로 처리합니다. 작업실적과 불량 정보를 함께 관리하고 싶습니다.",
+        "tobe": "재고·입출고·생산실적·품질 데이터를 통합해 확인하고 관리합니다.",
+        "constraints": "기존 ERP 사용 여부, 설비 데이터 수집 방식 확인 필요",
+        "problems": [
+          "재고 수량 불일치",
+          "수기 입출고 기록",
+          "작업실적 파악 어려움",
+          "불량 이력 관리 부족"
+        ],
+        "reviewed": false
+      },
+      "documents": [
+        {
+          "id": "EV-001",
+          "name": "재무현황_2025_샘플.xlsx",
+          "type": "XLSX",
+          "size": "24 KB",
+          "submittedBy": "수요기업 담당자",
+          "submittedAt": "2026-10-16",
+          "source": "요약!C8",
+          "excerpt": "2025년 매출액 18억 원",
+          "version": 1,
+          "privacy": "PRIVATE",
+          "status": "원문 추출 완료"
+        },
+        {
+          "id": "EV-002",
+          "name": "기업기본정보_예시.txt",
+          "type": "TXT",
+          "size": "1 KB",
+          "submittedBy": "수요기업 담당자",
+          "submittedAt": "2026-10-16",
+          "source": "6번째 줄",
+          "excerpt": "업종: 금속가공 제조업",
+          "version": 1,
+          "privacy": "PRIVATE",
+          "status": "원문 추출 완료"
+        },
+        {
+          "id": "EV-003",
+          "name": "공정현황_가상도면.png",
+          "type": "PNG",
+          "size": "810 KB",
+          "submittedBy": "수요기업 담당자",
+          "submittedAt": "2026-10-17",
+          "source": "이미지",
+          "excerpt": "이미지 의미 분석 미지원, 운영자 수동 검토 필요",
+          "version": 1,
+          "privacy": "PRIVATE",
+          "status": "수동 검토 필요"
+        }
+      ],
+      "facts": [
+        {
+          "id": "FACT-001",
+          "label": "업종",
+          "value": "금속가공 제조업",
+          "period": "현재",
+          "evidenceId": "EV-002",
+          "source": "기업기본정보_예시.txt · 6번째 줄",
+          "status": "CONFIRMED",
+          "actor": "DATCO 검토자",
+          "version": 1
+        },
+        {
+          "id": "FACT-002",
+          "label": "2025년 매출액",
+          "value": "18억 원",
+          "period": "2025",
+          "evidenceId": "EV-001",
+          "source": "재무현황_2025_샘플.xlsx · 요약!C8",
+          "status": "PENDING",
+          "actor": null,
+          "version": 1
+        },
+        {
+          "id": "FACT-003",
+          "label": "사업장 소재지",
+          "value": "경기도 성남시 분당구",
+          "period": "현재",
+          "evidenceId": "EV-002",
+          "source": "기업기본정보_예시.txt · 4번째 줄",
+          "status": "PENDING",
+          "actor": null,
+          "version": 1
+        }
+      ],
+      "capabilities": [
+        {
+          "id": "CAP-INV",
+          "title": "재고·입출고 이력관리",
+          "version": "v1.2",
+          "features": [
+            "FTR-INV-01",
+            "FTR-INV-02"
+          ],
+          "coverage": [
+            "재고 수량 불일치",
+            "수기 입출고 기록"
+          ],
+          "limitations": [
+            "ERP 데이터 연동은 별도 확인"
+          ],
+          "reason": "입출고 기록과 재고 변동을 추적해 수기 관리 문제에 대응",
+          "source": "가상 DMP 기능 카탈로그"
+        },
+        {
+          "id": "CAP-PROD",
+          "title": "생산실적 관리",
+          "version": "v1.0",
+          "features": [
+            "FTR-PROD-01"
+          ],
+          "coverage": [
+            "작업실적 파악 어려움"
+          ],
+          "limitations": [
+            "실시간 설비연동 구현 여부 별도 확인"
+          ],
+          "reason": "공정·작업별 실적 이력 관리가 개선요구와 관련",
+          "source": "가상 DMP 기능 카탈로그"
+        },
+        {
+          "id": "CAP-QUAL",
+          "title": "품질·불량 이력관리",
+          "version": "v1.1",
+          "features": [
+            "FTR-QUAL-01"
+          ],
+          "coverage": [
+            "불량 이력 관리 부족"
+          ],
+          "limitations": [
+            "공정검사 장비 연동 미확인"
+          ],
+          "reason": "불량유형과 발생 시점의 관리가 필요",
+          "source": "가상 DMP 기능 카탈로그"
+        }
+      ],
+      "compositions": [
+        {
+          "id": "COMP-A",
+          "title": "A안 · 재고관리 우선",
+          "capabilityIds": [
+            "CAP-INV"
+          ],
+          "coverage": "2/4 문제",
+          "unresolved": [
+            "작업실적",
+            "품질관리"
+          ],
+          "note": "최소 범위, 잔여 요구 충족 여부 검토 필요"
+        },
+        {
+          "id": "COMP-B",
+          "title": "B안 · 재고·생산·품질 통합",
+          "capabilityIds": [
+            "CAP-INV",
+            "CAP-PROD",
+            "CAP-QUAL"
+          ],
+          "coverage": "4/4 문제 (후보)",
+          "unresolved": [
+            "ERP·설비 인터페이스 검증 필요"
+          ],
+          "note": "요구 범위를 폭넓게 다루지만 실제 제공 범위 검토 필요"
+        }
+      ],
+      "grants": [
+        {
+          "id": "GR-001",
+          "title": "제조혁신 지원사업 후보 A (가상)",
+          "organization": "가상 공고기관",
+          "period": "공식 모집기간 미확정",
+          "rationale": "제조 공정 데이터 활용 및 생산관리 개선목표와의 관련성 검토",
+          "eligibility": [
+            {
+              "name": "업종",
+              "state": "MATCH",
+              "reason": "제조업 기준과 부합하는 예시"
+            },
+            {
+              "name": "사업장 지역",
+              "state": "UNKNOWN",
+              "reason": "공식 지역 제한조건 미확인"
+            },
+            {
+              "name": "중복 지원",
+              "state": "UNKNOWN",
+              "reason": "기존 수혜이력 확인 필요"
+            }
+          ],
+          "source": "시연용 가상 공고, 실제 접수 불가"
+        },
+        {
+          "id": "GR-002",
+          "title": "스마트제조 개선지원 후보 B (가상)",
+          "organization": "가상 공고기관",
+          "period": "공식 모집기간 미확정",
+          "rationale": "재고·생산관리 고도화 목적과 관련성이 있는 예시",
+          "eligibility": [
+            {
+              "name": "제조업",
+              "state": "MATCH",
+              "reason": "예시 업종 요건 일치"
+            },
+            {
+              "name": "매출 요건",
+              "state": "UNKNOWN",
+              "reason": "확정 Fact와 공식 조건 비교 전"
+            }
+          ],
+          "source": "시연용 가상 공고, 실제 접수 불가"
+        }
+      ],
+      "matching": {
+        "status": "BLOCKED",
+        "criteria": [
+          {
+            "name": "업종",
+            "state": "MATCH",
+            "reason": "제조업 일치 예시"
+          },
+          {
+            "name": "사업장 지역",
+            "state": "UNKNOWN",
+            "reason": "공식 공고 조건 미확인"
+          },
+          {
+            "name": "기존 수혜이력",
+            "state": "UNKNOWN",
+            "reason": "제출 자료 확인 필요"
+          }
+        ],
+        "reviewNote": "확인되지 않은 지원자격을 자동으로 충족 처리할 수 없습니다."
+      },
+      "proposal": {
+        "id": "PROP-001",
+        "version": 0,
+        "title": "재고·생산·품질관리 개선 제안서",
+        "body": "",
+        "reviewed": false,
+        "deliveredVersion": null,
+        "recipient": "김담당 (가상)"
+      }
+    },
+    {
+      "id": "COMP-002",
+      "name": "㈜미래에이엠",
+      "siteId": "SITE-002",
+      "site": "화성 생산사업장",
+      "industry": "자동차부품 제조업",
+      "address": "경기도 화성시 (시연용)",
+      "companyUser": "이담당 (가상)",
+      "businessNo": "234-56-78901 (가상)",
+      "stage": "제안서 검토",
+      "owner": "DATCO 운영자 B",
+      "lastUpdated": "2026-10-18",
+      "requestCount": 0,
+      "improvement": {
+        "id": "IMP-002",
+        "version": 2,
+        "title": "생산설비 점검이력 전산화",
+        "asis": "설비 점검 기록이 종이로 분산되어 있습니다.",
+        "tobe": "설비별 점검·고장 이력을 한곳에서 관리하고 싶습니다.",
+        "constraints": "센서 기반 예지보전 기능은 이번 검토범위에서 제외",
+        "problems": [
+          "점검기록 관리 분산",
+          "고장이력 추적 어려움"
+        ],
+        "reviewed": true
+      },
+      "documents": [
+        {
+          "id": "EV-004",
+          "name": "설비점검기록_2026_예시.txt",
+          "type": "TXT",
+          "size": "3 KB",
+          "submittedBy": "수요기업 담당자",
+          "submittedAt": "2026-10-15",
+          "source": "5~14행",
+          "excerpt": "설비 A의 정기점검 내역",
+          "version": 2,
+          "privacy": "PRIVATE",
+          "status": "원문 추출 완료"
+        }
+      ],
+      "facts": [
+        {
+          "id": "FACT-004",
+          "label": "업종",
+          "value": "자동차부품 제조업",
+          "period": "현재",
+          "evidenceId": "EV-004",
+          "source": "설비점검기록_2026_예시.txt",
+          "status": "CONFIRMED",
+          "actor": "DATCO 검토자",
+          "version": 1
+        },
+        {
+          "id": "FACT-005",
+          "label": "사업장 소재지",
+          "value": "경기도 화성시",
+          "period": "현재",
+          "evidenceId": "EV-004",
+          "source": "기업 제출정보 · 수동 확인",
+          "status": "CONFIRMED",
+          "actor": "DATCO 검토자",
+          "version": 1
+        }
+      ],
+      "capabilities": [
+        {
+          "id": "CAP-MAINT",
+          "title": "설비 점검·고장 이력관리",
+          "version": "v1.0",
+          "features": [
+            "FTR-MNT-01",
+            "FTR-MNT-02"
+          ],
+          "coverage": [
+            "점검기록 관리 분산",
+            "고장이력 추적 어려움"
+          ],
+          "limitations": [
+            "예지보전·센서 수집은 지원범위가 아님"
+          ],
+          "reason": "문서·이력 중심 설비 관리가 직접적인 개선 대상",
+          "source": "가상 DMP 기능 카탈로그"
+        }
+      ],
+      "compositions": [
+        {
+          "id": "COMP-C",
+          "title": "C안 · 설비점검 이력관리",
+          "capabilityIds": [
+            "CAP-MAINT"
+          ],
+          "coverage": "2/2 문제 (후보)",
+          "unresolved": [
+            "센서 기반 예지보전은 포함되지 않음"
+          ],
+          "note": "사전 검토를 통과한 가상 시나리오"
+        }
+      ],
+      "grants": [
+        {
+          "id": "GR-003",
+          "title": "제조 현장관리 고도화 후보 C (가상)",
+          "organization": "가상 공고기관",
+          "period": "모집기간 확인 예시 (실제 일정 아님)",
+          "rationale": "설비이력 관리 범위와 관련",
+          "eligibility": [
+            {
+              "name": "업종",
+              "state": "MATCH",
+              "reason": "확인된 Fact와 가상 기준 부합"
+            },
+            {
+              "name": "사업장",
+              "state": "MATCH",
+              "reason": "가상 지역요건과 부합"
+            },
+            {
+              "name": "수혜 제한",
+              "state": "MATCH",
+              "reason": "가상 이력 기준 충족"
+            }
+          ],
+          "source": "시연 전 검토완료로 구성한 가상 공고"
+        }
+      ],
+      "matching": {
+        "status": "PROPOSABLE",
+        "criteria": [
+          {
+            "name": "업종",
+            "state": "MATCH",
+            "reason": "확인 완료된 가상 기준"
+          },
+          {
+            "name": "사업장",
+            "state": "MATCH",
+            "reason": "확인 완료된 가상 기준"
+          },
+          {
+            "name": "수혜제한",
+            "state": "MATCH",
+            "reason": "확인 완료된 가상 기준"
+          }
+        ],
+        "reviewNote": "사전 확인된 가상 데이터로 준비된 제안 가능 예시입니다."
+      },
+      "proposal": {
+        "id": "PROP-002",
+        "version": 2,
+        "title": "설비 점검·고장 이력관리 개선 제안서",
+        "body": "현장 설비 점검 및 고장 기록을 체계적으로 관리하여 이력 조회와 업무 추적을 지원합니다.\n\nDATCO 제안 범위: 설비 점검 일정·점검표·고장 이력관리.\n제외사항: 실시간 센서 수집, 예지보전.\n정부지원사업: 가상 후보 C (실제 공고 아님).",
+        "reviewed": true,
+        "deliveredVersion": null,
+        "recipient": "이담당 (가상)"
+      }
+    },
+    {
+      "id": "COMP-003",
+      "name": "㈜새빛푸드",
+      "siteId": "SITE-003",
+      "site": "본사 생산시설",
+      "industry": "식품제조업",
+      "address": "충청북도 청주시 (시연용)",
+      "companyUser": "박담당 (가상)",
+      "businessNo": "345-67-89012 (가상)",
+      "stage": "조건 불일치",
+      "owner": "DATCO 운영자 A",
+      "lastUpdated": "2026-10-14",
+      "requestCount": 0,
+      "improvement": {
+        "id": "IMP-003",
+        "version": 1,
+        "title": "식품 생산 LOT 추적관리",
+        "asis": "LOT별 원료 입고와 제조이력 추적에 시간이 걸립니다.",
+        "tobe": "LOT 단위 추적을 빠르고 정확하게 하고 싶습니다.",
+        "constraints": "식품 기준 관련 규정은 담당자 확인 필요",
+        "problems": [
+          "LOT 이력 추적 지연"
+        ],
+        "reviewed": false
+      },
+      "documents": [
+        {
+          "id": "EV-005",
+          "name": "식품공정_확인자료_예시.txt",
+          "type": "TXT",
+          "size": "2 KB",
+          "submittedBy": "수요기업 담당자",
+          "submittedAt": "2026-10-14",
+          "source": "2~8행",
+          "excerpt": "LOT 이력 확인 업무",
+          "version": 1,
+          "privacy": "PRIVATE",
+          "status": "원문 추출 완료"
+        }
+      ],
+      "facts": [
+        {
+          "id": "FACT-006",
+          "label": "업종",
+          "value": "식품제조업",
+          "period": "현재",
+          "evidenceId": "EV-005",
+          "source": "가상 기업 제출정보",
+          "status": "CONFIRMED",
+          "actor": "DATCO 검토자",
+          "version": 1
+        }
+      ],
+      "capabilities": [
+        {
+          "id": "CAP-LOT",
+          "title": "생산 LOT 이력관리",
+          "version": "v0.9",
+          "features": [
+            "FTR-LOT-01"
+          ],
+          "coverage": [
+            "LOT 이력 추적 지연"
+          ],
+          "limitations": [
+            "식품 분야 적용검증 필요"
+          ],
+          "reason": "LOT 이력 추적 개선과 기능 범위 연관",
+          "source": "가상 DMP 기능 카탈로그"
+        }
+      ],
+      "compositions": [
+        {
+          "id": "COMP-D",
+          "title": "D안 · LOT 관리",
+          "capabilityIds": [
+            "CAP-LOT"
+          ],
+          "coverage": "1/1 문제 (조건부)",
+          "unresolved": [
+            "식품 전용 검증 확인 필요"
+          ],
+          "note": "기술 범위가 아닌 신청 조건 불일치로 검토 중"
+        }
+      ],
+      "grants": [
+        {
+          "id": "GR-004",
+          "title": "금속가공 전용 지원사업 후보 D (가상)",
+          "organization": "가상 공고기관",
+          "period": "모집기간 미확정",
+          "rationale": "해당 기업 업종과 맞지 않는 부적합 예시",
+          "eligibility": [
+            {
+              "name": "업종",
+              "state": "MISMATCH",
+              "reason": "해당 가상 사업은 금속가공업만 대상"
+            }
+          ],
+          "source": "불일치 처리 시연용 가상 공고"
+        }
+      ],
+      "matching": {
+        "status": "MISMATCH",
+        "criteria": [
+          {
+            "name": "업종",
+            "state": "MISMATCH",
+            "reason": "식품제조업은 가상의 금속가공 지원조건 불충족"
+          }
+        ],
+        "reviewNote": "불일치 상황에서는 제안 가능 상태로 변경할 수 없습니다."
+      },
+      "proposal": {
+        "id": "PROP-003",
+        "version": 0,
+        "title": "LOT 추적관리 개선 제안서",
+        "body": "",
+        "reviewed": false,
+        "deliveredVersion": null,
+        "recipient": "박담당 (가상)"
+      }
+    }
+  ]
+}
