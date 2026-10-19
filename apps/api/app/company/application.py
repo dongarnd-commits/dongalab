@@ -34,7 +34,8 @@ class CompanyApplication:
  def listing(self,who,q=''):
   self.role(who,'COMPANY_EDITOR','COMPANY_APPROVER','DATCO_OPERATOR')
   ids={m['company_id'] for m in self.rows(S.memberships,actor_id=who.id)}
-  return [c for c in self.rows(S.companies) if c['id'] in ids and q.casefold() in c['name'].casefold()]
+  visible=[c for c in self.rows(S.companies) if c['id'] in ids and q.casefold() in c['name'].casefold()]
+  return [dict(id=c['id'],name=c['name']) for c in visible] if who.role=='COMPANY_APPROVER' else visible
  def grant(self,who,company_id,username):
   self.role(who,'DATCO_ADMIN');self.get(S.companies,company_id,True)
   users=self.rows(actors,username=username)
@@ -94,7 +95,11 @@ class CompanyApplication:
   f=self.add(S.files,company_id=cid,site_id=site_id,name=name,media_type=mime,storage_key=key,digest=digest,size=len(raw),actor_id=who.id)
   self.record(who,cid,'UPLOAD_COMPANY_FILE',file_id=f['id']);return f
  def download(self,who,file_id):
-  f=self.get(S.files,file_id);self.scope(who,f['company_id']);return f,self.files.read(f['storage_key'],f['digest'])
+  f=self.get(S.files,file_id);self.scope(who,f['company_id'])
+  # Membership is not a publication grant. Source Company files have no
+  # approval-scoped sharing relation; approved Proposal documents use /proposal.
+  self.role(who,'COMPANY_EDITOR','DATCO_OPERATOR')
+  return f,self.files.read(f['storage_key'],f['digest'])
  def parse(self,who,file_id):
   f=self.get(S.files,file_id);self.scope(who,f['company_id'],True)
   try:p=parse_document(f['name'],self.files.read(f['storage_key'],f['digest']))
@@ -186,7 +191,12 @@ class CompanyApplication:
    self.session.execute(update(S.facts).where(S.facts.c.id==root['id']).values(current_ordinal=version['ordinal']))
   self.record(who,c['company_id'],'REVIEW_COMPANY_FACT',fact_review_id=r['id']);return {'review':r,'version':version}
  def detail(self,who,cid):
-  root=self.scope(who,cid);sites=self.rows(S.sites,company_id=cid);files=self.rows(S.files,company_id=cid);facts=self.rows(S.facts,company_id=cid);candidates=self.rows(S.candidates,company_id=cid);improvements=self.rows(S.improvements,company_id=cid)
+  root=self.scope(who,cid)
+  if who.role=='COMPANY_APPROVER':
+   # Whitelist before loading nested private histories. Public approval content
+   # remains available through the existing exact ProposalVersion projection.
+   return dict(company=dict(id=root['id'],name=root['name']),**{k:[] for k in ('inputs','sites','files','evidence','candidates','facts','improvements','audit')})
+  sites=self.rows(S.sites,company_id=cid);files=self.rows(S.files,company_id=cid);facts=self.rows(S.facts,company_id=cid);candidates=self.rows(S.candidates,company_id=cid);improvements=self.rows(S.improvements,company_id=cid)
   result={'company':root,'inputs':self.rows(S.inputs,company_id=cid),'sites':[dict(s,versions=self.rows(S.site_versions,site_id=s['id'])) for s in sites],
    'files':[dict(f,parses=self.rows(S.parses,file_id=f['id'])) for f in files],'evidence':self.rows(S.evidence,company_id=cid),
    'candidates':[dict(c,acknowledgements=self.rows(S.acknowledgements,candidate_id=c['id']),reviews=self.rows(S.reviews,candidate_id=c['id'])) for c in candidates],
@@ -209,10 +219,13 @@ class CompanyApplication:
    elif isinstance(value,list):
     for child in value:label(child)
   label(result)
-  if who.role=='COMPANY_APPROVER':
-   result['files']=[];result['evidence']=[];result['candidates']=[];result['inputs']=[]
-   result['improvements']=[i for i in result['improvements'] if i['state']=='CONFIRMED']
   return result
+ def read_context(self,who,version_id):
+  # Internal Provider.read is also used by Proposal approval authorization.
+  # Do not expose that authority context as a general approver HTTP projection.
+  self.role(who,'COMPANY_EDITOR','DATCO_OPERATOR')
+  from app.company.provider import CompanyProvider
+  return CompanyProvider(self).read(who,version_id)
  def save_improvement(self,who,cid,data,key=None,expected=0):
   self.role(who,'COMPANY_EDITOR','DATCO_OPERATOR');self.scope(who,cid,True);data=Improvement.model_validate(data).model_dump();self.site(cid,data['site_id'])
   if key:

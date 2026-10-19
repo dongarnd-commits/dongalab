@@ -8,7 +8,6 @@ from app.infrastructure.database import get_session
 from app.infrastructure import company_schema as S
 from app.company.application import CompanyApplication
 from app.company.contracts import Profile,Site,FactInput,Improvement
-from app.company.provider import CompanyProvider
 from app.company.documents import MAX_UPLOAD
 from app.notice.domain import Denied
 
@@ -105,4 +104,4 @@ def improvement_action(version_id:str,body:ImprovementAction,session:DB,who=Depe
  r=application(session).improvement_action(who,version_id,body.action,body.note);session.commit();return r
 @router.get('/improvements/{version_id}/context',response_model=dict,responses=errors(401,403,404))
 def context(version_id:str,session:DB,who=Depends(actor)):
- return CompanyProvider(application(session)).read(who,version_id)
+ return application(session).read_context(who,version_id)

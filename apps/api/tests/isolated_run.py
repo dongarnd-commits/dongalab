@@ -56,7 +56,7 @@ def wait_url(url,seconds=90):
 
 def main():
  global WEB
- parser=argparse.ArgumentParser();parser.add_argument('phase',choices=['baseline','verify','ui','backend','r04','p1','company','company-ui','workspace','workspace-ui','document-ui']);args=parser.parse_args()
+ parser=argparse.ArgumentParser();parser.add_argument('phase',choices=['baseline','verify','ui','backend','r04','p1','company','company-ui','workspace','workspace-ui','document-ui','authz']);args=parser.parse_args()
  nonce=uuid4().hex[:12];dbname='datco_test_'+nonce;role='datco_test_role_'+nonce
  directory=ROOT/'storage/private/runtime/test-isolation'/nonce;directory.mkdir(parents=True)
  web_source=WEB
@@ -142,7 +142,10 @@ def main():
   if args.phase=='company':
    run('company',[sys.executable,'-m','pytest','tests/test_company_workflow.py','tests/test_company_documents.py','tests/test_analysis_migration.py','tests/test_company_migration.py','-q','--tb=short'],API)
    run('migration-check',[sys.executable,'-m','alembic','check'],API)
-  if args.phase in ('backend','r04','p1','company','workspace'):
+  if args.phase=='authz':
+   run('approver-authz',[sys.executable,'-m','pytest','tests/test_company_workflow.py','tests/test_proposal_production.py','-k','test_approver_ or test_approval_scoped_ or test_real_company_provider_','-q','--tb=short','--junitxml='+str(directory/'authz.xml')],API)
+   run('migration-check',[sys.executable,'-m','alembic','check'],API)
+  if args.phase in ('backend','r04','p1','company','workspace','authz'):
    return 1 if any(step['exit'] for step in report['commands']) else 0
   api_port,web_port=free_port(),free_port()
   while web_port==api_port:web_port=free_port()

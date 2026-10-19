@@ -1,7 +1,7 @@
 # DATCO Phase-1 Skeleton
 
 Minimal runtime path: Browser -> Next.js -> FastAPI -> SQLAlchemy/Psycopg -> PostgreSQL.
-The first Notice Requirement review slice adds local session, controlled source files, persistent analysis jobs and human confirmation. Capability Catalog, Composition and reviewed Matching foundations are also available; Versioned Proposal production is implemented and tested in isolation; the authoritative Company provider and downstream lifecycle domains remain unimplemented.
+The first Notice Requirement review slice adds local session, controlled source files, persistent analysis jobs and human confirmation. Capability Catalog, Composition and reviewed Matching foundations are also available; Versioned Proposal production is implemented and tested in isolation; the authoritative local Company provider is connected for reviewed W1 inputs; downstream lifecycle domains remain unimplemented.
 Approved stack: [Decision-001](docs/11_DECISION_LOG.md). Product and module boundaries remain in [Baseline](docs/00_PROJECT_BASELINE.md) and [Architecture](docs/01_SYSTEM_ARCHITECTURE.md).
 
 ## Requirements
@@ -318,9 +318,9 @@ The proxy uses `CAPABILITY_API_ORIGIN`, then `API_ORIGIN`, then the normal API d
 For this local validation session, a separate project API runs at port 8011; its local proxy setting is untracked.
 Existing API/Worker processes are not stopped.
 
-Company/Improvement authority is provided through `ImprovementReader`. Until the collaborator's authoritative
-reader is connected, normal runtime composition and matching commands fail closed with
-`IMPROVEMENT_PROVIDER_NOT_CONNECTED`; general Catalog search is available. Browser/integration fixtures use
+Company/Improvement authority is provided through `ImprovementReader`, connected to the local W1 Company Provider.
+Unconfigured adapters still fail closed with `IMPROVEMENT_PROVIDER_NOT_CONNECTED`; external DMP integration
+remains separate. General Catalog search is available. Browser/integration fixtures use
 rollback-only PostgreSQL schemas and explicit TEST Company context, never normal-runtime fake Companies.
 Composition versions preserve exact Capability/Feature revisions and coverage. Candidates retain
 `NEED_MORE_INFO` until conditions are reviewed; the original Capability slice does not invent eligibility/score policy. The Proposal extension below adds reviewed production; Case remains unimplemented.
@@ -378,9 +378,9 @@ lint/build, API types, isolated resource cleanup and unchanged shared-DB fingerp
 The backend skip requires explicit stored-source opt-in; the browser skip requires a deliberately unavailable API.
 Private runtime evidence is not published. Reviewable test implementations are included in this branch.
 
-Matching now connects to the reviewed Proposal production extension below. Actual Company/Fact/Improvement
-Provider integration, general R-07 region/age/amount/compound-condition evaluation, operational document
-extraction and full Phase 1/2 integrated E2E remain unfinished. `SYSTEM_ACCEPTANCE: NOT_TESTED`. See `docs/reviews/DATCO_PHASE1_PHASE2_E2E_GAP.md` and
+Matching connects to the reviewed Proposal production extension below. The local Company/Fact/Improvement
+Provider and bounded PDF/DOCX/XLSX/TXT parsers are connected in W1. External DMP integration, general R-07
+region/age/amount/compound-condition evaluation, semantic AI extraction and full Phase 1/2 integrated E2E remain unfinished. `SYSTEM_ACCEPTANCE: NOT_TESTED`. See `docs/reviews/DATCO_PHASE1_PHASE2_E2E_GAP.md` and
 `docs/reviews/R07_REVIEWED_CONDITION_DESIGN.md`; proposed design is not an approved implementation contract.
 
 
@@ -410,7 +410,7 @@ The provisioner URL is removed from child environments; only owned processes/dat
 No live API key, private DMP JSON, stored Live Notice or business DB is supplied.
 The synthetic fixture is NOT a real 649-feature import. Actual DMP catalog/search/scenario suites and stored real Korean sources retain their separate local isolated verification requirement.
 Runtime evidence stays private; the workflow does not upload raw data, credentials or browser traces.
-CI verifies isolated Proposal output; it does not implement Company Provider, general R07 automation or Phase2.
+CI verifies local W1 Company authorization and isolated Proposal output; general R07 automation and Phase2 remain outside its acceptance scope.
 SYSTEM_ACCEPTANCE remains NOT_TESTED. Review and main protection settings require a separate owner decision.
 
 
@@ -418,7 +418,7 @@ SYSTEM_ACCEPTANCE remains NOT_TESTED. Review and main protection settings requir
 
 `/proposal` connects system-identified company inputs, service composition and Notice evidence to item-by-item human review, versioned proposal prose, separate content review, exact-version company approval and actual DOCX/PDF downloads.
 `/capability` matching links to this workspace. Existing session authentication, permissions, SQL transactions, receipts/audit and `LocalPrivateFiles` are reused.
-The migration head is `e863p0012026`; normal business databases have NOT been migrated by this development task.
+The Proposal migration is `e863p0012026`; the subsequent W1 migration head is `f974c0012026`. This security fix does not migrate normal business databases.
 Apply migrations only under a separately reviewed deployment procedure.
 
 ProposalVersion/manifest/content reviews/approval decisions/files and match review completions are immutable in PostgreSQL.
@@ -427,9 +427,9 @@ The generation endpoint rechecks PROPOSABLE, actual human resolution of every re
 Analysis NEED_MORE_INFO remains unchanged; the separate reviewed resolution does not fabricate a new analysis fact or eligibility score.
 The approved system-first review contract is `docs/reviews/PROPOSAL_MATCH_REVIEW_POLICY.md` and Decision-005.
 
-CompanyBasis/Proof are consumer interfaces, not an invented DMP wire API. The actual Company/Fact/Improvement provider remains unconnected and fails closed (503).
-Only guarded test harnesses supply synthetic confirmed company evidence and designated approvers. This is isolated Proposal E2E, not a completed Company portal or real enterprise integration.
-The proposal implementation does not add a company document extractor, general R07 engine, Information Request domain, Case or ApplicationPackage.
+CompanyBasis/Proof are consumer interfaces, not an invented DMP wire API. The local W1 Company Provider supplies reviewed, versioned Company/Fact/Improvement inputs; external DMP integration remains unconnected.
+Company approvers receive designated Proposal content and generated documents through the existing approval-scoped API. Company source files have no publication relation and are denied by default; Company histories and internal Fact review notes are not an approver projection.
+W1 includes bounded local document parsing. General R07 automation, semantic AI, Information Request, Case and ApplicationPackage remain outside this implementation; full business E2E and user acceptance are not complete.
 DOCX uses editable OOXML; PDF embeds an installed Korean TrueType font (Windows Malgun Gothic or Linux `fonts-nanum`).
 An explicit `DATCO_PROPOSAL_FONT` may select an installed TTF. Missing fonts/glyphs or rendering failures fail generation; no success File record is written.
 Generated files are private, content-addressed and bound to the exact reviewed ProposalVersion; downloads recheck parent permissions and SHA256. Internal Match review notes/full manifest are not automatically included in company projections or documents.

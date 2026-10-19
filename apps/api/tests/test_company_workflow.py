@@ -179,3 +179,66 @@ def test_explicit_financial_rules_keep_source_and_reject_guessed_context(env):
  assert any(x['field']=='employees' and x['value']=='42' for x in candidates)
  assert not d['facts'];assert d['inputs'][-1]['data']['financials']==p['financials']
  call(e,'other','/company/files/'+f['id']+'/parse',{},status=404)
+
+
+def security_fact(e):
+ c,site,p=fresh(e);f,raw=upload(e,c['id'],site['id'])
+ call(e,'operator','/company/files/'+f['id']+'/parse',{})
+ d=call(e,'editor','/company/'+c['id']);candidate=next(x for x in d['candidates'] if x['field']=='company_name')
+ call(e,'editor','/company/candidates/'+candidate['id']+'/acknowledge',dict(agreed=True,note='TEST company source acknowledgement'))
+ version=call(e,'operator','/company/candidates/'+candidate['id']+'/review',dict(outcome='CONFIRM_NEW_VALUE',note='TEST_DATCO_INTERNAL_PRIVATE_REVIEW'))['version']
+ return c,site,p,f,raw,candidate,version
+
+def test_approver_private_download_is_denied_by_application_and_http(env):
+ e=env;c,site,p,f,raw,candidate,version=security_fact(e)
+ with e['factory']() as session:
+  a=CompanyApplication(session,e['files'])
+  from app.notice.domain import Denied
+  with pytest.raises(Denied) as denied:a.download(Actor(e['people']['approver']['id'],'COMPANY_APPROVER'),f['id'])
+  assert denied.value.status==403
+ for ident,status in [(f['id'],403),(candidate['evidence_id'],404),('TEST_UNKNOWN_FILE_ID',404)]:
+  call(e,'approver','/company/files/'+ident+'/download',status=status)
+ # A nonmember approver has the same role but no access to this company.
+ from app.core.config import get_settings
+ with e['factory'].begin() as session:
+  user=SqlNoticeStore(session).add('actors',username='TEST_NONMEMBER_'+uuid4().hex,role='COMPANY_APPROVER',password_hash=hash_password('TEST_NONMEMBER_PASSWORD'))
+ other_company=call(e,'other','/company',dict(p,name='TEST Different company',business_number=str(int(uuid4().hex[:12],16))[-10:].zfill(10)))
+ call(e,'admin','/company/'+other_company['id']+'/access',dict(username=user['username']))
+ with TestClient(app) as client:
+  assert client.post('/notice/session',json={'username':user['username'],'password':'TEST_NONMEMBER_PASSWORD'},headers={'Origin':get_settings().web_origin}).status_code==200
+  assert client.get('/company/files/'+f['id']+'/download').status_code==404
+ for role in ('editor','operator'):
+  response=e['clients'][role].get('/company/files/'+f['id']+'/download');assert response.status_code==200 and response.content==raw
+
+
+def test_approver_detail_is_whitelisted_before_private_history_load(env,monkeypatch):
+ e=env;c,site,p,f,raw,candidate,version=security_fact(e)
+ expected={'company':{'id':c['id'],'name':c['name']},**{k:[] for k in ('inputs','sites','files','evidence','candidates','facts','improvements','audit')}}
+ assert call(e,'approver','/company/'+c['id'])==expected
+ assert all(set(row)=={'id','name'} for row in call(e,'approver','/company'))
+ assert call(e,'approver','/workspace')['actor']['role']=='COMPANY_APPROVER'
+ operator=call(e,'operator','/company/'+c['id']);assert operator['facts'][0]['versions'][0]['review']['note']=='TEST_DATCO_INTERNAL_PRIVATE_REVIEW'
+ assert call(e,'editor','/company/'+c['id'])['inputs'][-1]['data']['financials']==p['financials']
+ with e['factory']() as session:
+  a=CompanyApplication(session,e['files']);rows=a.rows
+  def private_read_guard(table,**where):
+   assert table in (S.memberships,), 'Approver projection must not load private nested tables'
+   return rows(table,**where)
+  monkeypatch.setattr(a,'rows',private_read_guard)
+  assert a.detail(Actor(e['people']['approver']['id'],'COMPANY_APPROVER'),c['id'])==expected
+
+
+def test_approver_direct_context_and_guessed_fact_evidence_routes_are_denied(env):
+ e=env;c,site,p,f,raw,candidate,fact=security_fact(e)
+ data=dict(title='TEST private improvement',original_text='TEST unshared original',site_id=site['id'],fact_version_ids=[fact['id']],evidence_ids=[candidate['evidence_id']])
+ v=call(e,'editor','/company/'+c['id']+'/improvements',{'data':data})
+ from app.notice.domain import Denied
+ with e['factory']() as session:
+  with pytest.raises(Denied):CompanyApplication(session,e['files']).read_context(Actor(e['people']['approver']['id'],'COMPANY_APPROVER'),v['id'])
+ call(e,'approver','/company/improvements/'+v['id']+'/context',status=403)
+ for role in ('editor','operator'):assert call(e,role,'/company/improvements/'+v['id']+'/context')['improvement_version_id']==v['id']
+ call(e,'other','/company/improvements/'+v['id']+'/context',status=404)
+ for path in ['/company/facts/'+fact['id'],'/company/evidence/'+candidate['evidence_id'],'/company/candidates/'+candidate['id']]:call(e,'approver',path,status=404)
+ # Editor writes and operator review remain real, independently authorized commands.
+ call(e,'editor','/company/'+c['id']+'/profile',dict(data=dict(p,overview='TEST permitted update'),expected_ordinal=1))
+ call(e,'approver','/company/'+c['id']+'/profile',dict(data=p,expected_ordinal=2),status=403)

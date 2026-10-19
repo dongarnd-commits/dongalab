@@ -34,5 +34,23 @@ def dashboard(session:Annotated[Session,Depends(get_session)],who=Depends(actor)
     if not v:continue
     requests=a.rows(P.requests,version_id=v['id'])
     if who.role=='COMPANY_APPROVER' and not any(q['intended_approver']==who.id for q in requests):continue
+    if who.role=='COMPANY_APPROVER':
+     from app.proposal.application import ProposalApplication
+     from app.capability.application import CapabilityApplication
+     from app.company.provider import CompanyProvider
+     from app.notice.domain import Denied
+     try:public=ProposalApplication(CapabilityApplication(session,a.files,CompanyProvider(a))).version(who,v['id'])
+     except Denied as exc:
+      if exc.status==404:continue
+      raise
+     # Preserve approved navigation context without loading private Fact/Review
+     # histories or publishing other company improvements and their versions.
+     iv=a.get(C.improvement_versions,public['manifest']['refs']['improvement_version_id']);ir=a.get(C.improvements,iv['improvement_id']);summary=result['companies'][-1]
+     if not any(i['version_id']==iv['id'] for i in summary['improvements']):
+      summary['improvements'].append(dict(id=ir['id'],title=public['title'],state=ir['state'],version_id=iv['id'],site_id=ir['site_id']))
+      summary['counts']['improvements']=len(summary['improvements'])
+     if not any(s['id']==ir['site_id'] for s in summary['sites']):
+      sv=next(s for s in a.rows(C.site_versions,site_id=ir['site_id']) if s['ordinal']==iv['site_ordinal'])
+      summary['sites'].append(dict(id=ir['site_id'],name=sv['data']['name']))
     result['proposals'].append(dict(id=root['id'],company_id=cid,title=v['title'],ordinal=v['ordinal'],improvement_version_id=v['manifest']['refs']['improvement_version_id'],pending=any(q['state']=='OPEN' for q in requests)))
  return result
