@@ -6,7 +6,7 @@ import psycopg
 from psycopg import sql
 from sqlalchemy.engine import make_url
 ROOT=Path(__file__).resolve().parents[3];API=ROOT/'apps/api';WEB=ROOT/'apps/web'
-TESTS=['test_notice_slice.py','test_notice_korean.py','test_bizinfo.py','test_confirmed_notice_reader.py','test_analysis_lineage.py','test_analysis_migration.py','test_capability_matching_comparison.py','test_matching_integrity.py','test_proposal_preparation.py','test_proposal_production.py']
+TESTS=['test_notice_slice.py','test_notice_korean.py','test_bizinfo.py','test_confirmed_notice_reader.py','test_analysis_lineage.py','test_analysis_migration.py','test_capability_matching_comparison.py','test_matching_integrity.py','test_proposal_preparation.py','test_proposal_production.py','test_company_workflow.py','test_company_migration.py']
 def main():
  phase=sys.argv[1];assert phase in ('integration','proposal','e2e')
  # No fallback to DATABASE_URL or .env. CI admin only provisions this disposable service.
@@ -55,11 +55,12 @@ def main():
    env.update(DATCO_E2E_USER=user,DATCO_E2E_PASSWORD=pw)
    code="from app.infrastructure.database import get_engine; from sqlalchemy.orm import sessionmaker; from app.infrastructure.notice_store import SqlNoticeStore; from app.infrastructure.notice_documents import LocalPrivateFiles; from app.infrastructure.local_auth import hash_password; from app.demo import load_input; import os; from pathlib import Path\nwith sessionmaker(bind=get_engine()).begin() as s:\n st=SqlNoticeStore(s);st.add('actors',username=os.environ['DATCO_E2E_USER'],role='DATCO_OPERATOR',password_hash=hash_password(os.environ['DATCO_E2E_PASSWORD']));[load_input(st,LocalPrivateFiles(Path(os.environ['DATCO_TEST_FILES'])),name) for name in ('normal','conflict','partial')]"
    run([sys.executable,'-c',code])
-   env.update(DATCO_TEST_PROPOSAL='1',DATCO_TEST_PROPOSAL_READY=str(out/'proposal-ready.json'),DATCO_TEST_DIST_DIR='.next/datco-e2e-'+nonce)
+   env.update(DATCO_TEST_COMPANY='1',DATCO_TEST_COMPANY_READY=str(out/'company-ready.json'),DATCO_TEST_PROPOSAL='1',DATCO_TEST_PROPOSAL_READY=str(out/'proposal-ready.json'),DATCO_TEST_DIST_DIR='.next/datco-e2e-'+nonce)
    config=WEB/('.next/datco-config-'+nonce)/'tsconfig.json';config.parent.mkdir(parents=True,exist_ok=True)
    config.write_text(json.dumps({'extends':'../../tsconfig.json','compilerOptions':{'paths':{'@/*':[str(WEB/'src/*')]}},'include':[str(WEB/'next-env.d.ts'),str(WEB/'src/**/*.ts'),str(WEB/'src/**/*.tsx'),str(WEB/'tests/**/*.ts'),str(WEB/env['DATCO_TEST_DIST_DIR']/'types/**/*.ts')],'exclude':[str(WEB/'node_modules')]}))
    start('api',[sys.executable,'-m','uvicorn','isolated_server:app','--host','127.0.0.1','--port',str(api_port)],API)
    identity=wait(env['API_ORIGIN']+'/__test/identity');assert identity['database']==db and identity['db_user']==role and identity['nonce']==nonce
+   env['DATCO_COMPANY_CONTEXT']=(out/'company-ready.json').read_text(encoding='utf-8')
    proposal=json.loads((out/'proposal-ready.json').read_text(encoding='utf-8'));env['DATCO_PROPOSAL_CONTEXT']=json.dumps(proposal)
    start('worker',[sys.executable,'tests/isolated_worker.py'],API)
    deadline=time.monotonic()+30
@@ -69,7 +70,7 @@ def main():
     time.sleep(.1)
    worker=json.loads((out/'worker-ready.json').read_text());assert worker['database']==db and worker['db_user']==role
    start('web',['npm','run','dev','--','--port',str(web_port)],WEB);wait(origin)
-   run(['npm','run','test:e2e','--','tests/smoke.spec.ts','tests/notice.spec.ts','tests/proposal.spec.ts','--workers=1','--reporter=line'],WEB)
+   run(['npm','run','test:e2e','--','tests/smoke.spec.ts','tests/notice.spec.ts','tests/proposal.spec.ts','tests/company.spec.ts','--workers=1','--reporter=line'],WEB)
  except Exception:
   for log in logs:log.flush()
   for name in ('api','worker','web'):

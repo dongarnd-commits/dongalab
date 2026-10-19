@@ -307,3 +307,10 @@ Provider/Library/수치 선택은 해당 실행 구현 전에 필요한 선택�
 공통 Run/Candidate/Review를 CapabilityAssessment 및 SupportMatching에 실제 typed 관계로 연결한다. 동기 평가에는 Job/Notice SourceLocation을 강제하지 않으며 실제 입력/설정/실행 Actor·시각·후보/Evidence와 검토를 고정한다. Assessment는 ImprovementVersion × CapabilityVersion이고 실제 조합에 귀속할 때만 CompositionVersion을 연결한다. 재평가·새 매칭 실행은 새 Run/후보이며 기존 검토를 보존한다. 공통 Review 유형은 업무 outcome을 위장하거나 대체하지 않는다. Notice 분기의 기존 공식 Source/Evidence/Review/Version 조건은 유지한다.
 
 Decision-004의 R-07 승인은 상세설계만이다. 기존 IN/NOT_IN Comparator와 Confirmed 입력/UNKNOWN/MISMATCH 후보·Human Review Guard는 유지한다. 자동 증빙 추출/범용 조건 정규화/AST/지역 계층/숫자·기간·예외 평가는 reviews/R07_REVIEWED_CONDITION_DESIGN.md의 제안이며 운영용 구현 완료로 보지 않는다. 자동 추출 후보는 Confirmed Fact/ReviewedConditionVersion이 아니다. 필수 공식 Human Review는 자동 정합성 검사로 제거하지 않는다. 연구원 Company/Fact/Improvement Provider 미연결 시 정상 503을 유지한다.
+
+
+## W1 승인된 구현 증분 — 2026-10-19 / Decision-006
+
+기존 로컬 파서를 재사용해 PDF 페이지/DOCX 문단/XLSX 셀/TXT 줄의 원문을 보존한다. 명시된 기업명/업종/소재지/대표자/사업자번호 라벨에서만 RULE_BASED_EXTRACTION 후보를 생성한다. 재무 연도·수치·단위·기간 및 비정형 의미를 추정하지 않는다. 나머지는 실제 원문 근거에 사람이 후보를 작성하고 검토한다. 스캔·이미지는 원본 저장과 수동 전사 근거를 제공하며 OCR/이미지 의미분석 완료로 표시하지 않는다.
+
+공통 COMPANY_FACT_EXTRACTION 계보 증분은 사용자 명시 승인 범위다. 승인 기록은 reviews/W1_COMMON_LINEAGE_APPROVAL_REQUEST.md. Company Provider는 현재 확정 FactVersion/Review/Evidence와 exact ImprovementVersion/Site ordinal을 읽는다. 기존 Capability/Matching/Proposal 소비에 연결하지만 Guard를 우회하지 않는다. 기간·단위가 필요한 재무/인원/이력은 기존 문자열 IN/NOT_IN 비교에 자동 전달하지 않는다. 범용 공고 조건 해석·추천 엔진은 미구현이며 조건 미확인은 UNKNOWN으로 남긴다. 외부 AI 전송 승인 없음: W1_AI_SEMANTIC_ANALYSIS=BLOCKED_BY_POLICY.

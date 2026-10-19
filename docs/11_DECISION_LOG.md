@@ -128,3 +128,12 @@ Decision-001~003, 기존 Architecture/업무 상태·권한·Human Review·공�
 ## Decision-005 — Proposal P01-P05 구현 및 항목별 검토 Gate
 
 Decision-005 — 사용자 명시 승인: P01-P05 실제 Proposal Root/불변 Version/Manifest/내용 Review/지정 기업 승인/실제 DOCX·PDF 출력 및 시스템 선행 파악→항목별 사람 확인 Gate를 구현한다. 세부 검토 기준은 docs/reviews/PROPOSAL_MATCH_REVIEW_POLICY.md. 기존 Role/State/Outcome/Architecture/공식 승인 의미를 유지한다. 실제 Company Provider 미연결은 차단하고 합성 격리 검증과 구분한다. 범용 R07 엔진·기업문서 추출기·Phase2/Case/Package·main Merge는 승인 범위 밖이다. 출력은 OOXML DOCX 및 ReportLab 임베디드 한글 TTF PDF, 기존 Private File Provider를 사용한다. 사용자 승인 지시: 기존 VSCode Proposal 브랜치에서 구현·검증·Commit/Push·Draft PR; 기존 Stash/외부 백업은 보존한다.
+
+
+## Decision-006 — W1 기업 입력·Fact·Improvement 및 Company 공통 계보 증분
+
+사용자는 W1 실제 Company/Site DB·API·UI, Private 파일/기존 파서, 출처 후보·기업 사실확인·운영자 Fact 검토, 불변 Fact/ImprovementVersion, 실제 Company Provider 연결, 격리 회귀 및 기존 Draft PR #9 Commit/Push를 명시 승인했다. 외부 AI 미승인은 수동/규칙 기반 경로를 중단하는 이유가 아니며 실호출 완료로 표시할 수 없다.
+
+기존 R04 미승인 스키마 금지로 자동 승인 검토가 최초 공통 증분 실행을 거절한 뒤, 사용자가 reviews/W1_COMMON_LINEAGE_APPROVAL_REQUEST.md 범위의 공통 계보 증분 구현을 명시 승인했다. Company FK 2개·typed context·COMPANY_FACT_EXTRACTION 분기·불변/Scope 무결성·새 Migration/회귀 및 관련 문서를 승인 범위로 한다. 이전 Migration/Decision은 변경하지 않는다. 기존 State/Role/Notice·Matching·Proposal Guard와 공용 DB는 유지한다.
+
+W2 자동 추천/W3 신규 Proposal 연계, R07 범용 조건 엔진, OCR·외부 AI 전송, 공용 업무 DB Migration, main Merge는 승인 범위 밖이다. 과거 Decision의 Company Provider 미연결 차단은 미구성 환경에 적용하며 이번에 연결한 실제 Provider도 현재성/Scope를 충족해야 한다. 미참조 Private 파일 보존·삭제정책 P2와 외부 AI Provider/모델/전송·비용·보존 승인은 후속 의사결정이다. 사용자 UI 수용은 주말 이후 실사용 검수 대기다.

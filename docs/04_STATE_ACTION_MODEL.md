@@ -644,3 +644,8 @@ Action은 03의 기존 Entity와 Attribute/검토 Record 의미를 사용한다.
 ## Proposal P01-P05 승인된 구현 증분 — 2026-10-16
 
 승인된 Proposal 생성 선행 검토: docs/reviews/PROPOSAL_MATCH_REVIEW_POLICY.md의 항목별 근거·확인완료 Gate를 적용한다. 분석 NEED_MORE_INFO는 보존하되, 현재 모든 Blocking 정보를 실제 Evidence로 사람 검토해 해소한 정확한 PROPOSABLE Review가 있어야 생성한다. MISMATCH/확인된 충돌·stale·legacy는 차단한다. 새 State/Action은 추가하지 않는다. 저장은 항상 새 불변 Version이며 과거 내용 Review/Approval은 승계하지 않는다.
+
+
+## W1 승인된 구현 증분 — 2026-10-19 / Decision-006
+
+기존 DRAFT/SUBMITTED/REVIEW_REQUIRED/CONFIRMED/REVISION_REQUIRED를 사용한다. E 초안 저장→제출→O 수동 구조화 새 Version→E exact Version 사실확인→O 근거검토 확정 순서다. 필수 구조화 내용·현재 Evidence·현재 Fact·기업 확인이 없으면 확정하지 않는다. 기업 원문과 Site identity를 O가 변경할 수 없다. 새 Version은 과거 확인을 자동 승계하지 않는다. Fact 확정은 E 사실확인과 O의 기존 Review outcome을 별도 기록한다. 제안서 승인이 아니다.

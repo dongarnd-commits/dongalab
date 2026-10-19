@@ -14,6 +14,7 @@ export default async function Home() {
   return <main>
     <p className="eyebrow">Phase-1 Application Skeleton</p>
     <h1>DATCO Government Support Operations</h1>
+    <nav aria-label="업무 화면"><a href="/company">기업정보·개선과제</a> · <a href="/notice">공고 운영</a> · <a href="/capability">역량·서비스</a> · <a href="/proposal">제안서</a></nav>
     <dl aria-label="Runtime status">
       <div><dt>Web</dt><dd data-testid="web-status">READY</dd></div>
       <div><dt>API</dt><dd data-testid="api-status">{api ? "READY" : "NOT READY"}</dd></div>

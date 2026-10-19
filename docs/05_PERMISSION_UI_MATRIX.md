@@ -251,3 +251,8 @@ DMP User / Role / Company Mapping → 내부 UserIdentity / Membership / Permiss
 ## Proposal P01-P05 승인된 구현 증분 — 2026-10-16
 
 P01-P05 구현은 기존 O의 생성/작성/내용검토/승인요청과 지정 P의 Version별 APPROVE/REVISION_REQUEST/REJECT를 적용한다. 운영 Company Provider 미연결은 503으로 차단한다. 내부 MatchReview Memo/전체 Manifest는 기업 Projection/출력에 자동 공개하지 않는다. 기업은 지정 승인 대상과 공개 제안내용·근거 식별자만 조회한다.
+
+
+## W1 승인된 구현 증분 — 2026-10-19 / Decision-006
+
+새 Role은 없다. COMPANY_EDITOR는 새 Company 등록 시 자기 Membership만 만들 수 있고 기존 타기업에 자체 가입할 수 없다. DATCO_ADMIN은 기존 계정에 명시적 Company Membership만 부여한다. 이 최소 물리 구현은 ADMIN의 Operator/기업 승인권한 상속을 의미하지 않는다. DATCO_OPERATOR의 조회·분석·Fact/Improvement Review는 해당 Company Membership이 필요하다. COMPANY_APPROVER는 Editor 권한을 상속하지 않는다. 파일 다운로드에서도 서버 인증·Company Scope·digest를 검사한다. Membership 회수·수명주기·복수 승인자 운영정책은 이번 구현에 추가하지 않는다.

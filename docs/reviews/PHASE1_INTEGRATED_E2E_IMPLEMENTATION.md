@@ -100,3 +100,28 @@ Provider 미설정, 미승인 외부 호출, 알 수 없는 Mode는 실행 전�
 - 기존 Proposal 브랜치 c1914ee, Stash 4aa8e071, Next.js 외부 백업 두 파일 SHA 일치 확인. 기존 체험 서버/자료 변경 없음.
 - 이번 로컬 실행에서 전체 Playwright·lint/build는 재실행하지 않았다. 새 UI/새 API/DB Schema 변경은 없다. GitHub 새 Head CI 결과는 별도로 확인한다.
 - 실제 기업자료/외부 AI 실호출/기업 입력부터 Proposal 승인까지 통합 UI E2E: 미실행. USER_ACCEPTANCE=PENDING, PHASE1_FULL_E2E=NO.
+
+
+## W1 실제 구현 업데이트 — 2026-10-19
+
+위 실행 결과는 655193b의 파서 단계 이력이다. 이번 W1은 Company/Site 입력·파일·후보·Review·Fact/Improvement 불변 Version·실제 Provider·/company 역할별 탭 UI를 추가한다. 정책/물리 계약은 Decision-006과 docs03/04/05/07/08/10 증분을 참조한다. 외부 AI·OCR 실행은 없으며 MANUAL_REVIEW/RULE_BASED_EXTRACTION만 사용한다.
+
+업무 흐름: Company 입력 Version→Site Version→Private File SHA256→parse attempt/위치 Evidence→후보→E acknowledgement→O FactReview→FactVersion→E 원문 초안/제출→O 수동 구조화 Version→E exact 확인→O 확정→CompanyProvider. 동일값 재확인은 과거 FactVersion을 덮어쓰지 않는다. Source/Fact/Site/Improvement가 바뀌면 Provider 현재성을 다시 검사한다.
+
+소비 계약: GET /company/improvements/{version}/context 및 기존 /capability/improvements/{version}/candidates. fact_details는 항목/값/기간/단위/통화/유효일/Review/Evidence/현재성을 제공한다. CompanyProvider.read_comparison_inputs와 proposal_basis는 기존 계약을 구현하며 실제 File 근거만 Proof로 전달한다. 재무/인원/이력의 범용 판정, 자동 추천, W3 신규 화면은 구현하지 않는다.
+
+W1_DATA_FACT_E2E 최종 실행결과는 아래에 기록한다. W1_AI_SEMANTIC_ANALYSIS=BLOCKED_BY_POLICY. W2_AUTO_RECOMMENDATION=NOT_STARTED, W3_PROPOSAL_INTEGRATION=NOT_STARTED, PHASE1_FULL_E2E=NOT_COMPLETED, PHASE2_FULL_E2E/SYSTEM_ACCEPTANCE=NOT_TESTED. USER_ACCEPTANCE=PENDING.
+
+
+### W1 최종 로컬 검증 (Commit 직전 동일 소스)
+
+- Backend 전체: 308 PASS / 0 FAIL / 1 SKIP. Integration 별도 재실행: 192 PASS / 0 FAIL / 1 SKIP / 116 deselected. nonce bc3dfa9f55cc, Migration Up/check PASS.
+- W1 문서 파서 Unit 32개, Company PostgreSQL/API 13개, 새 Migration 3개 및 공통 역사 Migration 3개가 위 전체 실행에 포함되어 PASS했다. 단순 합산을 별도 실행으로 주장하지 않는다.
+- 최종 전체 Playwright: 23 PASS / 0 FAIL / 1 SKIP (24개), W1 정상/예외 2개 포함. nonce 1f0e4debfb76. lint/build/API Types 모두 PASS.
+- Backend SKIP은 DATCO_TEST_STORED_KO 미설정 시 실제 저장 공고 선택 검증이며, 해당 실제 원문/Review 경로는 전체 브라우저의 korean-requirements 테스트에서 실행·통과했다. UI SKIP은 별도 API 장애 재현용 기존 unavailable 테스트다.
+- 개발 중 역사 Migration fixture 정합성/브라우저 선택자·연속 업로드 대기·격리 Web 상대 API 경로·textarea 접근성 문제를 발견했다. 원인 수정 후 위 최종 결과로 재검증했다. 이전 실패 실행을 PASS로 재분류하지 않는다.
+- 두 최종 Runner의 shared_write_privileges=[false,false,false], public_changed_tables=[], test_cleanup=true. 공용 DB Migration/업무 데이터 수정 없음. 기존 Notice·Capability·R04/R07·Matching·P1·Proposal 회귀 포함.
+- Secret 패턴·경로/내용 검토에서 .env/Private/Runtime/DMP 원천 혼입 없음. 원천 SHA256 28b1967ed77360d0fcc6d5525f6d7395fd899865b2e01e358402edc347d1d368 유지. Stash 4aa8e071 및 기존 Next.js 백업 SHA 유지, 원본 next-env/tsconfig 변경 없음. actionlint/diff check PASS.
+- 실제 화면은 /company 하나의 역할별 탭이며 Company/Site/재무·이력/파일/후보·Fact/개선과제 기능을 제공한다. 사용자 UUID 입력은 필요 없다. W1 기술 데이터 E2E PASS, 외부 AI/OCR/자동 추천 실행 없음. 최종 GitHub 새 Head CI는 Push 후 별도 확인한다.
+- 실사용은 별도 소유 W1 컨테이너·DB·제한 Role·Private File·API/Web/Worker에서 준비했다. Company/Fact/Improvement 확정 데이터를 Seed하지 않는다. 실제 URL·로그인·시나리오·소유 프로세스 정보는 비공개 runtime/w1-demo-*/LOCAL_LOGIN.md 및 USER_GUIDE.md에만 보관하며 Commit하지 않는다. 기존 B+C 환경은 보존한다.
+- 남은 결정: 외부 AI Provider/모델/전송·비용·보존 정책, 미참조 Private blob P2 보존·삭제 정책, 향후 Membership 회수/복수 승인자 운영 정책. 다른 연구원 Company 입력 모델과의 병합은 실제 계약을 비교한 후 수행하며 접근 불가 로컬 구현이 없다고 단정하지 않는다.
