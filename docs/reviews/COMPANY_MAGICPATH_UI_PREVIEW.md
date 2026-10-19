@@ -44,3 +44,12 @@ NODE_ENV=development에서만 HTML을 제공한다. Production에서는 쿼리�
 UI_VISUAL_PREVIEW_COMPLETE: YES (기술 검증). BACKEND_INTEGRATION / AI_ANALYSIS / COMPANY_FULL_E2E: NOT_IN_SCOPE. USER_ACCEPTANCE: PENDING. 실제 기능 연결은 UI 승인 후 별도 명령으로 진행한다. main Merge는 수행하지 않는다.
 
 원본 TSX SHA256: 2d74366067540b83355d906104123569d467b4f16b74b9f32d617981747db848
+
+## v0.2.1 사용자 1차 검수 반영
+사용자 요청에 따라 L-01 공통 로그인 문구/안내 박스, C-02 불필요 예시 버튼, C-04 복수 사업장, C-05 수행이력 3가지 선택 및 다건 입력, C-07 파일별 설명·사업장·현재 개선과제 연결 UI만 수정했다. 사업장에는 원본의 사업장명·소재지와 담당자 입력을 제공한다. 기업 기본 담당자는 기존 입력폼에 유지한다. 수행사업은 명칭·연도/기간·기관·수행내용·선택 증빙 메모를 직접 입력하며 제외할 수 있다. 없음과 미확인은 분리하고 선택을 바꾸어도 입력한 이력은 이번 세션에서 유지한다.
+
+자료 설명은 다중 행이며 편집 접기/수정, 파일 교체 후에도 유지된다. 사업장 선택은 동일 미리보기의 사업장 목록을 사용한다. 입력은 컴포넌트 메모리에만 유지하므로 메뉴 이동에서는 보존되지만 브라우저 새로고침/탭 종료 후에는 초기화된다. DB·API·인증·AI·실제 업무 코드·FROZEN 기준문서 변경은 없다. C-01/03/06/08/09/10 JSX는 시작 Commit f774fab과 동일하다. 제거한 C-02 예시 버튼으로 진입하던 테스트만 직접 작성 경로로 바꾸었다. C-03의 빈 후보 초기 상태는 유지한다.
+
+완료 판정은 UI_PREVIEW_REVISION_COMPLETE에 한정한다. BACKEND_INTEGRATION/AI_ANALYSIS는 범위 밖이며 USER_ACCEPTANCE는 사용자 승인 대기다.
+
+최종 v0.2.1 검증: 격리 Runner 4a5d6e07-7fd. Playwright 3 PASS / 0 FAIL / 0 SKIP, lint/typecheck/build/production 404 PASS. 업무 API 요청 및 신규 Cookie 0. 기존 실제 업무 소스는 변경하지 않았으며 이번 실행은 업무 서버 전체 E2E 검증이 아니다.
