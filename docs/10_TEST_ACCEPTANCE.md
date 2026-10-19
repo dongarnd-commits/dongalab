@@ -421,3 +421,8 @@ Proposal P01-P05 구현 검증 대상: Root/Manifest/Version 불변성·현재�
 W1 기술 Gate는 실제 격리 PostgreSQL/API/Private File/Web에서 Company·복수 Site·연도/기간/단위 재무·이력·실제 파일·원문 위치·후보·E 사실확인·O Review·FactVersion·수동 ImprovementVersion·실제 Provider 소비까지 검증한다. Company/파일 타기업 접근, 역할 대행, 잘못된 Site/Evidence, 중복 파일, 미지원/손상 파일, parse 실패/재시도, Fact 충돌·동일값 재확인·이력, stale 입력, 동시 수정, DB 실패 Rollback, 공통 계보 불일치와 새 Migration Up/안전한 Down/재시도를 포함한다.
 
 기존 격리 Runner의 company/company-ui 및 전체 backend/ui를 사용한다. 공개 CI는 합성 자료만 사용하며 업무 최종상태를 Seed하지 않는다. 실제 실행 결과는 reviews/PHASE1_INTEGRATED_E2E_IMPLEMENTATION.md의 최신 W1 기록에서 구분한다. W1 기술 E2E 통과는 AI 의미분석/전체 Phase1/사용자 수용 완료를 의미하지 않는다. 파일 선저장 후 DB 실패의 미참조 Private blob은 P2 보존·삭제정책 과제로 남기며 자동 삭제하지 않는다.
+
+
+## W0 승인된 UI Foundation 증분 — 2026-10-19 / Decision-007
+
+W0는 실제 로그인/역할별 홈→기업 입력/저장/재조회→개선과제→공통 메뉴/후속 화면→서버 로그아웃→이전 Cookie API 거절→다른 계정/뒤로가기 비노출을 격리 Web/API/PostgreSQL에서 검증한다. 운영자 Fact/Composer/Matching/Proposal 진입, 관리자 Catalog/접근관리·비상속 및 준비 중 메뉴를 포함한다. 기존 W1·Notice·Capability·Matching·Proposal 회귀와 lint/build/API Type/공용 DB 전후 무결성을 확인한다. 서버 테스트만 통과하여 W0 Browser E2E를 PASS로 판정하지 않는다. 실제 실행 결과는 W0 검수 문서에 구분한다.

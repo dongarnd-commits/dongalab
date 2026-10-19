@@ -31,3 +31,11 @@ def authenticated(store,token):
         raise Denied("AUTHENTICATION_REQUIRED",401)
     user=store.get("actors",sessions[0]["actor_id"])
     return Actor(user["id"],user["role"])
+
+
+def logout(store,token):
+    """Revoke this existing session without deleting authentication/audit history."""
+    who=authenticated(store,token)
+    for row in store.rows('sessions',token_hash=sha256(token.encode()).hexdigest()):
+        store.change('sessions',row['id'],expires_at=datetime.now(timezone.utc))
+    store.add('audits',actor_id=who.id,action='LOGOUT',reason='User revoked this local session')

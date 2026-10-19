@@ -56,12 +56,12 @@ def wait_url(url,seconds=90):
 
 def main():
  global WEB
- parser=argparse.ArgumentParser();parser.add_argument('phase',choices=['baseline','verify','ui','backend','r04','p1','company','company-ui']);args=parser.parse_args()
+ parser=argparse.ArgumentParser();parser.add_argument('phase',choices=['baseline','verify','ui','backend','r04','p1','company','company-ui','workspace','workspace-ui']);args=parser.parse_args()
  nonce=uuid4().hex[:12];dbname='datco_test_'+nonce;role='datco_test_role_'+nonce
  directory=ROOT/'storage/private/runtime/test-isolation'/nonce;directory.mkdir(parents=True)
  web_source=WEB
  global_web=WEB
- if args.phase in ('ui','verify','company-ui'):
+ if args.phase in ('ui','verify','company-ui','workspace-ui'):
   import shutil
   web_source=directory/'web';web_source.mkdir()
   for entry in WEB.iterdir():
@@ -84,7 +84,7 @@ def main():
  report={'phase':args.phase,'nonce':nonce,'database':dbname,'role':role,'source_hash':source_hash,'commands':[]}
  env=os.environ.copy();test_url=base.set(database=dbname,username=role,password=password,query={'application_name':'datco-tests-'+nonce,'sslmode':'disable'})
  env.update(DATABASE_URL=test_url.render_as_string(hide_password=False),DATCO_TEST_DATABASE=dbname,DATCO_TEST_DB_ROLE=role,DATCO_TEST_NONCE=nonce,PYTHONPATH=str(API)+os.pathsep+str(API/'tests'),PYTHONIOENCODING='utf-8',WEB_ORIGIN='http://localhost:3000',DATCO_TEST_FILES=str(directory/'notice'),DATCO_TEST_WORKER_READY=str(directory/'worker-ready.json'))
- if args.phase in ('ui','verify','company-ui'):WEB=web_source
+ if args.phase in ('ui','verify','company-ui','workspace-ui'):WEB=web_source
  # An inherited Live key cannot be used in any isolated subprocess.
  env['BIZINFO_API_KEY']=''
  def run(label,command,cwd,child_env=env):
@@ -136,10 +136,13 @@ def main():
   if args.phase=='p1':
    run('p1',[sys.executable,'-m','pytest','tests/test_matching_integrity.py','-q','--tb=short'],API)
    run('migration-check',[sys.executable,'-m','alembic','check'],API)
+  if args.phase=='workspace':
+   run('workspace',[sys.executable,'-m','pytest','tests/test_workspace.py','tests/test_company_workflow.py','-q','--tb=short'],API)
+   run('migration-check',[sys.executable,'-m','alembic','check'],API)
   if args.phase=='company':
    run('company',[sys.executable,'-m','pytest','tests/test_company_workflow.py','tests/test_company_documents.py','tests/test_analysis_migration.py','tests/test_company_migration.py','-q','--tb=short'],API)
    run('migration-check',[sys.executable,'-m','alembic','check'],API)
-  if args.phase in ('backend','r04','p1','company'):
+  if args.phase in ('backend','r04','p1','company','workspace'):
    return 1 if any(step['exit'] for step in report['commands']) else 0
   api_port,web_port=free_port(),free_port()
   while web_port==api_port:web_port=free_port()
@@ -174,6 +177,7 @@ def main():
   report['web_proxy_database_verified']=True
   command=['cmd.exe','/c','npm.cmd','run','test:e2e','--']
   if args.phase=='company-ui':command+=['tests/company.spec.ts']
+  if args.phase=='workspace-ui':command+=['tests/workspace.spec.ts','tests/company.spec.ts','tests/proposal.spec.ts']
   if args.phase=='baseline':command+=['tests/capability-scenarios.spec.ts']
   command+=['--workers=1']
   run('playwright',command,WEB,browser_env)

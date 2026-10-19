@@ -18,11 +18,12 @@ const test=base.extend<{scenario:Scenario}>({
   try{
    const account=await ready;origin="http://127.0.0.1:"+account.port;
    await expect.poll(async()=>{try{return(await request.get(origin+"/health")).status();}catch{return 0;}},{timeout:15000}).toBe(200);
-   for(const pattern of ["**/api/capability**","**/api/notice/session"]){
+   for(const pattern of ["**/api/capability**","**/api/notice/session","**/api/workspace"]){
     await page.route(pattern,async route=>{const req=route.request(),u=new URL(req.url());const response=await request.fetch(origin+u.pathname.replace("/api/","/")+u.search,{method:req.method(),data:req.postData()??undefined,headers:{"Content-Type":"application/json",Origin:process.env.WEB_ORIGIN!,Cookie:req.headers()["cookie"]??""}});await route.fulfill({status:response.status(),headers:response.headers(),body:await response.body()});});
    }
    await provide({account,base:origin,runtime});
   }finally{
+   await page.unrouteAll({behavior:"wait"});
    if(origin){
     try{await new Promise<void>((done,reject)=>{const stop=httpRequest(origin+"/__test/stop",{method:"POST"},r=>{r.resume();r.on("end",done);});stop.on("error",reject);stop.setTimeout(5000,()=>stop.destroy(new Error("Stop timeout")));stop.end();});await exited;}
     catch{child.kill();}
@@ -43,7 +44,7 @@ test("SC-A to D real browser persistence and Notice review; business accuracy is
  test.setTimeout(240000);await login(page,scenario,"operator");
  for(const [id,cap] of [["A","A"],["B","B"],["C","C"],["D","B"]]){
   await page.goto("/capability?view=composer");await expect(page.getByText("DATCO_OPERATOR",{exact:true})).toBeVisible();
-  await page.getByLabel("ImprovementVersion",{exact:true}).fill("TEST_IMPROVEMENT_"+id);await page.getByRole("button",{name:"권한 있는 요구사항 조회",exact:true}).click();
+  await openLookup(page,'ImprovementVersion');await page.getByLabel("ImprovementVersion",{exact:true}).fill("TEST_IMPROVEMENT_"+id);await page.getByRole("button",{name:"권한 있는 요구사항 조회",exact:true}).click();
   await page.getByRole("group",{name:"TEST CAP-"+cap,exact:true}).getByRole("button",{name:"조합에 추가",exact:true}).click();
   await page.getByLabel("조합명",{exact:true}).fill("TEST browser SC-"+id);await page.getByRole("button",{name:"해결범위 항목 추가",exact:true}).click();
   await page.getByLabel("기능 해결 역할",{exact:true}).fill("TEST 실제 원천 기능의 등록·조회 역할");
@@ -51,10 +52,10 @@ test("SC-A to D real browser persistence and Notice review; business accuracy is
   await page.getByLabel("부분·미해결 범위",{exact:true}).fill(id==="D"?"모든 불량의 AI 자동 원인 규명은 원천에서 확인되지 않음":"기업 도입조건 및 사업자격 추가 확인 필요");
   await page.getByRole("button",{name:"서비스 조합 저장",exact:true}).click();await expect(page.getByText("서비스 조합 버전이 저장됐습니다.",{exact:true})).toBeVisible();
   const compositionId=await page.getByLabel("저장된 조합 ID",{exact:true}).inputValue();
-  await page.reload();await expect(page.getByText("DATCO_OPERATOR",{exact:true})).toBeVisible();await page.getByLabel("저장된 조합 ID",{exact:true}).fill(compositionId);await page.getByRole("button",{name:"조합 재조회",exact:true}).click();await expect(page.getByLabel("조합명",{exact:true})).toHaveValue("TEST browser SC-"+id);
+  await page.reload();await expect(page.getByText("DATCO_OPERATOR",{exact:true})).toBeVisible();await openLookup(page,'저장된 조합 ID');await page.getByLabel("저장된 조합 ID",{exact:true}).fill(compositionId);await page.getByRole("button",{name:"조합 재조회",exact:true}).click();await expect(page.getByLabel("조합명",{exact:true})).toHaveValue("TEST browser SC-"+id);
   await page.screenshot({path:resolve(scenario.runtime,"isolated-SC-"+id+"-composer.png"),fullPage:true});
   await page.getByRole("button",{name:"정부지원사업 매칭",exact:true}).click();const n=scenario.account.notices.A;
-  await page.getByLabel("Notice ID",{exact:true}).fill(n.notice_id);await page.getByLabel("확정 RequirementVersion",{exact:true}).fill(n.requirement_version_id);
+  await openLookup(page,'Notice ID');await page.getByLabel("Notice ID",{exact:true}).fill(n.notice_id);await openLookup(page,'확정 RequirementVersion');await page.getByLabel("확정 RequirementVersion",{exact:true}).fill(n.requirement_version_id);
   await page.getByRole("button",{name:"확정 근거로 매칭 후보 준비",exact:true}).click();await expect(page.getByRole("heading",{name:"추가 확인 필요",exact:true})).toBeVisible();
   await page.getByLabel("담당자 검토").selectOption("HOLD");await page.getByLabel("검토 사유",{exact:true}).fill("TEST 서비스 범위와 사업 적격성을 구분하여 보류");await page.getByRole("button",{name:"검토 기록",exact:true}).click();await expect(page.getByText("검토 이력이 저장됐습니다.",{exact:true})).toBeVisible();
   evidence(scenario,"SC-"+id,{mode:"ISOLATED_TEST",compositionId,compositionVersion:await page.getByLabel("CompositionVersion",{exact:true}).inputValue(),capabilityVersion:scenario.account.capabilities[cap].version_id,notice:n,candidateId:await page.getByLabel("저장된 후보 ID",{exact:true}).inputValue(),fit:"NEED_MORE_INFO",review:"HOLD",refresh:true,businessAccuracy:"NOT_IMPLEMENTED"});
@@ -82,7 +83,7 @@ test("R-01 edited but unsaved scope must not report successful publication of ol
 });
 
 test("R-02 deselecting a Capability must not leave an invalid Coverage reference",async({page,scenario})=>{
- test.setTimeout(120000);await login(page,scenario,"operator");await page.getByRole("button",{name:"서비스 조합",exact:true}).click();await page.getByLabel("ImprovementVersion",{exact:true}).fill("TEST_IMPROVEMENT_A");await page.getByRole("button",{name:"권한 있는 요구사항 조회",exact:true}).click();
+ test.setTimeout(120000);await login(page,scenario,"operator");await page.getByRole("button",{name:"서비스 조합",exact:true}).click();await openLookup(page,'ImprovementVersion');await page.getByLabel("ImprovementVersion",{exact:true}).fill("TEST_IMPROVEMENT_A");await page.getByRole("button",{name:"권한 있는 요구사항 조회",exact:true}).click();
  await page.getByRole("group",{name:"TEST CAP-A",exact:true}).getByRole("button",{name:"조합에 추가",exact:true}).click();
  await page.getByLabel("조합명",{exact:true}).fill("TEST deselection scenario");await page.getByRole("button",{name:"해결범위 항목 추가",exact:true}).click();await page.getByLabel("기능 해결 역할",{exact:true}).fill("TEST 기능 역할");
  // Preserve a second Capability's independently written Coverage while removing A.
@@ -94,7 +95,7 @@ test("R-02 deselecting a Capability must not leave an invalid Coverage reference
  await expect(page.getByText("선택을 해제하고 해당 Capability의 해결범위 1개를 작성본에서 제거했습니다. 다른 해결범위와 저장된 버전은 유지됩니다.",{exact:true})).toBeVisible();
  await expect(page.getByLabel("기능 해결 역할",{exact:true})).toHaveCount(1);await expect(page.getByLabel("기능 해결 역할",{exact:true})).toHaveValue("TEST preserve B role");
  await page.getByRole("button",{name:"서비스 조합 저장",exact:true}).click();await expect(page.getByText("서비스 조합 버전이 저장됐습니다.",{exact:true})).toBeVisible();
- const id=await page.getByLabel("저장된 조합 ID",{exact:true}).inputValue();await page.reload();await page.getByLabel("저장된 조합 ID",{exact:true}).fill(id);await page.getByRole("button",{name:"조합 재조회",exact:true}).click();await expect(page.getByLabel("기능 해결 역할",{exact:true})).toHaveValue("TEST preserve B role");
+ const id=await page.getByLabel("저장된 조합 ID",{exact:true}).inputValue();await page.reload();await openLookup(page,'저장된 조합 ID');await page.getByLabel("저장된 조합 ID",{exact:true}).fill(id);await page.getByRole("button",{name:"조합 재조회",exact:true}).click();await expect(page.getByLabel("기능 해결 역할",{exact:true})).toHaveValue("TEST preserve B role");
  evidence(scenario,"R-02",{compositionId:id,removedA:true,preservedB:true,refresh:true});await page.screenshot({path:resolve(scenario.runtime,"isolated-R-02.png"),fullPage:true});
  await expect(page.locator("p.catalog-error[role=alert]")).toHaveCount(0);
 
@@ -104,7 +105,7 @@ for (const [caseId, heading, fit] of [["F1","확인된 조건 충돌","MISMATCH"
  test("SC-"+caseId+" reviewed facts and conditions survive browser reload",async({page,scenario})=>{
   test.setTimeout(120000);await login(page,scenario,"operator");
   await page.goto("/capability?view=composer");
-  await page.getByLabel("ImprovementVersion",{exact:true}).fill("TEST_IMPROVEMENT_"+caseId);
+  await openLookup(page,'ImprovementVersion');await page.getByLabel("ImprovementVersion",{exact:true}).fill("TEST_IMPROVEMENT_"+caseId);
   await page.getByRole("button",{name:"권한 있는 요구사항 조회",exact:true}).click();
   await page.getByRole("group",{name:"TEST CAP-A",exact:true}).getByRole("button",{name:"조합에 추가",exact:true}).click();
   await page.getByLabel("조합명",{exact:true}).fill("TEST browser "+caseId);
@@ -114,8 +115,8 @@ for (const [caseId, heading, fit] of [["F1","확인된 조건 충돌","MISMATCH"
   await expect(page.getByText("서비스 조합 버전이 저장됐습니다.",{exact:true})).toBeVisible();
   await page.getByRole("button",{name:"정부지원사업 매칭",exact:true}).click();
   const n=scenario.account.notices.B;
-  await page.getByLabel("Notice ID",{exact:true}).fill(n.notice_id);
-  await page.getByLabel("확정 RequirementVersion",{exact:true}).fill(n.requirement_version_id);
+  await openLookup(page,'Notice ID');await page.getByLabel("Notice ID",{exact:true}).fill(n.notice_id);
+  await openLookup(page,'확정 RequirementVersion');await page.getByLabel("확정 RequirementVersion",{exact:true}).fill(n.requirement_version_id);
   await page.getByRole("button",{name:"확정 근거로 매칭 후보 준비",exact:true}).click();
   await expect(page.locator(".condition-comparison").getByRole("heading",{name:heading,exact:true})).toBeVisible();
   const candidateId=await page.getByLabel("저장된 후보 ID",{exact:true}).inputValue();
@@ -123,7 +124,7 @@ for (const [caseId, heading, fit] of [["F1","확인된 조건 충돌","MISMATCH"
   await page.getByLabel("담당자 검토").selectOption("HOLD");
   await page.getByRole("button",{name:"검토 기록",exact:true}).click();
   await expect(page.getByText("검토 이력이 저장됐습니다.",{exact:true})).toBeVisible();
-  await page.reload();await page.getByLabel("저장된 후보 ID",{exact:true}).fill(candidateId);
+  await page.reload();await openLookup(page,'저장된 후보 ID');await page.getByLabel("저장된 후보 ID",{exact:true}).fill(candidateId);
   await page.getByRole("button",{name:"매칭 결과 조회",exact:true}).click();
   await expect(page.locator(".condition-comparison").getByRole("heading",{name:heading,exact:true})).toBeVisible();
   await expect(page.getByText("HOLD: TEST 조건별 근거 확인 후 보류",{exact:true})).toBeVisible();
@@ -143,3 +144,5 @@ for (const [caseId, heading, fit] of [["F1","확인된 조건 충돌","MISMATCH"
   await page.screenshot({path:resolve(scenario.runtime,"isolated-"+caseId+"-comparison.png"),fullPage:true});
  });
 }
+
+async function openLookup(page:import("@playwright/test").Page,label:string){const summary=page.getByText('고급 식별자: '+label,{exact:true});await expect(summary).toBeVisible();if(!await summary.locator('..').evaluate(el=>(el as HTMLDetailsElement).open))await summary.click();}

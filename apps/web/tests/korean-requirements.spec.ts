@@ -33,6 +33,7 @@ test("stored real Korean documents traverse isolated Job, Evidence, Human Review
       const response = await route.fetch({ url: base + url.pathname.replace(/^\/api/, "") + url.search });
       await route.fulfill({ response }); // Actual isolated FastAPI/PostgreSQL response, no candidate mocks.
     });
+    await page.route("**/api/workspace",async route=>{const response=await route.fetch({url:base+"/workspace"});await route.fulfill({response});});
     await page.goto("/notice");
     await page.getByLabel("아이디", { exact: true }).fill(credentials.username);
     await page.getByLabel("비밀번호", { exact: true }).fill(credentials.password);
@@ -81,6 +82,7 @@ test("stored real Korean documents traverse isolated Job, Evidence, Human Review
     expect(detail.versions[0].runs[0].candidates.some((c: { kind: string; content: string }) => c.kind === "APPLICATION_PERIOD" && c.content.includes("18:00"))).toBeTruthy();
     expect(detail.versions[0].runs[0].provider_version).toBe("labelled-clauses-ko-v3");
   } finally {
+    await page.unrouteAll({behavior:"wait"});
     if (base) await request.post(base + "/__test/stop");
     await Promise.race([new Promise<void>(done => child.once("exit", () => done())), new Promise<void>(done => setTimeout(done, 10000))]);
     if (child.exitCode === null) child.kill();

@@ -10,7 +10,7 @@ test("operator reviews actual Worker candidate, evidence and persistent confirma
   await page.getByLabel("아이디", { exact: true }).fill(account.username);
   await page.getByLabel("비밀번호", { exact: true }).fill(account.password);
   await page.getByRole("button", { name: "로그인", exact: true }).click();
-  await expect(page.getByText("DATCO 운영자")).toBeVisible();
+  await expect(page.locator(".operator-topbar").getByText("DATCO 운영자")).toBeVisible();
   if (!new URL(page.url()).searchParams.has("context")) {
     await page.locator(".demo-entry summary").click();
     await page.getByRole("button", { name: "테스트·시연 모드 열기", exact: true }).click();
@@ -37,7 +37,7 @@ test("operator reviews actual Worker candidate, evidence and persistent confirma
   await expect(panel.getByTestId("confirmed")).toContainText("Business registration certificate");
   const before = await panel.getByTestId("confirmed").innerText();
   await page.reload();
-  await expect(page.getByText("DATCO 운영자")).toBeVisible();
+  await expect(page.locator(".operator-topbar").getByText("DATCO 운영자")).toBeVisible();
   if (!new URL(page.url()).searchParams.has("context")) {
     await page.locator(".demo-entry summary").click();
     await page.getByRole("button", { name: "테스트·시연 모드 열기", exact: true }).click();
@@ -61,7 +61,7 @@ test("notice selection ignores delayed A after B and hides old actions immediate
   await page.getByLabel("아이디", { exact: true }).fill(account.username);
   await page.getByLabel("비밀번호", { exact: true }).fill(account.password);
   await page.getByRole("button", { name: "로그인", exact: true }).click();
-  await expect(page.getByText("DATCO 운영자")).toBeVisible();
+  await expect(page.locator(".operator-topbar").getByText("DATCO 운영자")).toBeVisible();
   if (!new URL(page.url()).searchParams.has("context")) {
     await page.locator(".demo-entry summary").click();
     await page.getByRole("button", { name: "테스트·시연 모드 열기", exact: true }).click();
