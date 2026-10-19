@@ -159,7 +159,7 @@ export default function OperatorPortal() {
     notify("개선요구 검토 결과를 화면에 반영했습니다. 실제 ImprovementVersion 승인은 별도입니다.");
   };
   const toggleCapability = (id: string) => setSelectedCapabilities((prev) => {
-    const items = prev[current.id] ?? [];
+    const items = prev[contextKey] ?? [];
     return { ...prev, [contextKey]: items.includes(id) ? items.filter((x) => x !== id) : [...items, id] };
   });
   const selectComposition = (id: string) => {

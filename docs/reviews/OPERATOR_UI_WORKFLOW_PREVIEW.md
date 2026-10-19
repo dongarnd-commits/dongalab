@@ -41,3 +41,5 @@ lint/typecheck/build와 두 미리보기의 운영 404를 확인한다. 결과�
 
 
 로컬 최종 실행: `98a17165-412` — Playwright 11 PASS (운영자 6 / 기존 기업 5), lint/typecheck/build PASS, 운영 미리보기 두 경로 모두 404. DB/API 시작 없음.
+
+선택·해제 맥락 키 보완 후 `99ec25c0-507` 재검증: 동일 11 PASS, lint/typecheck/build 및 운영 404 PASS.
