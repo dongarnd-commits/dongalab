@@ -687,3 +687,10 @@ R-07 운영용 ReviewedConditionVersion/기업 자동 추출 구조는 이 문�
 ## Proposal P01-P05 승인된 구현 증분 — 2026-10-16
 
 P01-P05 물리 구현: Proposal Root의 Company/현재 ordinal, 불변 ProposalVersion(정확한 MatchReview/Snapshot·Manifest·11개 내용항목·작성자·digest), 별도 불변 내용 Review, 특정 Version/지정 APPROVER의 ApprovalRequest/Decision, Version별 Private DOCX/PDF File을 추가한다. 외부 Company/Fact 참조는 신뢰된 소비 Provider 검증 대상이며 가짜 Company FK를 만들지 않는다. Match 검토완료 근거는 Candidate/Review에 연결된 불변 별도 Record로 저장한다.
+
+
+## W1 승인된 구현 증분 — 2026-10-19 / Decision-006
+
+Company 입력·Site·파일·파싱 위치·Fact 후보/기업 사실확인/운영자 Review·FactVersion·ImprovementVersion을 실제 PostgreSQL에 저장한다. 입력·Site·Fact·개선과제 Root는 현재 ordinal만 전진시키며 Version·Evidence·Review·Audit는 불변이다. 재무 Fact 의미키는 Company/Site/항목/기간/단위/통화다. 새 근거의 동일값 재확인은 이전 FactVersion을 수정하지 않고 별도 Review로 연결한다.
+
+새 Migration f974c0012026은 e863p0012026 다음이다. 실제 Company 물리 객체만 FK를 연결하며 기존 외부 소비 계약을 유지한다. 승인된 공통 계보 증분은 analysis_company_contexts와 기존 Candidate/Review의 typed Company FK 2개다. RULE_BASED 후보만 공통 Run/Candidate/Review에 연결하고 직접입력·수동 후보를 AI 실행으로 위장하지 않는다. Company/file/parse/actor/값/Review 관계는 deferred 제약으로 검사한다. 데이터가 있는 Down은 COMPANY_HISTORY_EXISTS로 거절한다. 공용 DB에는 적용하지 않는다.

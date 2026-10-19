@@ -139,6 +139,15 @@ def create_session(body: Login,response: Response,session: Annotated[Session,Dep
 def session_actor(who=Depends(actor)):
     return who
 
+@router.post('/session/logout',response_model=dict,dependencies=[Depends(trusted_origin)],responses=errors(401,403,503))
+def end_session(request:Request,response:Response,session:Annotated[Session,Depends(get_session)]):
+    from app.infrastructure.local_auth import logout
+    logout(SqlNoticeStore(session),request.cookies.get('datco_session'))
+    session.commit()
+    response.delete_cookie('datco_session',path='/',httponly=True,samesite='strict')
+    response.headers['Cache-Control']='no-store'
+    return {'logged_out':True}
+
 @router.get("",response_model=list[NoticeSummary],responses=errors(401,403,503))
 def notice_list(session: Annotated[Session,Depends(get_session)],who=Depends(actor)):
     from app.notice.domain import authorize

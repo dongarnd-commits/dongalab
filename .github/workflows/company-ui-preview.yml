@@ -1,0 +1,35 @@
+name: Company UI Visual Preview
+on:
+  push:
+    branches: [feat/datco-phase1-integrated-e2e-v1]
+    paths: ['apps/web/**', '.github/workflows/company-ui-preview.yml']
+  pull_request:
+    paths: ['apps/web/**', '.github/workflows/company-ui-preview.yml']
+permissions:
+  contents: read
+jobs:
+  company-ui-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+        working-directory: apps/web
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+      - run: node run-company-preview-tests.mjs
+        working-directory: apps/web
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: company-ui-preview-evidence
+          path: |
+            storage/private/runtime/company-visual-preview/*/report.json
+            storage/private/runtime/company-visual-preview/*/screenshots/**
+            storage/private/runtime/company-visual-preview/*/*.log
+          retention-days: 7

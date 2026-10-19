@@ -23,3 +23,7 @@ def test_identity():return dict(identity,nonce=os.environ['DATCO_TEST_NONCE'])
 if os.environ.get('DATCO_TEST_PROPOSAL')=='1':
  from proposal_browser_setup import prepare
  proposal_environment=prepare()
+
+if os.environ.get("DATCO_TEST_COMPANY")=="1":
+ from company_browser_setup import prepare as prepare_company
+ company_environment=prepare_company()

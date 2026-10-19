@@ -13,7 +13,11 @@ from app.notice.domain import Denied
 from app.capability.application import CapabilityApplication
 
 router=APIRouter(prefix='/capability',tags=['Capability Catalog'])
-def application(session): return CapabilityApplication(session,LocalPrivateFiles(ROOT/'storage/private/notice'))
+def application(session):
+    from app.api.company import application as company_application
+    from app.company.provider import CompanyProvider
+    company=company_application(session)
+    return CapabilityApplication(session,company.files,CompanyProvider(company))
 class FeatureRecord(BaseModel):
     id:str
     feature_id:str

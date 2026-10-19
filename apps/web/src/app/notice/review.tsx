@@ -14,6 +14,7 @@ async function api<T>(path: string, body?: unknown): Promise<T> {
   const response = await fetch("/api/notice" + path, { method: body === undefined ? "GET" : "POST", headers: { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body), cache: "no-store" });
   const data = await response.json();
   if (!response.ok) throw new Error(data.reason ?? "REQUEST_FAILED");
+  if(path==="/session")window.dispatchEvent(new CustomEvent("datco-auth-change",{detail:data}));
   return data as T;
 }
 function Evidence({ candidate }: { candidate: Candidate }) {

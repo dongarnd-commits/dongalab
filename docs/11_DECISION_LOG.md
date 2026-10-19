@@ -128,3 +128,21 @@ Decision-001~003, 기존 Architecture/업무 상태·권한·Human Review·공�
 ## Decision-005 — Proposal P01-P05 구현 및 항목별 검토 Gate
 
 Decision-005 — 사용자 명시 승인: P01-P05 실제 Proposal Root/불변 Version/Manifest/내용 Review/지정 기업 승인/실제 DOCX·PDF 출력 및 시스템 선행 파악→항목별 사람 확인 Gate를 구현한다. 세부 검토 기준은 docs/reviews/PROPOSAL_MATCH_REVIEW_POLICY.md. 기존 Role/State/Outcome/Architecture/공식 승인 의미를 유지한다. 실제 Company Provider 미연결은 차단하고 합성 격리 검증과 구분한다. 범용 R07 엔진·기업문서 추출기·Phase2/Case/Package·main Merge는 승인 범위 밖이다. 출력은 OOXML DOCX 및 ReportLab 임베디드 한글 TTF PDF, 기존 Private File Provider를 사용한다. 사용자 승인 지시: 기존 VSCode Proposal 브랜치에서 구현·검증·Commit/Push·Draft PR; 기존 Stash/외부 백업은 보존한다.
+
+
+## Decision-006 — W1 기업 입력·Fact·Improvement 및 Company 공통 계보 증분
+
+사용자는 W1 실제 Company/Site DB·API·UI, Private 파일/기존 파서, 출처 후보·기업 사실확인·운영자 Fact 검토, 불변 Fact/ImprovementVersion, 실제 Company Provider 연결, 격리 회귀 및 기존 Draft PR #9 Commit/Push를 명시 승인했다. 외부 AI 미승인은 수동/규칙 기반 경로를 중단하는 이유가 아니며 실호출 완료로 표시할 수 없다.
+
+기존 R04 미승인 스키마 금지로 자동 승인 검토가 최초 공통 증분 실행을 거절한 뒤, 사용자가 reviews/W1_COMMON_LINEAGE_APPROVAL_REQUEST.md 범위의 공통 계보 증분 구현을 명시 승인했다. Company FK 2개·typed context·COMPANY_FACT_EXTRACTION 분기·불변/Scope 무결성·새 Migration/회귀 및 관련 문서를 승인 범위로 한다. 이전 Migration/Decision은 변경하지 않는다. 기존 State/Role/Notice·Matching·Proposal Guard와 공용 DB는 유지한다.
+
+W2 자동 추천/W3 신규 Proposal 연계, R07 범용 조건 엔진, OCR·외부 AI 전송, 공용 업무 DB Migration, main Merge는 승인 범위 밖이다. 과거 Decision의 Company Provider 미연결 차단은 미구성 환경에 적용하며 이번에 연결한 실제 Provider도 현재성/Scope를 충족해야 한다. 미참조 Private 파일 보존·삭제정책 P2와 외부 AI Provider/모델/전송·비용·보존 승인은 후속 의사결정이다. 사용자 UI 수용은 주말 이후 실사용 검수 대기다.
+
+
+## Decision-007 — W0 역할별 UI·네비게이션 및 실제 로그아웃
+
+사용자는 기존 PR #9/W1을 유지하며 W0 실제 공통 Shell·역할별 홈/메뉴·이름 기반 업무 진입·현재 맥락/단계 이동·로그아웃·격리 브라우저 회귀·Commit/Push 및 기존 Draft PR 업데이트를 명시 승인했다. 기존 화면/API/DB를 재사용한다. 화면 Inventory와 최소 API 영향은 reviews/W0_UI_NAVIGATION_IMPLEMENTATION.md에 기록한다.
+
+기존 인증에 서버 로그아웃이 없음을 확인하여 해당 세션의 expires_at 만료/동일 Cookie 삭제/LOGOUT Audit만 추가한다. 인증 방식·8시간 수명·Role/Permission/Schema/업무 State/승인 Guard는 변경하지 않는다. 홈·이름 선택용 GET /workspace는 실제 Membership 및 기존 Projection에서 허용된 요약만 읽는 최소 API이며 권한 확대나 새 업무 결정을 만들지 않는다.
+
+미구현 자동 추천·D~F·관리 전용 기능은 준비 중으로 구분한다. 기존 Capability/Matching/Proposal과 W1 데이터를 삭제·재작성하지 않는다. 사용자 실사용 수용은 PENDING이고 전체 Phase1 완료·SYSTEM ACCEPTANCE를 주장하지 않는다. 공용 DB Migration/업무 데이터 변경·새 Worktree·main Commit/Push/Merge·force 작업은 포함하지 않는다.

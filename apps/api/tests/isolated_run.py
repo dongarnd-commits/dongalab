@@ -55,9 +55,26 @@ def wait_url(url,seconds=90):
  raise RuntimeError('ISOLATED_SERVICE_NOT_READY')
 
 def main():
- parser=argparse.ArgumentParser();parser.add_argument('phase',choices=['baseline','verify','ui','backend','r04','p1']);args=parser.parse_args()
+ global WEB
+ parser=argparse.ArgumentParser();parser.add_argument('phase',choices=['baseline','verify','ui','backend','r04','p1','company','company-ui','workspace','workspace-ui','document-ui','authz']);args=parser.parse_args()
  nonce=uuid4().hex[:12];dbname='datco_test_'+nonce;role='datco_test_role_'+nonce
  directory=ROOT/'storage/private/runtime/test-isolation'/nonce;directory.mkdir(parents=True)
+ web_source=WEB
+ global_web=WEB
+ if args.phase in ('ui','verify','company-ui','workspace-ui','document-ui'):
+  import shutil
+  web_source=directory/'web';web_source.mkdir()
+  for entry in WEB.iterdir():
+   if entry.name in ('src','public','tests') or entry.is_file() and entry.suffix in ('.json','.ts','.mjs'):
+    if entry.is_dir():shutil.copytree(entry,web_source/entry.name)
+    else:shutil.copy2(entry,web_source/entry.name)
+  next_config=web_source/'next.config.mjs'
+  next_text=next_config.read_text(encoding='utf-8')
+  next_config.write_text(next_text.replace('export default config;', 'config.turbopack={root:'+json.dumps(str(ROOT))+'};\nconfig.experimental={...(config.experimental??{}),turbopackFileSystemCacheForDev:false};\nexport default config;'),encoding='utf-8')
+  if os.name=='nt':subprocess.run(['cmd.exe','/c','mklink','/J',str(directory/'api'),str(API)],check=True,stdout=subprocess.DEVNULL)
+  else:(directory/'api').symlink_to(API,target_is_directory=True)
+  if os.name=='nt':subprocess.run(['cmd.exe','/c','mklink','/J',str(web_source/'node_modules'),str(WEB/'node_modules')],check=True,stdout=subprocess.DEVNULL)
+  else:(web_source/'node_modules').symlink_to(WEB/'node_modules',target_is_directory=True)
  normal=get_engine();before=digest_shared(normal);public_inputs=read_public_inputs(normal)
  (directory/'public-before.json').write_text(json.dumps(before,indent=2),encoding='utf-8')
  source_hash=hashlib.sha256((ROOT/'_local_inputs/dmp_features_649.json').read_bytes()).hexdigest()
@@ -67,6 +84,7 @@ def main():
  report={'phase':args.phase,'nonce':nonce,'database':dbname,'role':role,'source_hash':source_hash,'commands':[]}
  env=os.environ.copy();test_url=base.set(database=dbname,username=role,password=password,query={'application_name':'datco-tests-'+nonce,'sslmode':'disable'})
  env.update(DATABASE_URL=test_url.render_as_string(hide_password=False),DATCO_TEST_DATABASE=dbname,DATCO_TEST_DB_ROLE=role,DATCO_TEST_NONCE=nonce,PYTHONPATH=str(API)+os.pathsep+str(API/'tests'),PYTHONIOENCODING='utf-8',WEB_ORIGIN='http://localhost:3000',DATCO_TEST_FILES=str(directory/'notice'),DATCO_TEST_WORKER_READY=str(directory/'worker-ready.json'))
+ if args.phase in ('ui','verify','company-ui','workspace-ui','document-ui'):WEB=web_source
  # An inherited Live key cannot be used in any isolated subprocess.
  env['BIZINFO_API_KEY']=''
  def run(label,command,cwd,child_env=env):
@@ -118,7 +136,16 @@ def main():
   if args.phase=='p1':
    run('p1',[sys.executable,'-m','pytest','tests/test_matching_integrity.py','-q','--tb=short'],API)
    run('migration-check',[sys.executable,'-m','alembic','check'],API)
-  if args.phase in ('backend','r04','p1'):
+  if args.phase=='workspace':
+   run('workspace',[sys.executable,'-m','pytest','tests/test_workspace.py','tests/test_company_workflow.py','-q','--tb=short'],API)
+   run('migration-check',[sys.executable,'-m','alembic','check'],API)
+  if args.phase=='company':
+   run('company',[sys.executable,'-m','pytest','tests/test_company_workflow.py','tests/test_company_documents.py','tests/test_analysis_migration.py','tests/test_company_migration.py','-q','--tb=short'],API)
+   run('migration-check',[sys.executable,'-m','alembic','check'],API)
+  if args.phase=='authz':
+   run('approver-authz',[sys.executable,'-m','pytest','tests/test_company_workflow.py','tests/test_proposal_production.py','-k','test_approver_ or test_approval_scoped_ or test_real_company_provider_','-q','--tb=short','--junitxml='+str(directory/'authz.xml')],API)
+   run('migration-check',[sys.executable,'-m','alembic','check'],API)
+  if args.phase in ('backend','r04','p1','company','workspace','authz'):
    return 1 if any(step['exit'] for step in report['commands']) else 0
   api_port,web_port=free_port(),free_port()
   while web_port==api_port:web_port=free_port()
@@ -126,11 +153,12 @@ def main():
   browser_env=dict(env,WEB_ORIGIN=origin,DATCO_E2E_BASE_URL=origin,DATCO_E2E_USER=username,DATCO_E2E_PASSWORD=actor_password,DATCO_E2E_SERVER_READY='1',API_ORIGIN='http://127.0.0.1:'+str(api_port),CAPABILITY_API_ORIGIN='http://127.0.0.1:'+str(api_port),DATCO_TEST_DIST_DIR='.next/datco-e2e-'+nonce)
   test_tsconfig=WEB/browser_env['DATCO_TEST_DIST_DIR'].replace('datco-e2e-','datco-config-')/'tsconfig.json';test_tsconfig.parent.mkdir(parents=True,exist_ok=True)
   test_tsconfig.write_text(json.dumps({'extends':'../../tsconfig.json','compilerOptions':{'paths':{'@/*':[str(WEB/'src/*')]}},'include':[str(WEB/'next-env.d.ts'),str(WEB/'src/**/*.ts'),str(WEB/'src/**/*.tsx'),str(WEB/'tests/**/*.ts'),str(WEB/browser_env['DATCO_TEST_DIST_DIR']/'types/**/*.ts'),str(WEB/browser_env['DATCO_TEST_DIST_DIR']/'dev/types/**/*.ts')],'exclude':[str(WEB/'node_modules')]}),encoding='utf-8')
-  browser_env.update(DATCO_TEST_PROPOSAL='1',DATCO_TEST_PROPOSAL_SOURCE='private',DATCO_TEST_PROPOSAL_READY=str(directory/'proposal-ready.json'))
+  browser_env.update(DATCO_TEST_COMPANY='1',DATCO_TEST_COMPANY_READY=str(directory/'company-ready.json'),DATCO_TEST_PROPOSAL='1',DATCO_TEST_PROPOSAL_SOURCE='private',DATCO_TEST_PROPOSAL_READY=str(directory/'proposal-ready.json'))
   start('api',[sys.executable,'-m','uvicorn','isolated_server:app','--host','127.0.0.1','--port',str(api_port)],API,browser_env)
   identity=wait_url(browser_env['API_ORIGIN']+'/__test/identity')
   if identity['database']!=dbname or identity['nonce']!=nonce:raise RuntimeError('ISOLATED_API_IDENTITY_MISMATCH')
   report['api_identity']=identity;report['api_url']=browser_env['API_ORIGIN'];report['web_url']=origin
+  browser_env['DATCO_COMPANY_CONTEXT']=json.dumps(json.loads((directory/'company-ready.json').read_text(encoding='utf-8')))
   browser_env['DATCO_PROPOSAL_CONTEXT']=json.dumps(json.loads((directory/'proposal-ready.json').read_text(encoding='utf-8')))
   worker=start('worker',[sys.executable,'tests/isolated_worker.py'],API,browser_env)
   worker_ready=directory/'worker-ready.json';until=time.monotonic()+15
@@ -151,10 +179,13 @@ def main():
   if page['total']!=649 or page['import']['id']!=expected_import:raise RuntimeError('WEB_PROXY_TEST_DATABASE_MISMATCH')
   report['web_proxy_database_verified']=True
   command=['cmd.exe','/c','npm.cmd','run','test:e2e','--']
+  if args.phase=='document-ui':command+=['tests/company-document-first.spec.ts']
+  if args.phase=='company-ui':command+=['tests/company.spec.ts']
+  if args.phase=='workspace-ui':command+=['tests/workspace.spec.ts','tests/company.spec.ts','tests/proposal.spec.ts','tests/company-document-first.spec.ts']
   if args.phase=='baseline':command+=['tests/capability-scenarios.spec.ts']
   command+=['--workers=1']
   run('playwright',command,WEB,browser_env)
-  if args.phase in ('verify','ui'):
+  if args.phase in ('verify','ui','company-ui'):
    run('lint',['cmd.exe','/c','npm.cmd','run','lint'],WEB,browser_env)
    # Stop only the owned Web before building into its dedicated Next directory.
    subprocess.run(['taskkill','/PID',str(children[-1].pid),'/T','/F'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)

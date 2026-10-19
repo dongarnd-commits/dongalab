@@ -228,3 +228,76 @@ def test_partial_migration_failure_rolls_back_and_can_retry(monkeypatch):
    assert dict(c.execute(select(N.notices).where(N.notices.c.id==old['id'])).mappings().one())==dict(old)
    migration.upgrade();assert {t.name for t in new}<=set(inspect(c).get_table_names(schema=schema))
   transaction.rollback()
+
+
+def test_approval_scoped_public_documents_survive_company_source_lockdown(env):
+ e=env;p,_,_=create(e);vid=p['version_id']
+ e.call('approver','/proposal/versions/'+vid,status=404)
+ e.call('operator','/proposal/versions/'+vid+'/review',dict(confirmed=True,note='TEST_INTERNAL_CONTENT_REVIEW_NOT_PUBLIC',idempotency_key=e.nonce()))
+ q=e.call('operator','/proposal/versions/'+vid+'/approval',dict(idempotency_key=e.nonce()))
+ visible=e.call('approver','/proposal/versions/'+vid);assert set(visible['manifest'])=={'refs'} and 'TEST_INTERNAL_CONTENT_REVIEW_NOT_PUBLIC' not in str(visible)
+ detail=e.call('approver','/proposal/'+p['proposal_id']);assert detail['content_reviews']==[]
+ file=e.call('operator','/proposal/versions/'+vid+'/export',dict(kind='DOCX',idempotency_key=e.nonce()))
+ response=e.clients['approver'].get('/proposal/files/'+file['id']+'/download');assert response.status_code==200 and sha256(response.content).hexdigest()==file['digest']
+ from fastapi.testclient import TestClient
+ from app.main import app
+ from app.core.config import get_settings
+ # Same synthetic Company membership, same Role, but not the designated approver.
+ with e.factory.begin() as session:
+  from app.infrastructure.notice_store import SqlNoticeStore
+  from app.infrastructure.local_auth import hash_password
+  user=SqlNoticeStore(session).add('actors',username='TEST_UNASSIGNED_'+e.nonce(),role='COMPANY_APPROVER',password_hash=hash_password('TEST_UNASSIGNED_PASSWORD'))
+ e.memberships[user['id']]='TEST_COMPANY_A'
+ with TestClient(app) as client:
+  assert client.post('/notice/session',json={'username':user['username'],'password':'TEST_UNASSIGNED_PASSWORD'},headers={'Origin':get_settings().web_origin}).status_code==200
+  for path in ['/proposal/versions/'+vid,'/proposal/files/'+file['id']+'/download','/proposal/'+p['proposal_id']]:assert client.get(path).status_code==404
+  assert client.post('/proposal/approvals/'+q['id']+'/decision',json=dict(outcome='APPROVE',reason='TEST not designated',idempotency_key=e.nonce()),headers={'Origin':get_settings().web_origin}).status_code==404
+ decision=e.call('approver','/proposal/approvals/'+q['id']+'/decision',dict(outcome='APPROVE',reason='TEST exact assigned version',idempotency_key=e.nonce()));assert decision['outcome']=='APPROVE'
+ assert any(d['id']==decision['id'] and d['version_id']==vid for d in e.call('approver','/proposal/'+p['proposal_id'])['decisions'])
+
+
+def test_real_company_provider_approval_projection_and_workspace_context(tmp_path,monkeypatch):
+ # Real W1 records/provider plus normal Proposal commands in an isolated schema.
+ from app.company.application import CompanyApplication
+ from app.company.provider import CompanyProvider
+ from app.proposal.policy import tasks
+ from app.infrastructure.notice_store import SqlNoticeStore
+ from app.infrastructure.local_auth import hash_password
+ from app.core.config import get_settings
+ from fastapi.testclient import TestClient
+ from app.main import app
+ import app.api.company as company_api
+ with committed_environment(tmp_path/'real-company-approval') as e:
+  with monkeypatch.context() as patch:
+   patch.setattr(company_api,'application',lambda session:CompanyApplication(session,e.files))
+   c=e.call('company','/company',dict(name='TEST real provider company',business_number=str(int(e.nonce()[:12],16))[-10:].zfill(10)))
+   with e.factory.begin() as session:
+    person=SqlNoticeStore(session).add('actors',username='TEST_REAL_APPROVER_'+e.nonce(),role='COMPANY_APPROVER',password_hash=hash_password(e.password))
+   e.accounts['approver']=person;e.clients['approver']=TestClient(app);e.call('approver','/notice/session',dict(username=person['username'],password=e.password))
+   for name in ('operator','approver'):e.call('admin','/company/'+c['id']+'/access',dict(username=e.accounts[name]['username']))
+   site=e.call('company','/company/'+c['id']+'/sites',{'data':dict(name='TEST approved site',address='TEST location')})['site']
+   raw='기업명: TEST real provider company'.encode('utf8');response=e.clients['company'].post('/company/'+c['id']+'/files',content=raw,headers={'Origin':get_settings().web_origin,'X-Upload-Name':'TEST-real.txt'});assert response.status_code==200;source=response.json()
+   e.call('operator','/company/files/'+source['id']+'/parse',{})
+   candidate=next(x for x in e.call('company','/company/'+c['id'])['candidates'] if x['mode']=='RULE_BASED_EXTRACTION')
+   e.call('company','/company/candidates/'+candidate['id']+'/acknowledge',dict(agreed=True,note='TEST source acknowledged'))
+   fact=e.call('operator','/company/candidates/'+candidate['id']+'/review',dict(outcome='CONFIRM_NEW_VALUE',note='TEST_PRIVATE_FACT_NOTE'))['version']
+   original=e.contexts['TEST_IMPROVEMENT_A']['original_text'];data=dict(title='TEST company improvement',original_text=original,site_id=site['id'],as_is='TEST as-is',problem='TEST problem',goal='TEST goal',to_be='TEST to-be',fact_version_ids=[fact['id']],evidence_ids=[candidate['evidence_id']])
+   initial=e.call('company','/company/'+c['id']+'/improvements',{'data':data});e.call('company','/company/improvements/'+initial['id']+'/actions',dict(action='SUBMIT',note='TEST original submitted'))
+   current=e.call('operator','/company/'+c['id']+'/improvements',dict(data=data,improvement_id=initial['improvement_id'],expected_ordinal=1));e.call('company','/company/improvements/'+current['id']+'/actions',dict(action='ACKNOWLEDGE',note='TEST exact version acknowledged'));e.call('operator','/company/improvements/'+current['id']+'/actions',dict(action='CONFIRM',note='TEST current evidence reviewed'))
+   e.contexts['TEST_IMPROVEMENT_A']=e.call('operator','/company/improvements/'+current['id']+'/context')
+   patch.setattr(api,'application',lambda session:CapabilityApplication(session,e.files,CompanyProvider(CompanyApplication(session,e.files))))
+   r=e.compose('A',['A']);cid=r['candidate']['candidate_id'];detail=e.call('operator','/capability/matches/'+cid)
+   items=[dict(task_id=t['id'],decision='CONFIRMED',note='TEST reviewed item against synthetic source',proof_ids=[candidate['evidence_id']],notice_evidence_id=t.get('notice_evidence_id')) for t in tasks(detail)]
+   e.call('operator','/capability/matches/'+cid+'/review',dict(outcome='PROPOSABLE',note='TEST complete synthetic review',completion_items=items,idempotency_key=e.nonce()))
+   p=e.call('operator','/proposal',dict(candidate_id=cid,title='TEST public proposal title',idempotency_key=e.nonce()));vid=p['version_id']
+   assert not e.call('approver','/workspace')['proposals']
+   e.call('operator','/proposal/versions/'+vid+'/review',dict(confirmed=True,note='TEST_PRIVATE_PROPOSAL_NOTE',idempotency_key=e.nonce()));q=e.call('operator','/proposal/versions/'+vid+'/approval',dict(idempotency_key=e.nonce()))
+   workspace=e.call('approver','/workspace');company=next(x for x in workspace['companies'] if x['id']==c['id']);assert [x['version_id'] for x in company['improvements']]==[current['id']];assert company['improvements'][0]['title']=='TEST public proposal title';assert company['sites']==[dict(id=site['id'],name='TEST approved site')];assert len(workspace['proposals'])==1
+   for path in ['/workspace','/company/'+c['id'],'/proposal/'+p['proposal_id'],'/proposal/versions/'+vid]:
+    text=str(e.call('approver',path));assert 'TEST_PRIVATE_FACT_NOTE' not in text and 'TEST_PRIVATE_PROPOSAL_NOTE' not in text
+   e.call('approver','/company/files/'+source['id']+'/download',status=403);e.call('approver','/company/improvements/'+current['id']+'/context',status=403)
+   evidence_url='/proposal/matches/'+cid+'/evidence/'+candidate['evidence_id']+'/download'
+   e.call('approver',evidence_url,status=403)
+   response=e.clients['operator'].get(evidence_url);assert response.status_code==200 and response.content==raw
+   exported=e.call('operator','/proposal/versions/'+vid+'/export',dict(kind='DOCX',idempotency_key=e.nonce()));response=e.clients['approver'].get('/proposal/files/'+exported['id']+'/download');assert response.status_code==200 and sha256(response.content).hexdigest()==exported['digest']
+   decision=e.call('approver','/proposal/approvals/'+q['id']+'/decision',dict(outcome='APPROVE',reason='TEST exact version approved',idempotency_key=e.nonce()));assert decision['outcome']=='APPROVE'

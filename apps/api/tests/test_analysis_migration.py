@@ -17,13 +17,15 @@ def migration_schema():
  connection=get_engine().connect().execution_options(schema_translate_map={None:schema})
  outer=connection.begin();connection.exec_driver_sql('CREATE SCHEMA '+schema)
  connection.exec_driver_sql('SET LOCAL search_path = '+schema+', public')
- Base.metadata.create_all(connection)
- from app.infrastructure.analysis_constraints import install
- install(connection,schema)
- path=ROOT/'apps/api/alembic/versions/c941a0042026_common_analysis_lineage.py'
- spec=importlib.util.spec_from_file_location('tested_lineage_migration',path);module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+ def load(name):
+  path=ROOT/'apps/api/alembic/versions'/name
+  spec=importlib.util.spec_from_file_location('tested_'+name,path);module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
+ # Build the actual historical revision, not today's metadata with future columns.
+ chain=['6d5ba2015303_notice_first_slice.py','a44df74db1ac_bizinfo_ingestion.py','b730cf01a649_capability_catalog.py','c941a0042026_common_analysis_lineage.py']
  try:
   with Operations.context(MigrationContext.configure(connection)):
+   for name in chain:load(name).upgrade()
+   module=load(chain[-1])
    yield connection,module,schema
  finally:outer.rollback();connection.close()
 
@@ -37,6 +39,10 @@ def test_safe_empty_down_and_up_model_columns(migration_schema):
  c,m,schema=migration_schema;m.downgrade()
  assert 'analysis_kind' not in {x['name'] for x in inspect(c).get_columns('analysis_runs',schema=schema)}
  m.upgrade()
+ # Verify the historical round-trip also upgrades through the real remaining chain.
+ for filename in ['d752a0012026_immutable_matching_inputs.py','e863p0012026_proposal_production.py','f974c0012026_company_workflow.py']:
+  path=ROOT/'apps/api/alembic/versions'/filename
+  spec=importlib.util.spec_from_file_location('tested_following_'+filename,path);following=importlib.util.module_from_spec(spec);spec.loader.exec_module(following);following.upgrade()
  for name,t in Base.metadata.tables.items():
   actual={x['name']:x for x in inspect(c).get_columns(name,schema=schema)}
   assert set(actual)==set(t.c.keys())

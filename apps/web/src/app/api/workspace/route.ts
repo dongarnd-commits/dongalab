@@ -1,0 +1,2 @@
+import {NextRequest} from "next/server";
+export async function GET(request:NextRequest){try{const r=await fetch(new URL('/workspace',process.env.API_ORIGIN??'http://127.0.0.1:8000'),{headers:{Cookie:request.headers.get('cookie')??''},cache:'no-store',signal:AbortSignal.timeout(15000)});return new Response(await r.arrayBuffer(),{status:r.status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});}catch{return Response.json({reason:'API_UNAVAILABLE'},{status:502});}}

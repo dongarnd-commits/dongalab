@@ -35,3 +35,9 @@ app.include_router(capability_router)
 
 from app.api.proposal import router as proposal_router
 app.include_router(proposal_router)
+
+from app.api.company import router as company_router
+app.include_router(company_router)
+
+from app.api.workspace import router as workspace_router
+app.include_router(workspace_router)

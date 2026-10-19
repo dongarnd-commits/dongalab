@@ -26,6 +26,7 @@ test("real 649 inventory, Admin publishing, Operator composition versions and co
    const req=route.request();const response=await request.fetch(base+"/notice/session",{method:req.method(),data:req.postData()??undefined,headers:{"Content-Type":"application/json","Origin":process.env.WEB_ORIGIN!,"Cookie":req.headers()["cookie"]??""}});
    await route.fulfill({status:response.status(),headers:response.headers(),body:await response.body()});
   });
+  await page.route("**/api/workspace",async route=>{const req=route.request();const response=await request.fetch(base+"/workspace",{headers:{Cookie:req.headers()["cookie"]??""}});await route.fulfill({status:response.status(),headers:response.headers(),body:await response.body()});});
   await page.goto('/capability');
   await page.getByLabel('아이디',{exact:true}).fill(account.admin);await page.getByLabel('비밀번호',{exact:true}).fill(account.password);await page.getByRole('button',{name:'로그인',exact:true}).click();
   await page.getByRole('button',{name:'검색·조회',exact:true}).click();await expect(page.getByText('검색 결과 649건',{exact:false})).toBeVisible();
@@ -35,22 +36,23 @@ test("real 649 inventory, Admin publishing, Operator composition versions and co
   await page.screenshot({path:resolve('../../storage/private/runtime/capability-browser/catalog.png'),fullPage:true});
   await page.reload();await page.getByRole('button',{name:'검색·조회',exact:true}).click();await expect(page.getByRole('button',{name:'TEST 재고 정보 서비스',exact:true})).toBeVisible();
   await page.getByText('계정 로그인',{exact:true}).click();await page.getByLabel('아이디',{exact:true}).fill(account.operator);await page.getByLabel('비밀번호',{exact:true}).fill(account.password);await page.getByRole('button',{name:'로그인',exact:true}).click();await expect(page.getByText('DATCO_OPERATOR',{exact:true})).toBeVisible();await page.getByRole('button',{name:'서비스 조합',exact:true}).click();
-  await page.getByLabel('ImprovementVersion',{exact:true}).fill('TEST_IMPROVEMENT_A');await page.getByRole('button',{name:'권한 있는 요구사항 조회',exact:true}).click();await expect(page.getByText('재고가 맞지 않고 입출고를 수기로 관리합니다.',{exact:true})).toBeVisible();
+  await openLookup(page,'ImprovementVersion');await page.getByLabel('ImprovementVersion',{exact:true}).fill('TEST_IMPROVEMENT_A');await page.getByRole('button',{name:'권한 있는 요구사항 조회',exact:true}).click();await expect(page.getByText('재고가 맞지 않고 입출고를 수기로 관리합니다.',{exact:true})).toBeVisible();
   await page.getByRole('button',{name:'조합에 추가',exact:true}).click();await page.getByLabel('조합명',{exact:true}).fill('TEST 재고 개선 조합');await page.getByRole('button',{name:'해결범위 항목 추가',exact:true}).click();await page.getByLabel('기능 해결 역할',{exact:true}).fill('재고 정보 조회');await page.getByLabel('해결 가능한 범위',{exact:true}).fill('재고현황 관리');await page.getByLabel('부분·미해결 범위',{exact:true}).fill('자동 불량 원인분석 제외');
   await page.getByRole('button',{name:'서비스 조합 저장',exact:true}).click();await expect(page.getByText('서비스 조합 버전이 저장됐습니다.',{exact:true})).toBeVisible();
   const composition=await page.getByLabel('저장된 조합 ID',{exact:true}).inputValue();expect(composition).toBeTruthy();
-  await page.reload();await page.getByLabel('저장된 조합 ID',{exact:true}).fill(composition);await page.getByRole('button',{name:'조합 재조회',exact:true}).click();await expect(page.getByLabel('조합명',{exact:true})).toHaveValue('TEST 재고 개선 조합');await page.getByLabel('조합명',{exact:true}).fill('TEST 재고 개선 조합 v2');await page.getByRole('button',{name:'새 버전 저장',exact:true}).click();await expect(page.getByText('Version 2',{exact:false})).toBeVisible();
+  await page.reload();await openLookup(page,'저장된 조합 ID');await page.getByLabel('저장된 조합 ID',{exact:true}).fill(composition);await page.getByRole('button',{name:'조합 재조회',exact:true}).click();await expect(page.getByLabel('조합명',{exact:true})).toHaveValue('TEST 재고 개선 조합');await page.getByLabel('조합명',{exact:true}).fill('TEST 재고 개선 조합 v2');await page.getByRole('button',{name:'새 버전 저장',exact:true}).click();await expect(page.getByText('Version 2',{exact:false})).toBeVisible();
   await page.screenshot({path:resolve('../../storage/private/runtime/capability-browser/composer.png'),fullPage:true});
-  await page.getByRole('button',{name:'정부지원사업 매칭',exact:true}).click();await page.getByLabel('Notice ID',{exact:true}).fill(account.notice_id);await page.getByLabel('확정 RequirementVersion',{exact:true}).fill(account.requirement_version_id);await page.getByRole('button',{name:'확정 근거로 매칭 후보 준비',exact:true}).click();await expect(page.getByRole('heading',{name:'추가 확인 필요',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'정부지원사업 매칭',exact:true}).click();await openLookup(page,'Notice ID');await page.getByLabel('Notice ID',{exact:true}).fill(account.notice_id);await openLookup(page,'확정 RequirementVersion');await page.getByLabel('확정 RequirementVersion',{exact:true}).fill(account.requirement_version_id);await page.getByRole('button',{name:'확정 근거로 매칭 후보 준비',exact:true}).click();await expect(page.getByRole('heading',{name:'추가 확인 필요',exact:true})).toBeVisible();
   await page.getByLabel('검토 사유',{exact:true}).fill('TEST 공급자격 추가정보 필요');await page.getByRole('button',{name:'검토 기록',exact:true}).click();await expect(page.getByText('검토 이력이 저장됐습니다.',{exact:true})).toBeVisible();
   await page.screenshot({path:resolve('../../storage/private/runtime/capability-browser/matching.png'),fullPage:true});
   await page.getByText('계정 로그인',{exact:true}).click();await page.getByLabel('아이디',{exact:true}).fill(account.company);await page.getByLabel('비밀번호',{exact:true}).fill(account.password);await page.getByRole('button',{name:'로그인',exact:true}).click();
-  await expect(page.locator('p.catalog-error[role=alert]')).toHaveText('현재 역할은 이 운영 화면에 접근할 권한이 없습니다.');
+  await expect(page.getByRole('heading',{name:'접근 권한 없음',exact:true})).toBeVisible();await expect(page.getByText('현재 역할에 허용되지 않은 업무입니다.',{exact:true})).toBeVisible();
   await expect(page.getByRole('heading',{name:'3자 매칭 검토',exact:true})).toHaveCount(0);
   const cookies=await page.context().cookies();const session=cookies.find(c=>c.name==='datco_session');expect(session).toBeTruthy();
   const denied=await request.get(base+'/capability/features',{headers:{Cookie:'datco_session='+session!.value}});expect(denied.status()).toBe(403);
 
  }finally{
+  await page.unrouteAll({behavior:"wait"});
   if(base){
    try{await new Promise<void>((done,reject)=>{const stop=httpRequest(base+'/__test/stop',{method:'POST'},r=>{r.resume();r.on('end',done);});stop.on('error',reject);stop.setTimeout(5000,()=>stop.destroy(new Error('Isolated stop timeout')));stop.end();});}
    catch{child.kill();}
@@ -59,3 +61,5 @@ test("real 649 inventory, Admin publishing, Operator composition versions and co
   else child.kill();
  }
 });
+
+async function openLookup(page:import("@playwright/test").Page,label:string){const summary=page.getByText('고급 식별자: '+label,{exact:true});await expect(summary).toBeVisible();if(!await summary.locator('..').evaluate(el=>(el as HTMLDetailsElement).open))await summary.click();}

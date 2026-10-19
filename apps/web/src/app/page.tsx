@@ -1,3 +1,4 @@
+import WorkspaceHome from "./_workspace/home";
 import type { components } from "@/generated/api";
 export const dynamic = "force-dynamic";
 type Health = components["schemas"]["HealthResponse"];
@@ -11,15 +12,5 @@ async function readiness(path: string, service: Health["service"]): Promise<bool
 }
 export default async function Home() {
   const [api, database] = await Promise.all([readiness("/health", "api"), readiness("/health/db", "database")]);
-  return <main>
-    <p className="eyebrow">Phase-1 Application Skeleton</p>
-    <h1>DATCO Government Support Operations</h1>
-    <dl aria-label="Runtime status">
-      <div><dt>Web</dt><dd data-testid="web-status">READY</dd></div>
-      <div><dt>API</dt><dd data-testid="api-status">{api ? "READY" : "NOT READY"}</dd></div>
-      <div><dt>Database</dt><dd data-testid="database-status">{database ? "READY" : "NOT READY"}</dd></div>
-    </dl>
-    <p>Environment: {process.env.NODE_ENV === "development" ? "Development" : process.env.NODE_ENV}</p>
-    {(!api || !database) && <p role="status">A service is unavailable. Check the local API and PostgreSQL, then refresh.</p>}
-  </main>;
+  return <><WorkspaceHome/><section className="workspace-home" aria-label="실제 서비스 연결 상태"><h2>서비스 연결 상태</h2><dl><div><dt>Web</dt><dd data-testid="web-status">READY</dd></div><div><dt>API</dt><dd data-testid="api-status">{api?"READY":"NOT READY"}</dd></div><div><dt>Database</dt><dd data-testid="database-status">{database?"READY":"NOT READY"}</dd></div></dl>{(!api||!database)&&<p role="status">서비스 연결을 확인해 주세요.</p>}</section></>;
 }
