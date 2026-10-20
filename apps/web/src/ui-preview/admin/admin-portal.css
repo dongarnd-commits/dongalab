@@ -1,0 +1,262 @@
+/* DATCO ONE Admin Portal — scoped, dependency-light styling. No global reset. */
+.datco-admin-details{
+  --ad-brand:#1767c7;--ad-ink:#1b2b42;--ad-muted:#718198;--ad-bg:#f6f8fc;
+  --ad-line:#e7ecf3;--ad-navy:#143d70;--ad-white:#fff;
+  background:var(--ad-bg);color:var(--ad-ink);font:13px/1.55 Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif;
+  color-scheme:light;box-sizing:border-box;letter-spacing:-.01em;
+}
+.datco-admin-details *,.datco-admin-details *:before,.datco-admin-details *:after{box-sizing:border-box}
+.datco-admin-details h1,.datco-admin-details h2,.datco-admin-details h3,.datco-admin-details h4,.datco-admin-details p{margin:0}
+.datco-admin-details button,.datco-admin-details input,.datco-admin-details select,.datco-admin-details textarea{font:inherit}
+.datco-admin-details button{cursor:pointer}
+.datco-admin-details button:disabled{opacity:.46;cursor:not-allowed}
+.datco-admin-details button:focus-visible,.datco-admin-details input:focus-visible,.datco-admin-details select:focus-visible,.datco-admin-details textarea:focus-visible{outline:3px solid #b9d8fe;outline-offset:2px}
+.datco-admin-details input,.datco-admin-details select,.datco-admin-details textarea{max-width:100%;min-width:0;line-height:1.55}
+.datco-admin-details .ad-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:10px;border:1px solid transparent;padding:10px 14px;font-size:12px;font-weight:750;min-height:39px;transition:background .14s,border-color .14s;color:#51627b;white-space:nowrap}
+.datco-admin-details .ad-btn-primary{background:var(--ad-brand);border-color:var(--ad-brand);color:#fff}
+.datco-admin-details .ad-btn-primary:not(:disabled):hover{background:#1055ac}
+.datco-admin-details .ad-btn-outline{background:#fff;color:#405875;border-color:#dbe3ec}
+.datco-admin-details .ad-btn-outline:not(:disabled):hover{background:#f4f8fc;border-color:#abcbed}
+.datco-admin-details .ad-btn-ghost{background:transparent;color:var(--ad-brand)}
+.datco-admin-details .ad-btn-danger{background:#fff2f1;color:#b84b4b;border-color:#ffded9}
+.datco-admin-details .ad-pill{display:inline-flex;justify-content:center;align-items:center;border-radius:999px;padding:5px 10px;font-size:10px;font-weight:800;white-space:nowrap}
+.datco-admin-details .ad-pill-neutral{color:#66758a;background:#f1f4f7}
+.datco-admin-details .ad-pill-info{color:#2368b2;background:#ebf3ff}
+.datco-admin-details .ad-pill-success{color:#267f59;background:#eaf9f1}
+.datco-admin-details .ad-pill-warning{color:#976b26;background:#fff6e1}
+.datco-admin-details .ad-pill-danger{color:#b5534e;background:#fff0ef}
+.datco-admin-details .ad-pill-purple{color:#7553b0;background:#f3eefd}
+.datco-admin-details .ad-card{border:1px solid var(--ad-line);background:#fff;border-radius:18px;box-shadow:0 2px 14px rgba(40,73,113,.025);min-width:0}
+.datco-admin-details .ad-pad{padding:24px}
+.datco-admin-details .ad-label{display:flex;flex-direction:column;gap:7px;margin-bottom:16px;font-size:12px;color:#5b6a7d;font-weight:700}
+.datco-admin-details .ad-label input,.datco-admin-details .ad-label select,.datco-admin-details .ad-label textarea{width:100%;border:1px solid #dce5ef;border-radius:10px;padding:10px 13px;background:#fff;color:#25364c;font-weight:500;outline:none;resize:vertical}
+.datco-admin-details .ad-label :is(input,select,textarea):focus{border-color:#7babe5;box-shadow:0 0 0 3px #e8f3ff}
+.datco-admin-details .ad-label :is(input,select,textarea)[readonly]{background:#f8fafc}
+.datco-admin-details .ad-label small{font-size:10.5px;font-weight:400;color:#8a97a9}
+.datco-admin-details .ad-alert{background:#edf5ff;color:#28669c;border-radius:12px;padding:14px;display:flex;gap:10px;align-items:flex-start;margin:17px 0;font-size:11.5px;line-height:1.85}
+.datco-admin-details .ad-alert svg{margin-top:2px;flex-shrink:0}
+.datco-admin-details .ad-alert-warning{color:#946928;background:#fff7e5}
+.datco-admin-details .ad-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:0 0 24px;flex-wrap:wrap}
+.datco-admin-details .ad-heading h1{font-size:28px;line-height:1.25;font-weight:850;color:#1a2b43;letter-spacing:-.045em}
+.datco-admin-details .ad-heading p{color:#7a8797;font-size:12px;margin-top:9px;line-height:1.75}
+.datco-admin-details .ad-kicker{font-size:10px;color:#2070c4;letter-spacing:.16em;font-weight:850;margin-bottom:8px}
+.datco-admin-details .ad-section-head{display:flex;align-items:start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.datco-admin-details .ad-section-head h2{font-size:15px;font-weight:800;color:#283950}
+.datco-admin-details .ad-section-head p{font-size:11.5px;margin-top:5px;color:#8b98a8;line-height:1.6}
+.datco-admin-details .ad-info-line{display:flex;flex-direction:column;gap:5px;min-width:0}
+.datco-admin-details .ad-info-line>span{font-size:11px;color:#8997a7}
+.datco-admin-details .ad-info-line>strong{font-size:12px;color:#33485f;overflow-wrap:anywhere;line-height:1.75;font-weight:650}
+.datco-admin-details .ad-info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:19px 22px;padding:5px 0 22px;margin:10px 0 17px;border-bottom:1px solid #edf1f5}
+.datco-admin-details .ad-action-row{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:19px 0 4px}
+.datco-admin-details .ad-align-right{justify-content:flex-end}
+.datco-admin-details .ad-empty{min-height:150px;display:flex;justify-content:center;align-items:center;flex-direction:column;gap:9px;color:#a7b1c0;padding:22px;font-size:12px}
+.datco-admin-details .ad-empty p{text-align:center}
+/* Login */
+.datco-admin-details.ad-auth-layout{width:100%;min-height:760px;display:grid;grid-template-columns:47% 53%}
+.datco-admin-details .ad-brand-side{min-height:760px;display:flex;flex-direction:column;justify-content:space-between;padding:50px 55px;background:#153d6f;color:#fff;position:relative;overflow:hidden}
+.datco-admin-details .ad-brand-side:after{content:"";position:absolute;width:440px;height:440px;border-radius:50%;border:55px solid #ffffff0b;right:-220px;top:90px;pointer-events:none}
+.datco-admin-details .ad-auth-logo{position:relative;z-index:1;display:flex;align-items:center;gap:13px}
+.datco-admin-details .ad-auth-logo>svg{padding:11px;width:49px;height:49px;border-radius:14px;background:#ffffff24}
+.datco-admin-details .ad-auth-logo>div{display:flex;flex-direction:column}
+.datco-admin-details .ad-auth-logo strong{font-size:20px;font-weight:850;letter-spacing:-.04em}
+.datco-admin-details .ad-auth-logo em{color:#a4d4ff;font-style:normal}
+.datco-admin-details .ad-auth-logo span{font-size:10.5px;color:#c5def6;letter-spacing:.06em}
+.datco-admin-details .ad-brand-hero{z-index:1;position:relative;max-width:550px}
+.datco-admin-details .ad-brand-hero small{font-size:11px;color:#9acaff;font-weight:800;letter-spacing:.17em}
+.datco-admin-details .ad-brand-hero h1{margin-top:21px;font-size:clamp(31px,3.2vw,45px);font-weight:850;line-height:1.46;letter-spacing:-.055em}
+.datco-admin-details .ad-brand-hero p{margin-top:20px;color:#cce0f3;font-size:14px;line-height:2}
+.datco-admin-details .ad-hero-steps{display:flex;flex-wrap:wrap;gap:10px;margin-top:34px}
+.datco-admin-details .ad-hero-steps span{border:1px solid #ffffff3b;border-radius:9px;padding:9px 12px;font-size:11px;color:#d7eaff}
+.datco-admin-details .ad-brand-foot{z-index:1;position:relative;color:#a9c7e5;font-size:11px}
+.datco-admin-details .ad-login-stage{padding:28px;display:flex;justify-content:center;align-items:center}
+.datco-admin-details .ad-login-card{background:#fff;width:min(100%,450px);border:1px solid #e9eef6;border-radius:23px;padding:44px;box-shadow:0 15px 55px #244e7d0b}
+.datco-admin-details .ad-login-icon{width:49px;height:49px;background:#ecf4ff;color:#2069c0;display:grid;place-items:center;border-radius:13px;margin-bottom:22px}
+.datco-admin-details .ad-login-card h2{font-size:28px;font-weight:850;letter-spacing:-.045em}
+.datco-admin-details .ad-login-card>p{font-size:13px;margin:10px 0 27px;color:#8a98ab}
+.datco-admin-details .ad-login-submit{width:100%;padding:13px;margin-top:7px}
+.datco-admin-details .ad-validation{color:#c43d48;margin:-4px 0 14px;font-size:11px}
+.datco-admin-details .ad-sample-account{margin-top:27px;padding:15px;border-radius:12px;background:#f5f7fb;display:flex;flex-direction:column;gap:3px;font-size:11px;color:#6b7a90}
+.datco-admin-details .ad-sample-account strong{color:#45576c;font-size:11px}
+.datco-admin-details .ad-sample-account p{font-size:10.5px;line-height:1.7;color:#99a4b4;margin-top:6px}
+/* Shell */
+.datco-admin-details.ad-layout{display:flex;min-height:730px;height:900px;max-height:100vh;overflow:hidden;width:100%}
+.datco-admin-details .ad-sidebar{width:254px;flex:0 0 254px;background:#fff;border-right:1px solid #e5ebf2;display:flex;flex-direction:column;min-height:0}
+.datco-admin-details .ad-side-brand{display:flex;align-items:center;gap:11px;padding:17px 19px;height:76px;flex:0 0 76px;border-bottom:1px solid #f0f2f6}
+.datco-admin-details .ad-logo-icon{width:38px;height:38px;display:grid;place-items:center;background:#1767c7;color:#fff;border-radius:12px}
+.datco-admin-details .ad-logo-text{display:flex;flex-direction:column}
+.datco-admin-details .ad-logo-text strong{font-size:18px;font-weight:900;letter-spacing:-.045em;line-height:1.3}
+.datco-admin-details .ad-logo-text em{color:#1767c7;font-style:normal}
+.datco-admin-details .ad-logo-text span{font-size:10px;color:#96a3b3}
+.datco-admin-details .ad-side-nav{flex:1;overflow:auto;padding:19px 12px;scrollbar-width:thin;scrollbar-color:#e5edf5 transparent}
+.datco-admin-details .ad-nav-group{margin-bottom:19px}
+.datco-admin-details .ad-nav-group-title{display:block;font-size:10px;color:#9aa7b9;font-weight:800;letter-spacing:.095em;padding:5px 12px 8px}
+.datco-admin-details .ad-nav-item{border:0;background:transparent;width:100%;padding:10px 12px;text-align:left;display:flex;align-items:center;gap:11px;color:#728095;font-size:12px;font-weight:650;min-height:41px;border-radius:9px;margin-bottom:2px}
+.datco-admin-details .ad-nav-item svg{flex-shrink:0}
+.datco-admin-details .ad-nav-item>span:nth-child(2){flex:1}
+.datco-admin-details .ad-nav-item:hover{background:#f4f8ff;color:#276aa8}
+.datco-admin-details .ad-nav-item.active{background:#eaf3ff;color:#1767c7;font-weight:800}
+.datco-admin-details .ad-active-mark{background:#1767c7;width:6px;height:6px;border-radius:50%}
+.datco-admin-details .ad-side-end{flex:0 0 auto}
+.datco-admin-details .ad-secure-notice{display:flex;align-items:center;gap:9px;background:#f5f9ff;color:#526882;border:1px solid #e7f0fa;border-radius:11px;padding:14px;margin:4px 12px 13px;font-size:10.5px}
+.datco-admin-details .ad-secure-notice svg{color:#1767c7;flex-shrink:0}
+.datco-admin-details .ad-profile{display:flex;align-items:center;gap:10px;border-top:1px solid #f0f2f6;padding:17px 14px}
+.datco-admin-details .ad-avatar{width:38px;height:38px;display:grid;place-items:center;border-radius:50%;background:#eaf3ff;color:#1767c7;font-size:12px;font-weight:800}
+.datco-admin-details .ad-profile>div:nth-child(2){display:flex;flex:1;flex-direction:column;min-width:0}
+.datco-admin-details .ad-profile strong{font-size:12px}
+.datco-admin-details .ad-profile span{color:#a1acbc;font-size:10.5px}
+.datco-admin-details .ad-profile button,.datco-admin-details .ad-mobile-close,.datco-admin-details .ad-menu-toggle{border:0;background:transparent;color:#8898aa;padding:6px;border-radius:7px}
+.datco-admin-details .ad-profile button:hover{background:#fff0ed;color:#b74a4a}
+.datco-admin-details .ad-mobile-close,.datco-admin-details .ad-menu-toggle{display:none}
+.datco-admin-details .ad-app-content{flex:1;min-width:0;display:flex;flex-direction:column}
+.datco-admin-details .ad-topbar{height:76px;flex:0 0 76px;display:flex;justify-content:space-between;align-items:center;padding:0 31px;background:#fff;border-bottom:1px solid #e8edf4;gap:16px}
+.datco-admin-details .ad-crumb{display:flex;align-items:center;gap:11px;color:#9ca8b8;font-size:12px;min-width:0}
+.datco-admin-details .ad-crumb strong{color:#30425a;font-size:12.5px;white-space:nowrap}
+.datco-admin-details .ad-crumb svg{flex-shrink:0;color:#bac4d0}
+.datco-admin-details .ad-top-actions{display:flex;align-items:center;gap:12px}
+.datco-admin-details .ad-subtle-origin{font-size:10px;color:#8ea1b8;border:1px solid #e5eef8;background:#f6faff;border-radius:99px;padding:7px 10px;white-space:nowrap}
+.datco-admin-details .ad-header-avatar{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:#eaf3ff;color:#1767c7;font-size:11px;font-weight:800}
+.datco-admin-details .ad-top-logout{min-height:34px;font-size:11px;padding:7px 9px}
+.datco-admin-details .ad-main{flex:1;min-height:0;overflow-y:auto}
+.datco-admin-details .ad-inner{max-width:1390px;margin:0 auto;padding:29px 32px 17px}
+.datco-admin-details .ad-toast{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:#eaf3ff;border:1px solid #d4e8ff;color:#225e9d;border-radius:11px;margin-bottom:20px;font-size:11.5px;line-height:1.8}
+.datco-admin-details .ad-toast>svg{flex-shrink:0;margin-top:1px}
+.datco-admin-details .ad-toast>span{flex:1}
+.datco-admin-details .ad-toast>button{border:0;background:transparent;color:inherit;padding:2px}
+.datco-admin-details .ad-footer{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap;border-top:1px solid #e3e9ef;padding:15px 2px;margin-top:31px;color:#a0acbb;font-size:10px}
+/* Dashboard */
+.datco-admin-details .ad-hero{background:#173f72;color:#fff;min-height:192px;position:relative;display:flex;align-items:center;justify-content:space-between;border-radius:21px;padding:30px 36px;overflow:hidden}
+.datco-admin-details .ad-hero>div:first-child{z-index:1;position:relative;max-width:650px}
+.datco-admin-details .ad-hero span{font-size:10px;letter-spacing:.16em;color:#b7d5ff;font-weight:800}
+.datco-admin-details .ad-hero h2{font-size:23px;font-weight:800;margin-top:10px;letter-spacing:-.035em}
+.datco-admin-details .ad-hero p{color:#d3e5f6;font-size:12px;line-height:1.75;margin-top:9px;margin-bottom:17px}
+.datco-admin-details .ad-hero .ad-btn{background:#fff;color:#1767c7;border-color:#fff}
+.datco-admin-details .ad-hero-decoration{position:absolute;right:45px;top:25px;opacity:.09;transform:rotate(-12deg)}
+.datco-admin-details .ad-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0}
+.datco-admin-details .ad-kpi{border:1px solid var(--ad-line);border-radius:17px;background:#fff;padding:20px;text-align:left;min-height:129px;display:flex;flex-direction:column;gap:10px}
+.datco-admin-details .ad-kpi:hover{border-color:#adcdf3;background:#fcfdff}
+.datco-admin-details .ad-kpi-top{display:flex;align-items:center;justify-content:space-between;gap:9px;color:#8593a5;font-size:11px;font-weight:750}
+.datco-admin-details .ad-kpi-top svg{color:#4383cb}
+.datco-admin-details .ad-kpi-main{display:flex;gap:6px;align-items:baseline}
+.datco-admin-details .ad-kpi-main strong{font-size:31px;font-weight:850;letter-spacing:-.06em}
+.datco-admin-details .ad-kpi-main span{font-size:12px;color:#73849a}
+.datco-admin-details .ad-kpi>small{color:#a0acb9;font-size:10.5px}
+.datco-admin-details .ad-columns{display:grid;grid-template-columns:1.26fr 1fr;gap:16px;align-items:start}
+.datco-admin-details .ad-task-list{display:flex;flex-direction:column}
+.datco-admin-details .ad-task{display:flex;align-items:center;gap:13px;background:transparent;border:0;border-bottom:1px solid #eff2f7;padding:15px 2px;text-align:left;color:#66778c;width:100%}
+.datco-admin-details .ad-task:last-child{border:0}
+.datco-admin-details .ad-task:hover{color:#1767c7}
+.datco-admin-details .ad-task-check{width:34px;height:34px;flex-shrink:0;border-radius:9px;display:grid;place-items:center;background:#edf5ff;color:#2f79c6}
+.datco-admin-details .ad-task>span:nth-child(2){flex:1;display:flex;flex-direction:column;gap:3px}
+.datco-admin-details .ad-task strong{font-size:12px;color:#30405a}
+.datco-admin-details .ad-task small{color:#98a3b2;font-size:10.5px}
+.datco-admin-details .ad-activity{display:flex;gap:11px;padding:13px 0;border-bottom:1px solid #f0f2f5;align-items:flex-start}
+.datco-admin-details .ad-activity:last-child{border:0}
+.datco-admin-details .ad-timeline-dot{height:9px;width:9px;background:#9bc0ef;border:2px solid #dbeaff;border-radius:50%;margin-top:5px;flex-shrink:0}
+.datco-admin-details .ad-activity>div{display:flex;flex-direction:column;gap:5px}
+.datco-admin-details .ad-activity strong{font-size:11.5px;color:#526078;font-weight:700;line-height:1.6}
+.datco-admin-details .ad-activity small{font-size:10px;color:#a1afbf}
+/* Lists and details */
+.datco-admin-details .ad-split{display:grid;grid-template-columns:minmax(0,1.16fr) minmax(0,.98fr);gap:16px;align-items:start}
+.datco-admin-details .ad-item-stack{display:flex;flex-direction:column;gap:8px;max-height:570px;overflow-y:auto;padding-right:2px}
+.datco-admin-details .ad-select-item{display:flex;align-items:center;gap:10px;border:1px solid #edf1f5;background:#fff;padding:12px;text-align:left;width:100%;border-radius:11px;color:#8491a1}
+.datco-admin-details .ad-select-item:hover{border-color:#bfd8f7;background:#fbfdff}
+.datco-admin-details .ad-select-item.active{border-color:#98c1ef;background:#f4f9ff}
+.datco-admin-details .ad-select-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.datco-admin-details .ad-select-main strong{color:#34475e;font-size:12px;overflow-wrap:anywhere;line-height:1.55}
+.datco-admin-details .ad-select-main small{color:#a1acbb;font-size:10.3px;overflow-wrap:anywhere}
+.datco-admin-details .ad-detail-header{display:flex;align-items:center;gap:13px;padding:4px 0 19px;margin-bottom:18px;border-bottom:1px solid #eef1f5}
+.datco-admin-details .ad-square-icon{width:45px;height:45px;display:grid;place-items:center;background:#edf5ff;color:#1767c7;border-radius:13px;flex-shrink:0}
+.datco-admin-details .ad-detail-header>div:nth-child(2){display:flex;flex-direction:column;gap:4px;min-width:0}
+.datco-admin-details .ad-detail-header strong{font-size:16px;font-weight:800;overflow-wrap:anywhere;line-height:1.5}
+.datco-admin-details .ad-detail-header small{font-size:11px;color:#9eacbd;overflow-wrap:anywhere;line-height:1.55}
+.datco-admin-details .ad-filter-row{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.datco-admin-details .ad-filter-row>select,.datco-admin-details .ad-filter-row>.ad-label select{min-width:160px;border:1px solid #dce6ee;background:#fff;border-radius:10px;padding:9px 10px;font-size:11.5px;color:#4d6179}
+.datco-admin-details .ad-filter-row>.ad-label{margin:0;flex:1}
+.datco-admin-details .ad-filter-top{justify-content:space-between}
+.datco-admin-details .ad-filter-label{display:flex;align-items:center;gap:8px;color:#65788f;font-size:11.5px;font-weight:750}
+.datco-admin-details .ad-search{display:flex;align-items:center;gap:9px;border:1px solid #dce4ed;border-radius:10px;padding:9px 11px;flex:1;min-width:150px;background:white;color:#a1afbe}
+.datco-admin-details .ad-search input{border:0;background:transparent;outline:none;color:#3c5068;width:100%;font-size:12px}
+.datco-admin-details .ad-table-wrap{min-width:0;overflow-x:auto}
+.datco-admin-details .ad-table{border-collapse:collapse;width:100%;font-size:11.5px;min-width:410px}
+.datco-admin-details .ad-table th{background:#f7f9fc;border-bottom:1px solid #ebeff5;text-align:left;padding:12px 10px;font-size:10.5px;color:#8996a7;white-space:nowrap}
+.datco-admin-details .ad-table td{padding:13px 10px;border-bottom:1px solid #f0f3f7;color:#6c7d91;vertical-align:middle;max-width:300px;line-height:1.55}
+.datco-admin-details .ad-table td>b{display:block;font-size:11.5px;color:#344a63;font-weight:750}
+.datco-admin-details .ad-table td small{display:block;margin-top:4px;color:#a2aebc;font-size:10px}
+.datco-admin-details .ad-table tbody tr:not(.ad-audit-expanded):hover{background:#fbfdff;cursor:pointer}
+.datco-admin-details .ad-table tbody tr.selected{background:#f4f9ff}
+.datco-admin-details .ad-table tbody tr:last-child td{border-bottom:0}
+.datco-admin-details .ad-audit-expanded{background:#f6f9fc!important;padding:15px!important;font-size:11px!important;color:#617288!important}
+.datco-admin-details .ad-mini-list{margin-top:20px;border-top:1px solid #edf1f5;padding-top:16px}
+.datco-admin-details .ad-mini-list h3{font-size:12px;margin-bottom:9px}
+.datco-admin-details .ad-mini-list>div{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:11px 0;border-bottom:1px solid #f1f4f7;font-size:11.5px}
+.datco-admin-details .ad-mini-list>div:last-child{border:0}
+.datco-admin-details .ad-mini-list>div strong{min-width:130px;color:#34475d;font-size:11.5px;flex:1}
+.datco-admin-details .ad-mini-list>div span:not(.ad-pill){font-size:10.8px;color:#8b98a7;flex:1}
+.datco-admin-details .ad-mini-empty{font-size:11.5px;color:#a2adba}
+.datco-admin-details .ad-check-collection{display:flex;flex-direction:column;gap:5px;max-height:178px;overflow-y:auto;border:1px solid #eef1f5;border-radius:12px;padding:9px 11px;margin-bottom:18px}
+.datco-admin-details .ad-check-line{display:flex;align-items:center;gap:8px;padding:6px;font-size:11.5px;font-weight:600;color:#64758b}
+.datco-admin-details .ad-check-line input{accent-color:#1767c7;flex-shrink:0}
+.datco-admin-details .ad-check-line span:nth-child(2){flex:1}
+.datco-admin-details .ad-check-line small{font-size:10px;color:#abb5c1}
+.datco-admin-details .ad-field-title{font-size:12px;font-weight:750;color:#576984;margin-bottom:8px}
+.datco-admin-details .ad-gate-list,.datco-admin-details .ad-checklist{border:1px solid #edf1f4;border-radius:12px;padding:15px;margin:12px 0}
+.datco-admin-details .ad-gate-list>strong,.datco-admin-details .ad-checklist h3{font-size:12.5px;color:#41566b;display:block;margin-bottom:12px}
+.datco-admin-details .ad-gate-row{display:flex;justify-content:space-between;align-items:center;gap:11px;border-bottom:1px solid #f1f3f6;padding:9px 0;font-size:11.5px;color:#62738a}
+.datco-admin-details .ad-gate-row:last-child{border:0}
+.datco-admin-details .ad-gate-row>span:first-child{display:flex;align-items:center;gap:8px}
+.datco-admin-details .ad-ok{color:#30a57b}
+.datco-admin-details .ad-bad{color:#e3a54e}
+.datco-admin-details .ad-history{border-top:1px solid #eef2f6;padding-top:16px;margin-top:17px}
+.datco-admin-details .ad-history h3{font-size:12.5px;margin-bottom:12px}
+.datco-admin-details .ad-history p{display:flex;align-items:center;gap:9px;color:#8490a2;font-size:11px;line-height:1.7;margin-bottom:7px}
+.datco-admin-details .ad-checklist>div{display:flex;gap:8px;align-items:start;padding:8px 0;color:#718198;font-size:11.5px;line-height:1.6;border-bottom:1px solid #f1f3f5}
+.datco-admin-details .ad-checklist>div:last-child{border:0}
+.datco-admin-details .ad-checklist>div svg{flex-shrink:0;color:#e0a75c;margin-top:1px}
+.datco-admin-details .ad-source-warning{display:flex;align-items:center;gap:9px;color:#9c7139;font-size:11.5px;background:#fff8ed;border-radius:9px;padding:10px 13px;max-width:520px}
+.datco-admin-details .ad-avatar-small{display:grid;place-items:center;background:#eef5ff;color:#2c78c7;border-radius:50%;height:32px;width:32px;flex-shrink:0}
+/* modal */
+.datco-admin-details .ad-modal-mask{position:fixed;inset:0;background:#0d254472;display:flex;align-items:center;justify-content:center;padding:18px;z-index:1000}
+.datco-admin-details .ad-modal{width:min(100%,470px);border-radius:20px;background:white;padding:30px;box-shadow:0 25px 65px #10244038}
+.datco-admin-details .ad-modal-icon{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;color:#1767c7;background:#edf5ff;margin-bottom:17px}
+.datco-admin-details .ad-modal h2{font-size:18px;font-weight:850;line-height:1.5;margin-bottom:11px}
+.datco-admin-details .ad-modal p{font-size:12px;line-height:1.9;color:#718198}
+.datco-admin-details .ad-mobile-overlay{display:none}
+@media(max-width:1200px){
+ .datco-admin-details .ad-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .datco-admin-details .ad-split{grid-template-columns:1fr}
+ .datco-admin-details .ad-split>.ad-card:first-child .ad-item-stack{max-height:310px}
+ .datco-admin-details .ad-inner{padding:26px 22px 16px}
+}
+@media(max-width:900px){
+ .datco-admin-details.ad-layout{height:100vh;min-height:600px}
+ .datco-admin-details .ad-sidebar{position:fixed;top:0;bottom:0;left:0;transform:translateX(-105%);z-index:98;box-shadow:10px 0 30px #213e5f16;transition:transform .16s}
+ .datco-admin-details .ad-sidebar.ad-sidebar-open{transform:translateX(0)}
+ .datco-admin-details .ad-mobile-overlay{display:block;position:fixed;inset:0;background:#163c6170;z-index:97}
+ .datco-admin-details .ad-mobile-close{display:block;margin-left:auto}
+ .datco-admin-details .ad-menu-toggle{display:block}
+ .datco-admin-details .ad-subtle-origin{display:none}
+ .datco-admin-details .ad-topbar{padding:0 18px}
+ .datco-admin-details .ad-columns{grid-template-columns:1fr}
+ .datco-admin-details.ad-auth-layout{grid-template-columns:1fr}
+ .datco-admin-details .ad-brand-side{display:none}
+ .datco-admin-details .ad-login-stage{min-height:100vh}
+}
+@media(max-width:600px){
+ .datco-admin-details .ad-inner{padding:21px 14px}
+ .datco-admin-details .ad-pad{padding:17px}
+ .datco-admin-details .ad-heading h1{font-size:24px}
+ .datco-admin-details .ad-heading{margin-bottom:20px}
+ .datco-admin-details .ad-kpi-grid{gap:10px}
+ .datco-admin-details .ad-kpi{padding:15px;min-height:125px}
+ .datco-admin-details .ad-hero{padding:22px;min-height:208px}
+ .datco-admin-details .ad-hero h2{font-size:19px}
+ .datco-admin-details .ad-hero-decoration{right:-35px;top:15px}
+ .datco-admin-details .ad-info-grid{grid-template-columns:1fr 1fr;gap:17px 10px}
+ .datco-admin-details .ad-footer{flex-direction:column;align-items:flex-start}
+ .datco-admin-details .ad-login-card{padding:29px 24px}
+ .datco-admin-details .ad-top-actions{gap:6px}
+ .datco-admin-details .ad-top-logout{padding:7px 8px}
+ .datco-admin-details .ad-table{min-width:560px}
+}
+
+body{margin:0}.datco-admin-details .ad-preview-navigation{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:18px}.datco-admin-details .ad-saved-quality{padding:10px;background:#f1f6fc;margin:10px 0}

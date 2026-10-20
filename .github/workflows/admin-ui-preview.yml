@@ -1,0 +1,35 @@
+name: Admin UI Workflow Preview
+on:
+  push:
+    branches: [feat/datco-admin-ui-preview-v01]
+    paths: ['apps/web/**', '.github/workflows/admin-ui-preview.yml']
+  pull_request:
+    paths: ['apps/web/**', '.github/workflows/admin-ui-preview.yml']
+permissions:
+  contents: read
+jobs:
+  admin-ui-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+        working-directory: apps/web
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+      - run: node run-admin-preview-tests.mjs
+        working-directory: apps/web
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: admin-ui-preview-evidence
+          path: |
+            storage/private/runtime/admin-visual-preview/*/report.json
+            storage/private/runtime/admin-visual-preview/*/screenshots/**
+            storage/private/runtime/admin-visual-preview/*/*.log
+          retention-days: 7

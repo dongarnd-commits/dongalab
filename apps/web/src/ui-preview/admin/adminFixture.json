@@ -1,0 +1,753 @@
+{
+  "schemaVersion": "0.1",
+  "dataNature": "SYNTHETIC_SAMPLE_ONLY",
+  "fixtureGeneratedAt": "2026-10-19",
+  "doNotUseAsOfficialSource": true,
+  "sourceOfTruthNote": "본 데이터는 UI 시연 Fixture. 실제 DMP/정부공고/사내 승인정책이 아니다. 기존 dongalab FROZEN/PRD/실제 원천을 우선한다.",
+  "admin": {
+    "id": "USER-ADMIN-001",
+    "displayName": "DATCO 관리자",
+    "roleLabel": "DATCO_ADMIN",
+    "isRealAuthenticated": false,
+    "demoUser": "admin@datco.local"
+  },
+  "metricsDescription": "표시 수치는 이 Fixture 레코드 기준이며 DMP 원본 649개 기능의 검증/수입 건수로 간주하지 않는다.",
+  "companies": [
+    {
+      "id": "COMP-001",
+      "name": "㈜한빛정밀",
+      "stage": "Fact 검토",
+      "siteId": "SITE-001"
+    },
+    {
+      "id": "COMP-002",
+      "name": "㈜미래에이엠",
+      "stage": "제안 가능 검토",
+      "siteId": "SITE-002"
+    },
+    {
+      "id": "COMP-003",
+      "name": "㈜새빛푸드",
+      "stage": "자격 불일치",
+      "siteId": "SITE-003"
+    }
+  ],
+  "features": [
+    {
+      "id": "FEAT-INV-001",
+      "name": "재고 현황 조회",
+      "category": "재고·입출고",
+      "description": "재고별 수량과 위치 조회",
+      "revision": "1.0",
+      "capabilityId": "CAP-INV",
+      "catalogReady": true,
+      "source": "DMP_CATALOG_SAMPLE_ONLY",
+      "evidence": "샘플 기능정의서 FEAT-INV-001",
+      "updatedAt": "2026-10-17"
+    },
+    {
+      "id": "FEAT-INV-002",
+      "name": "입출고 이력 기록",
+      "category": "재고·입출고",
+      "description": "입고·출고 내역 및 이동 이력",
+      "revision": "1.0",
+      "capabilityId": "CAP-INV",
+      "catalogReady": true,
+      "source": "DMP_CATALOG_SAMPLE_ONLY",
+      "evidence": "샘플 기능정의서 FEAT-INV-002",
+      "updatedAt": "2026-10-17"
+    },
+    {
+      "id": "FEAT-INV-003",
+      "name": "재고 조정 내역",
+      "category": "재고·입출고",
+      "description": "실사·조정 근거 기록",
+      "revision": "1.1",
+      "capabilityId": "CAP-INV",
+      "catalogReady": true,
+      "source": "DMP_CATALOG_SAMPLE_ONLY",
+      "evidence": "샘플 기능정의서 FEAT-INV-003",
+      "updatedAt": "2026-10-17"
+    },
+    {
+      "id": "FEAT-PROD-001",
+      "name": "작업지시 관리",
+      "category": "생산·공정",
+      "description": "생산 작업지시 등록 및 이력",
+      "revision": "1.0",
+      "capabilityId": "CAP-PROD",
+      "catalogReady": true,
+      "source": "DMP_CATALOG_SAMPLE_ONLY",
+      "evidence": "샘플 기능정의서 FEAT-PROD-001",
+      "updatedAt": "2026-10-17"
+    },
+    {
+      "id": "FEAT-PROD-002",
+      "name": "생산실적 집계",
+      "category": "생산·공정",
+      "description": "공정·일자별 생산실적 기록",
+      "revision": "1.2",
+      "capabilityId": "CAP-PROD",
+      "catalogReady": true,
+      "source": "DMP_CATALOG_SAMPLE_ONLY",
+      "evidence": "샘플 기능정의서 FEAT-PROD-002",
+      "updatedAt": "2026-10-17"
+    },
+    {
+      "id": "FEAT-PROD-003",
+      "name": "공정 진행 현황",
+      "category": "생산·공정",
+      "description": "실시간 공정 흐름 확인",
+      "revision": "1.0",
+      "capabilityId": "CAP-PROD",
+      "catalogReady": true,
+      "source": "DMP_CATALOG_SAMPLE_ONLY",
+      "evidence": "샘플 기능정의서 FEAT-PROD-003",
+      "updatedAt": "2026-10-17"
+    },
+    {
+      "id": "FEAT-QUAL-001",
+      "name": "품질검사 기록",
+      "category": "품질관리",
+      "description": "검사 결과·이력 기록",
+      "revision": "1.0",
+      "capabilityId": "CAP-QUAL",
+      "catalogReady": true,
+      "source": "DMP_CATALOG_SAMPLE_ONLY",
+      "evidence": "샘플 기능정의서 FEAT-QUAL-001",
+      "updatedAt": "2026-10-17"
+    },
+    {
+      "id": "FEAT-QUAL-002",
+      "name": "불량 유형 분석",
+      "category": "품질관리",
+      "description": "불량 유형 및 발생 현황 조회",
+      "revision": "1.0",
+      "capabilityId": "CAP-QUAL",
+      "catalogReady": true,
+      "source": "DMP_CATALOG_SAMPLE_ONLY",
+      "evidence": "샘플 기능정의서 FEAT-QUAL-002",
+      "updatedAt": "2026-10-17"
+    },
+    {
+      "id": "FEAT-DATA-001",
+      "name": "ERP 연계 어댑터",
+      "category": "연계·데이터",
+      "description": "표준 기업 데이터 연동 계약 후보",
+      "revision": "0.9",
+      "capabilityId": "CAP-INTEGRATION",
+      "catalogReady": false,
+      "source": "DMP_CATALOG_SAMPLE_ONLY",
+      "evidence": "샘플 기능정의서 FEAT-DATA-001",
+      "updatedAt": "2026-10-17"
+    },
+    {
+      "id": "FEAT-ENER-001",
+      "name": "에너지 사용량 기록",
+      "category": "현장·에너지",
+      "description": "설비별 사용량 기록",
+      "revision": "0.5",
+      "capabilityId": "CAP-ENERGY",
+      "catalogReady": false,
+      "source": "DMP_CATALOG_SAMPLE_ONLY",
+      "evidence": "샘플 기능정의서 FEAT-ENER-001",
+      "updatedAt": "2026-10-17"
+    },
+    {
+      "id": "FEAT-SEC-001",
+      "name": "사용자 감사 이력",
+      "category": "운영·보안",
+      "description": "행위 및 변경이력 조회",
+      "revision": "1.0",
+      "capabilityId": "CAP-OPS",
+      "catalogReady": true,
+      "source": "DMP_CATALOG_SAMPLE_ONLY",
+      "evidence": "샘플 기능정의서 FEAT-SEC-001",
+      "updatedAt": "2026-10-17"
+    },
+    {
+      "id": "FEAT-DOC-001",
+      "name": "첨부 증빙자료 관리",
+      "category": "운영·보안",
+      "description": "개별 업무와 증빙자료 연결",
+      "revision": "1.0",
+      "capabilityId": "CAP-OPS",
+      "catalogReady": true,
+      "source": "DMP_CATALOG_SAMPLE_ONLY",
+      "evidence": "샘플 기능정의서 FEAT-DOC-001",
+      "updatedAt": "2026-10-17"
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "CAP-INV",
+      "title": "재고·입출고 관리",
+      "description": "재고현황 및 입출고 흐름 관리",
+      "category": "물류/재고",
+      "version": 2,
+      "releaseState": "PUBLISHED",
+      "featureIds": [
+        "FEAT-INV-001",
+        "FEAT-INV-002",
+        "FEAT-INV-003"
+      ],
+      "conditions": [
+        "기초 품목·창고 데이터 확보"
+      ],
+      "coverage": [
+        "재고 불일치",
+        "수기 입출고"
+      ],
+      "limitations": [
+        "설비 자동 수집은 별도 연동 필요"
+      ],
+      "evidence": "샘플 서비스 사양서 v2",
+      "publishedAt": "2026-10-13",
+      "changeHistory": [
+        "v1 초안 작성",
+        "v2 시연용 발행 기록"
+      ],
+      "authorizationHint": "발행권한 확인 필요"
+    },
+    {
+      "id": "CAP-PROD",
+      "title": "생산실적 관리",
+      "description": "생산 계획·작업 지시와 실적 집계",
+      "category": "제조/생산",
+      "version": 1,
+      "releaseState": "PUBLISHED",
+      "featureIds": [
+        "FEAT-PROD-001",
+        "FEAT-PROD-002",
+        "FEAT-PROD-003"
+      ],
+      "conditions": [
+        "작업공정 및 기준정보 등록"
+      ],
+      "coverage": [
+        "작업 실적 확인"
+      ],
+      "limitations": [
+        "자동 설비 연계는 별도 검토"
+      ],
+      "evidence": "샘플 서비스 사양서 v1",
+      "publishedAt": "2026-10-14",
+      "changeHistory": [
+        "v1 시연용 발행 기록"
+      ],
+      "authorizationHint": "발행권한 확인 필요"
+    },
+    {
+      "id": "CAP-QUAL",
+      "title": "품질·불량 이력 관리",
+      "description": "검사 결과 및 불량 이력을 관리",
+      "category": "제조/품질",
+      "version": 1,
+      "releaseState": "REVIEW_PENDING",
+      "featureIds": [
+        "FEAT-QUAL-001",
+        "FEAT-QUAL-002"
+      ],
+      "conditions": [
+        "검사항목 및 기준 정의"
+      ],
+      "coverage": [
+        "불량 이력 관리"
+      ],
+      "limitations": [
+        "외부 검사장비 자동연계 미포함"
+      ],
+      "evidence": "샘플 품질관리 기능 사양서",
+      "publishedAt": null,
+      "changeHistory": [
+        "v1 검토 대기"
+      ],
+      "authorizationHint": "발행권한 확인 필요"
+    },
+    {
+      "id": "CAP-INTEGRATION",
+      "title": "ERP 연계 기능",
+      "description": "기업 ERP와 일부 데이터 연계",
+      "category": "연계/데이터",
+      "version": 1,
+      "releaseState": "DRAFT",
+      "featureIds": [
+        "FEAT-DATA-001"
+      ],
+      "conditions": [
+        "외부 ERP API 연동규격 확인 필요"
+      ],
+      "coverage": [
+        "데이터 연결"
+      ],
+      "limitations": [
+        "공급 가능성 미확정"
+      ],
+      "evidence": null,
+      "publishedAt": null,
+      "changeHistory": [
+        "초안 작성"
+      ],
+      "authorizationHint": "발행권한 확인 필요"
+    },
+    {
+      "id": "CAP-ENERGY",
+      "title": "설비 에너지 계측",
+      "description": "설비 사용량 기록 및 분석",
+      "category": "현장/에너지",
+      "version": 1,
+      "releaseState": "DRAFT",
+      "featureIds": [
+        "FEAT-ENER-001"
+      ],
+      "conditions": [
+        "현장 계측설비 규격 확인"
+      ],
+      "coverage": [
+        "사용량 기록"
+      ],
+      "limitations": [
+        "실계측 API 미연동"
+      ],
+      "evidence": null,
+      "publishedAt": null,
+      "changeHistory": [
+        "초안 작성"
+      ],
+      "authorizationHint": "발행권한 확인 필요"
+    },
+    {
+      "id": "CAP-OPS",
+      "title": "운영 이력·증빙 관리",
+      "description": "업무 활동과 증빙·감사 이력을 보존",
+      "category": "공통/운영",
+      "version": 1,
+      "releaseState": "PUBLISHED",
+      "featureIds": [
+        "FEAT-SEC-001",
+        "FEAT-DOC-001"
+      ],
+      "conditions": [
+        "기업별 Role·Permission 적용"
+      ],
+      "coverage": [
+        "자료 추적"
+      ],
+      "limitations": [
+        "운영환경 배포 검증은 별도"
+      ],
+      "evidence": "샘플 운영 사양서 v1",
+      "publishedAt": "2026-10-17",
+      "changeHistory": [
+        "v1 시연용 발행 기록"
+      ],
+      "authorizationHint": "발행권한 확인 필요"
+    }
+  ],
+  "notices": [
+    {
+      "id": "NOTICE-S01",
+      "title": "스마트 제조혁신 지원 프로그램 A (가상)",
+      "agency": "가상제조혁신센터",
+      "round": "2026년 예시 모집",
+      "region": "수도권",
+      "version": 2,
+      "reviewStatus": "REVIEWED_SAMPLE",
+      "from": "2026-10-01",
+      "to": "2026-11-30",
+      "official": false,
+      "source": "가상 공고문 Notice-S01",
+      "sourceType": "SYNTHETIC",
+      "requirements": [
+        {
+          "id": "REQ-S01-01",
+          "title": "제조업 해당",
+          "value": "제조업 사업체",
+          "comparator": "INDUSTRY_CODE",
+          "status": "REVIEWED_SAMPLE",
+          "evidence": "가상 공고 제2절"
+        },
+        {
+          "id": "REQ-S01-02",
+          "title": "사업장 소재지",
+          "value": "수도권 소재",
+          "comparator": "REGION",
+          "status": "CANDIDATE",
+          "evidence": "가상 공고 제3절"
+        },
+        {
+          "id": "REQ-S01-03",
+          "title": "사업자 중복수혜 확인",
+          "value": "별도 심사 필요",
+          "comparator": "MANUAL",
+          "status": "CANDIDATE",
+          "evidence": "가상 공고 제4절"
+        }
+      ],
+      "history": [
+        "v1 최초 등록",
+        "v2 예시 공고정보 변경"
+      ]
+    },
+    {
+      "id": "NOTICE-S02",
+      "title": "디지털 품질관리 고도화 사업 B (가상)",
+      "agency": "가상산업지원기관",
+      "round": "2026년 예시 사업",
+      "region": "전국",
+      "version": 1,
+      "reviewStatus": "CANDIDATE",
+      "from": "2026-10-10",
+      "to": "2026-12-08",
+      "official": false,
+      "source": "가상 공고문 Notice-S02",
+      "sourceType": "SYNTHETIC",
+      "requirements": [
+        {
+          "id": "REQ-S02-01",
+          "title": "기업 규모",
+          "value": "중소기업 기준 확인",
+          "comparator": "SIZE",
+          "status": "CANDIDATE",
+          "evidence": "가상 공고 제2절"
+        },
+        {
+          "id": "REQ-S02-02",
+          "title": "사업내용",
+          "value": "품질 개선 및 데이터 관리",
+          "comparator": "PROGRAM_PURPOSE",
+          "status": "CANDIDATE",
+          "evidence": "가상 공고 제3절"
+        }
+      ],
+      "history": [
+        "v1 등록"
+      ]
+    },
+    {
+      "id": "NOTICE-S03",
+      "title": "산업안전·에너지 효율 지원 C (가상)",
+      "agency": "가상현장기술지원단",
+      "round": "2026년 예시 사업",
+      "region": "전국",
+      "version": 1,
+      "reviewStatus": "NEEDS_INFO",
+      "from": "2026-09-01",
+      "to": "2026-10-31",
+      "official": false,
+      "source": "가상 공고문 Notice-S03",
+      "sourceType": "SYNTHETIC",
+      "requirements": [
+        {
+          "id": "REQ-S03-01",
+          "title": "에너지 개선목표",
+          "value": "효율 개선 데이터",
+          "comparator": "PURPOSE",
+          "status": "CANDIDATE",
+          "evidence": "가상 공고 제3절"
+        },
+        {
+          "id": "REQ-S03-02",
+          "title": "기업 부담 조건",
+          "value": "상세 조건 검토 필요",
+          "comparator": "MANUAL",
+          "status": "CANDIDATE",
+          "evidence": "가상 공고 제5절"
+        }
+      ],
+      "history": [
+        "v1 등록"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "id": "USER-ADMIN-001",
+      "name": "시스템 관리자",
+      "email": "admin@datco.local",
+      "role": "DATCO_ADMIN",
+      "status": "ACTIVE",
+      "scopeCompanyIds": [],
+      "lastSeen": "2026-10-19",
+      "notes": "관리자 역할 예시, 운영자 승인권한 미포함"
+    },
+    {
+      "id": "USER-OP-001",
+      "name": "DATCO 운영자 A",
+      "email": "operator@datco.local",
+      "role": "DATCO_OPERATOR",
+      "status": "ACTIVE",
+      "scopeCompanyIds": [
+        "COMP-001",
+        "COMP-002"
+      ],
+      "lastSeen": "2026-10-19",
+      "notes": "기업 검토 담당"
+    },
+    {
+      "id": "USER-OP-002",
+      "name": "DATCO 운영자 B",
+      "email": "operator-b@datco.local",
+      "role": "DATCO_OPERATOR",
+      "status": "ACTIVE",
+      "scopeCompanyIds": [
+        "COMP-003"
+      ],
+      "lastSeen": "2026-10-17",
+      "notes": "기업 검토 담당"
+    },
+    {
+      "id": "USER-COMP-001",
+      "name": "김담당",
+      "email": "company@datco.local",
+      "role": "COMPANY_USER",
+      "status": "ACTIVE",
+      "scopeCompanyIds": [
+        "COMP-001"
+      ],
+      "lastSeen": "2026-10-19",
+      "notes": "가상 수요기업 사용자"
+    },
+    {
+      "id": "USER-COMP-002",
+      "name": "기업 승인자 B",
+      "email": "approver-b@datco.local",
+      "role": "COMPANY_APPROVER",
+      "status": "ACTIVE",
+      "scopeCompanyIds": [
+        "COMP-002"
+      ],
+      "lastSeen": "2026-10-16",
+      "notes": "제안서 승인은 별도 기존 계약 기준"
+    }
+  ],
+  "aiRuns": [
+    {
+      "id": "RUN-S01",
+      "companyId": "COMP-001",
+      "task": "기업 기본정보 추출",
+      "mode": "RULE_BASED_EXTRACTION",
+      "engine": "LOCAL_TEXT_PARSER",
+      "status": "SUCCESS",
+      "startedAt": "2026-10-19 09:02",
+      "durationMs": 650,
+      "evidence": "EV-001 / 문서 8행",
+      "attempt": 1,
+      "note": "실제 모델 호출 없음"
+    },
+    {
+      "id": "RUN-S02",
+      "companyId": "COMP-001",
+      "task": "개선요구 의미 분석",
+      "mode": "BLOCKED_BY_POLICY",
+      "engine": "NOT_CONFIGURED",
+      "status": "BLOCKED",
+      "startedAt": "2026-10-19 09:10",
+      "durationMs": 0,
+      "evidence": "없음",
+      "attempt": 0,
+      "note": "기업 자료 외부 AI 전송 승인 미확인"
+    },
+    {
+      "id": "RUN-S03",
+      "companyId": "COMP-002",
+      "task": "정부지원사업 공고 텍스트 추출",
+      "mode": "RULE_BASED_EXTRACTION",
+      "engine": "LOCAL_DOC_PARSER",
+      "status": "SUCCESS",
+      "startedAt": "2026-10-18 16:44",
+      "durationMs": 1340,
+      "evidence": "NOTICE-S01 가상 원문",
+      "attempt": 1,
+      "note": "규칙 기반 시연"
+    },
+    {
+      "id": "RUN-S04",
+      "companyId": "COMP-003",
+      "task": "스캔 사업자등록증 이미지 처리",
+      "mode": "NOT_SUPPORTED",
+      "engine": "OCR_NOT_AVAILABLE",
+      "status": "FAILED",
+      "startedAt": "2026-10-18 13:15",
+      "durationMs": 180,
+      "evidence": "EV-006",
+      "attempt": 1,
+      "note": "OCR 엔진 미연동: 수동 확인 필요"
+    },
+    {
+      "id": "RUN-S05",
+      "companyId": "COMP-001",
+      "task": "기업 개선항목 수동 정리",
+      "mode": "MANUAL_REVIEW",
+      "engine": "HUMAN_OPERATOR",
+      "status": "SUCCESS",
+      "startedAt": "2026-10-18 11:00",
+      "durationMs": 0,
+      "evidence": "IMP-001-v1",
+      "attempt": 1,
+      "note": "사람 검토 결과"
+    }
+  ],
+  "qualityIssues": [
+    {
+      "id": "DQ-S01",
+      "entityType": "COMPANY_FACT",
+      "targetId": "COMP-001",
+      "issue": "기준연도별 매출 증빙 확인 필요",
+      "kind": "MISSING_EVIDENCE",
+      "status": "OPEN",
+      "owner": "미확정",
+      "next": "기업 원본과 수치 비교"
+    },
+    {
+      "id": "DQ-S02",
+      "entityType": "CAPABILITY",
+      "targetId": "CAP-INTEGRATION",
+      "issue": "ERP 연계 근거·공급범위 미확인",
+      "kind": "UNVERIFIED_CATALOG",
+      "status": "OPEN",
+      "owner": "미확정",
+      "next": "실제 DMP 원천 확인"
+    },
+    {
+      "id": "DQ-S03",
+      "entityType": "NOTICE_REQUIREMENT",
+      "targetId": "NOTICE-S03",
+      "issue": "기업부담 요건의 비교규칙 부재",
+      "kind": "UNSUPPORTED_COMPARATOR",
+      "status": "OPEN",
+      "owner": "미확정",
+      "next": "추가 정책 판단"
+    },
+    {
+      "id": "DQ-S04",
+      "entityType": "EVIDENCE",
+      "targetId": "EV-006",
+      "issue": "이미지 분석 미지원으로 근거확인 필요",
+      "kind": "PARSER_NOT_SUPPORTED",
+      "status": "OPEN",
+      "owner": "미확정",
+      "next": "수동 Fact 검토"
+    },
+    {
+      "id": "DQ-S05",
+      "entityType": "VERSION",
+      "targetId": "CAP-QUAL",
+      "issue": "검토 중인 서비스 버전 발행 미확정",
+      "kind": "DRAFT_VERSION",
+      "status": "OPEN",
+      "owner": "미확정",
+      "next": "기존 발행 계약에 따라 검토"
+    }
+  ],
+  "integrations": [
+    {
+      "id": "INT-SSO",
+      "name": "DMP SSO",
+      "category": "AUTH",
+      "status": "NOT_CONNECTED",
+      "desc": "수요기업과 DATCO 사용자의 단일 로그인",
+      "prerequisites": [
+        "인증 프로토콜 및 Identity Provider",
+        "사용자 식별자·클레임 규격",
+        "기업 매핑 규격",
+        "로그아웃·세션 기준",
+        "개발 테스트 계정"
+      ],
+      "owner": "후속 개발팀 (상세 미확정)"
+    },
+    {
+      "id": "INT-CATALOG",
+      "name": "DMP Feature Catalog",
+      "category": "DMP",
+      "status": "NOT_CONNECTED",
+      "desc": "실제 FeatureRevision·Capability 원천 연결",
+      "prerequisites": [
+        "DMP 기능 제공 API",
+        "동기화/Import 계약",
+        "원천 데이터 버전·Checksum",
+        "권한·접근범위"
+      ],
+      "owner": "후속 개발팀 (상세 미확정)"
+    },
+    {
+      "id": "INT-NOTICE",
+      "name": "정부사업 공고 원천",
+      "category": "EXTERNAL",
+      "status": "NOT_CONNECTED",
+      "desc": "공식 공고·개정판·접수기한 확인",
+      "prerequisites": [
+        "기관별 공식 공고 조회 방법",
+        "NoticeVersion 변경 검증",
+        "공고 원문/근거 저장 정책"
+      ],
+      "owner": "미확정"
+    },
+    {
+      "id": "INT-AI",
+      "name": "AI Provider",
+      "category": "AI",
+      "status": "BLOCKED_BY_POLICY",
+      "desc": "승인된 외부·내부 분석모델 연동",
+      "prerequisites": [
+        "Provider/모델 승인",
+        "기업자료 전송·보관정책",
+        "비용/오류/재시도/모델버전",
+        "Privacy/PII 처리 범위"
+      ],
+      "owner": "미확정"
+    },
+    {
+      "id": "INT-FILES",
+      "name": "Private File Storage",
+      "category": "STORAGE",
+      "status": "INTEGRATION_REQUIRED",
+      "desc": "증빙 원본·파일 다운로드·SHA-256 검증",
+      "prerequisites": [
+        "기존 파일 저장소 API",
+        "Company Scope 검증",
+        "기존 Evidence 계약",
+        "파일 삭제·보존 정책"
+      ],
+      "owner": "후속 개발팀 (상세 미확정)"
+    }
+  ],
+  "audit": [
+    {
+      "id": "AUD-001",
+      "actor": "DATCO 관리자(예시)",
+      "action": "CAPABILITY_READ",
+      "target": "CAP-INV",
+      "at": "2026-10-19 09:05",
+      "detail": "서비스 상세조회 예시",
+      "source": "SAMPLE_FIXTURE"
+    },
+    {
+      "id": "AUD-002",
+      "actor": "DATCO 관리자(예시)",
+      "action": "NOTICE_REVIEW_OPEN",
+      "target": "NOTICE-S01",
+      "at": "2026-10-19 09:12",
+      "detail": "공고 요건 검토대기 예시",
+      "source": "SAMPLE_FIXTURE"
+    },
+    {
+      "id": "AUD-003",
+      "actor": "DATCO 관리자(예시)",
+      "action": "ACCESS_READ",
+      "target": "USER-OP-001",
+      "at": "2026-10-19 09:17",
+      "detail": "운영자 접근범위 조회 예시",
+      "source": "SAMPLE_FIXTURE"
+    },
+    {
+      "id": "AUD-004",
+      "actor": "DATCO 관리자(예시)",
+      "action": "AI_RUN_READ",
+      "target": "RUN-S02",
+      "at": "2026-10-19 09:22",
+      "detail": "정책 차단된 실행 확인 예시",
+      "source": "SAMPLE_FIXTURE"
+    }
+  ]
+}
