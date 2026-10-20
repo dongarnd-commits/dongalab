@@ -259,4 +259,4 @@
  .datco-admin .da-table{min-width:560px}
 }
 
-body{margin:0}.admin-preview-disclaimer{padding:10px 16px;background:#143c6d;color:white;font:13px sans-serif;text-align:center}.datco-admin .da-preview-controls,.datco-admin .da-preview-navigation{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:18px}.datco-admin .da-preview-controls{padding:14px;background:#edf5ff;border-radius:12px}.datco-admin .da-saved-quality{padding:10px;background:#f1f6fc;margin:10px 0}
+body{margin:0}.datco-admin .da-preview-navigation{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:18px}.datco-admin .da-saved-quality{padding:10px;background:#f1f6fc;margin:10px 0}

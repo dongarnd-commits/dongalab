@@ -1,3 +1,28 @@
+# DATCO 관리자 포털 UI 정리 v0.2.1
+
+## 현재 적용 기준
+
+2026-10-20 사용자 승인 작업. 기존 feat/datco-admin-ui-preview-v01 / Draft PR #11 유지. 시작 HEAD 8ce5820d93399cebe9ac60dff18a3a781679af11.
+이번 지시에 따라 이전 ‘명시적 예시 전환’ 방식은 일반 관리자 화면에서 제거한다. 아래 v0.2 기록은 변경 이력이며 현재 동작으로 해석하지 않는다.
+
+- 최상단 대형 안내 배너 및 1개/전체/종료 전환 버튼 제거. 작은 헤더 ‘데이터 미연결’과 데이터 영역의 ‘데이터 연결 후 표시됩니다.’만 사용한다.
+- 미리보기 시작 후 동일한 M-01~M-12 업무 컴포넌트를 표시한다. 빈 화면용 축약 레이아웃을 사용하지 않는다. Sidebar/Header/Card/검색/필터/목록/컬럼/상세/입력/검토/Version UI 유지.
+- 일반 진입은 Fixture import 없이 빈 배열로 구성한다. 데이터 조회 결과로 오인되지 않도록 실제 조회 건수는 표시하지 않고 통계는 —로 둔다. 실제 데이터 없음/조회 0건/가짜 발행 완료를 주장하지 않는다.
+- 미연결 저장·개정안·발행·검토·접근 요청 버튼은 화면에 보존하고 비활성화하며 이유를 제공한다. 가상 Version v0나 가상 공고를 기본 데이터로 표시하지 않는다.
+- 원본 adminFixture.json은 보존한다. tests/admin-preview-fixture-entry.tsx만 이를 import하고 testData를 주입한다. 정상/0개/1개/여러 개 및 차단 시나리오를 그대로 검증한다.
+- Runner만 고유 shadow 폴더에 /ui-preview/admin-fixture Route를 생성하고 build-admin-preview.mjs --test-fixture를 사용한다. 실제 app tree에는 이 Route가 없으며 일반 URL query로 Fixture를 켤 수 없다.
+- 일반 및 Runner의 테스트 Route 모두 운영 NODE_ENV에서는 404. 실제 사용자 시연 서버는 테스트 Route/테스트 Entry를 복사하지 않고 별도 pinned runtime 소스를 사용한다.
+- 기존 수요기업·운영자 미리보기, 로그인·세션, 업무 API/DB/Role/Permission/State/FROZEN/Private Storage 변경 없음.
+
+관리자 테스트를 삭제·SKIP하지 않고 일반 미연결 화면 검증과 격리 Fixture 업무 검증으로 재구성한다. 이전/이후 대시보드와 일반 12개 화면 캡처를 runtime에 기록한다.
+USER_ACCEPTANCE: PENDING / BACKEND_INTEGRATION: NOT_STARTED / PHASE1_FULL_E2E: NOT_COMPLETED / SYSTEM_ACCEPTANCE: NOT_TESTED.
+
+v0.2.1 최종 검증 `85ca6fee-9f3`: 관리자 8/수요기업 5/운영자 6, 총 19 PASS / 0 FAIL / 0 SKIP. lint/typecheck/build 및 세 미리보기+격리 Fixture Route의 운영 404 PASS. 일반 재진입 시 Fixture 비노출 검증 PASS.
+화면 바로가기는 활성 상태로 유지하고, 서버 데이터 처리만 비활성화한다. 테스트/일반 번들의 컴파일 출력 경로를 분리했다.
+최초 `d292fa3e-193`에서 M-06 미연결 안내 누락 1건을 확인해 보완했으며 실패 증거를 보존했다. 중간 통과 이후 캐시 격리와 바로가기를 보완한 최종 소스로 위 결과를 다시 확인했다.
+
+## v0.2 구현 이력 — 아래는 이전 버전 기록
+
 # DATCO 관리자 포털 UI 미리보기 v0.2
 
 ## 작업 기준 및 범위

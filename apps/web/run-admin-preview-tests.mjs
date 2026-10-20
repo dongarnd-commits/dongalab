@@ -1,4 +1,4 @@
-import {mkdir,cp,symlink,writeFile,open} from "node:fs/promises";
+import {mkdir,cp,symlink,writeFile,readFile,open} from "node:fs/promises";
 import {spawn,spawnSync} from "node:child_process";
 import path from "node:path";
 import net from "node:net";
@@ -6,6 +6,11 @@ import {randomUUID} from "node:crypto";
 const web=import.meta.dirname,repo=path.resolve(web,"../.."),out=path.join(repo,"storage/private/runtime/admin-visual-preview",randomUUID().slice(0,12)),shadow=path.join(out,"web");
 await mkdir(shadow,{recursive:true});
 for(const name of ["src","tests","public","package.json","package-lock.json","tsconfig.json","next-env.d.ts","build-company-preview.mjs","build-operator-preview.mjs","build-admin-preview.mjs","playwright.admin-preview.config.ts"]){try{await cp(path.join(web,name),path.join(shadow,name),{recursive:true});}catch(e){if(e.code!=="ENOENT")throw e;}}
+// This fixture route exists only in the isolated shadow, never in the real app tree.
+const fixtureRoute=path.join(shadow,"src/app/ui-preview/admin-fixture");
+await mkdir(fixtureRoute,{recursive:true});
+const routeSource=await readFile(path.join(shadow,"src/app/ui-preview/admin/route.ts"),"utf8");
+await writeFile(path.join(fixtureRoute,"route.ts"),routeSource.replace('"build-admin-preview.mjs"),out]','"build-admin-preview.mjs"),out,"--test-fixture"]').replaceAll('admin-ui-preview-','admin-fixture-preview-'));
 await symlink(path.join(web,"node_modules"),path.join(shadow,"node_modules"),process.platform==="win32"?"junction":"dir");
 await writeFile(path.join(shadow,"next.config.mjs"),'export default '+JSON.stringify({turbopack:{root:repo},experimental:{turbopackFileSystemCacheForDev:false}})+';');
 const env={...process.env,NEXT_TELEMETRY_DISABLED:"1",API_ORIGIN:"http://127.0.0.1:1",CAPABILITY_API_ORIGIN:"http://127.0.0.1:1"},children=[],steps=[];
@@ -17,5 +22,5 @@ async function wait(url,status){for(let i=0;i<180;i++){try{const r=await fetch(u
 try{const p=await port();env.DATCO_UI_PREVIEW_ORIGIN="http://127.0.0.1:"+p;const dev=await start("dev",[path.join(web,"node_modules/next/dist/bin/next"),"dev","--hostname","127.0.0.1","--port",String(p)]);await wait(env.DATCO_UI_PREVIEW_ORIGIN+"/ui-preview/admin",200);
 await command("playwright",[path.join(web,"node_modules/@playwright/test/cli.js"),"test","--config","playwright.admin-preview.config.ts","--output",path.join(out,"screenshots")]);await stop(dev);
 await command("lint",[path.join(web,"node_modules/eslint/bin/eslint.js"),"."],web);await command("typecheck",[path.join(web,"node_modules/typescript/bin/tsc"),"--project",path.join(web,"tsconfig.json"),"--noEmit","--incremental","false"],web);await command("build",[path.join(web,"node_modules/next/dist/bin/next"),"build"]);
-const prod=await start("production",[path.join(web,"node_modules/next/dist/bin/next"),"start","--hostname","127.0.0.1","--port",String(p)]);await wait(env.DATCO_UI_PREVIEW_ORIGIN+"/ui-preview/operator",404);await wait(env.DATCO_UI_PREVIEW_ORIGIN+"/ui-preview/company",404);await wait(env.DATCO_UI_PREVIEW_ORIGIN+"/ui-preview/admin",404);steps.push({name:"production-previews-404",code:0});await stop(prod);
+const prod=await start("production",[path.join(web,"node_modules/next/dist/bin/next"),"start","--hostname","127.0.0.1","--port",String(p)]);await wait(env.DATCO_UI_PREVIEW_ORIGIN+"/ui-preview/operator",404);await wait(env.DATCO_UI_PREVIEW_ORIGIN+"/ui-preview/company",404);await wait(env.DATCO_UI_PREVIEW_ORIGIN+"/ui-preview/admin",404);await wait(env.DATCO_UI_PREVIEW_ORIGIN+"/ui-preview/admin-fixture?count=1",404);steps.push({name:"production-previews-404",code:0});await stop(prod);
 }finally{for(const p of children)await stop(p);await writeFile(path.join(out,"report.json"),JSON.stringify({steps,no_database_or_api_started:true},null,2));console.log("REPORT",out);}
