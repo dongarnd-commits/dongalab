@@ -1,3 +1,53 @@
+# DATCO 통합 시스템 관리자 포털 UI v0.3
+
+## 현재 적용 기준 — UI만 통합
+
+2026-10-20 사용자 실행명령. 시작 HEAD `c98d813b3524773eb8e0d952f7e9a3dbe8d453b6`, 기존 `feat/datco-admin-ui-preview-v01` / Draft PR #11 유지.
+사용자 제공 통합관제 v0.2 `AdminControlCenter.tsx`, `charts.tsx`, `admin-control.css`를 재사용한다. types는 미리보기 표시용 로컬 형태이며 API/Schema/Permission 계약으로 확정하지 않는다. 원본 dataSource의 HTTP/배정 명령은 가져오지 않고 `disconnectedSnapshot()`으로 대체한다.
+
+기준: AGENTS → docs/00·01·04·05·08·10. FROZEN, Domain, State, Role/Permission, API, DB 및 기존 수요기업·운영자 UI는 변경하지 않는다. 첨부의 실제 E2E 개발 지시는 이번 사용자 지시에 따라 후속 범위로 남긴다.
+
+## 한 개의 포털과 상세 동선
+
+`/ui-preview/admin`의 기존 미리보기 시작 화면 하나를 유지한다. 신규 통합관제 공통 헤더·사이드바·이전/관리 홈 아래에서 상위 M-01~12와 기존 상세 화면을 이동한다. 과거 기준정보 대시보드/중복 레이아웃은 통합하고 상세 업무 로직은 재사용한다.
+
+| ID | 상위 메뉴 | 상세·화면 목적 |
+|---|---|---|
+| M-01 | 통합 관제 홈 | 기업/요구/미배정/진행/검토/제안 KPI, 도넛·막대·추이·퍼널·간트·AI·자원 |
+| M-02 | 기업 접수 현황 | 기업·사업장·개선요구·담당자 분리, 검색·기간·단계·운영자 필터 |
+| M-03 | 업무 배정·재배정 | 대상·운영자·사유·차단 사유·이력; 서버 반영 비활성 |
+| M-04 | 운영자 업무량 | 진행/대기/완료 누적 막대·단계 히트맵·상세 목록 |
+| M-05 | 전체 E2E 진행 | 현재 분포/누적 도달 분리·미완료 추이·지연 확인 영역 |
+| M-06 | 일정·마감·간트 | 확정 기한만 사용하는 간트/목록 |
+| M-07 | 서버·연동 모니터링 | 자원·DB·Storage·API·Worker 미측정, 기존 외부 연동 상세 |
+| M-08 | AI 실행·품질 | 방식·시간·정정·근거·비용·모델 품질; 기존 AI 실행·데이터 품질 상세 |
+| M-09 | 기준정보·버전 | 기존 DMP 기능/Capability 개정안/발행/공고/요건·Evidence 상세 |
+| M-10 | 사용자·권한 | 기존 계정·Scope·접근 검토 상세 |
+| M-11 | 포털 운영현황 | 수요기업/운영자 가용성·사용·오류 미측정, 감사 상세 이동 |
+| M-12 | 경보·감사 이력 | 실제 경보/감사 연결 대기, 기존 감사 검색·상세 |
+
+기존 상세 스타일을 `ad-*` / `.datco-admin-details`로 분리하고 통합관제는 `da-*` / `.datco-admin`를 사용한다. 이전 상세 번호는 DETAIL로 바꿔 상위 M 번호와 혼용하지 않는다. 상세 컴포넌트를 유지해 화면 메모·개정안 등 격리 테스트 상태를 보존한다.
+
+## 미연결 경계와 조작
+
+- 일반 화면: null KPI `—`, 빈 목록 `데이터 연결 후 표시`, 서버 `미측정`, 정확도 `평가 데이터 없음`. 실시간 숫자·날짜·비율·감사기록·배정 후보를 만들지 않는다.
+- 차트는 원본을 재사용하고 미측정용 중립 도형·축·단위·범례를 보완한다. 차트/KPI/상세 링크를 클릭하거나 키보드로 실행하면 데이터 없이도 해당 관리 화면으로 이동한다.
+- 기간·운영자·단계·검색 값 및 배정 사유 초안은 UI 상태다. 조회·저장·권한 부여·배정 성공이 아니다. 미연결 배정·발행·권한 변경 버튼은 비활성화하고 이유를 표시한다.
+- 실제 API/DB/AI/Metrics/Assignment 호출 없음. `assignment.write` 등 서버 권한을 추가하지 않는다. 관리자에게 Fact·Match·Proposal 승인권한을 부여하지 않는다.
+- 원본 Fixture는 tests 전용 Entry와 Runner의 격리 임시 경로에서만 사용한다. 일반 query로 켤 수 없다. 실제 시연 서버에는 fixture route가 없다.
+- 개발 환경 전용 Route와 CSP `connect-src 'none'`을 유지한다. 운영에서 관리자/수요기업/운영자 및 테스트 fixture preview는 404.
+
+## 검증·후속
+
+기존 관리자 테스트 8개를 삭제/SKIP하지 않고 새 메뉴 동선으로 조정하고 관제 테스트를 추가한다. 관리자 9 + 수요기업 5 + 운영자 6개를 격리 Runner로 실행한다. 별도 DB/API/Worker를 시작하지 않는다. 실측·업무 API·배정 정책·모델 평가셋 연결은 사용자 UI 승인 후 별도 작업이다.
+
+ADMIN_USER_ACCEPTANCE: PENDING / ADMIN_REAL_DATA_API: NOT_STARTED / ADMIN_ASSIGNMENT_BACKEND: NOT_STARTED / ADMIN_SERVER_METRICS: NOT_STARTED / ADMIN_REAL_AI_QUALITY: NOT_STARTED / THREE_ROLE_REAL_E2E: NOT_TESTED / PHASE1_FULL_E2E: NOT_COMPLETED / SYSTEM_ACCEPTANCE: NOT_TESTED.
+
+최종 검증: `storage/private/runtime/admin-visual-preview/cde658c5-579/report.json`. Playwright 20 PASS / 0 FAIL / 0 SKIP (관리자 9, 수요기업 5, 운영자 6), lint/typecheck/build 및 운영 미리보기 404 PASS. 일반 URL 실제 브라우저에서 API 요청/페이지 오류 없음, Fixture 경로 404, 기존 두 포털·로그인 HTTP 200 확인.
+최초 `1a38ed90-b5f`의 모바일 메뉴 테스트 판별과 입력 후 접근성 이름 문제를 수정했다. 중간 `72efe919-3a1`은 브라우저 20 PASS 후 캡처 helper의 Node 타입 오류로 중단했으며 최종 실행에서 수정·재검증했다. 실패 이력을 삭제하지 않는다.
+
+## 과거 v0.2.1 및 v0.2 기록 — 아래는 현재 상위 화면 번호와 다름
+
 # DATCO 관리자 포털 UI 정리 v0.2.1
 
 ## 현재 적용 기준
