@@ -1,7 +1,7 @@
 import {test,expect,Page} from "@playwright/test";
 import {readFileSync} from "node:fs";
 const config=()=>JSON.parse(process.env.DATCO_COMPANY_CONTEXT??'null');
-async function login(page:Page,role='editor') {const c=config();await page.goto('/login');await page.getByLabel('아이디',{exact:true}).fill(c.accounts[role]);await page.getByLabel('비밀번호',{exact:true}).fill(c.password);await page.getByRole('button',{name:'로그인',exact:true}).click();await expect(page).toHaveURL(/\/$/);await expect(page.getByRole('button',{name:'로그아웃',exact:true})).toBeVisible();}
+async function login(page:Page,role='editor') {const c=config();await page.goto('/login');await page.getByLabel('아이디',{exact:true}).fill(c.accounts[role]);await page.getByLabel('비밀번호',{exact:true}).fill(c.password);await page.getByRole('button',{name:'로그인',exact:true}).click();await expect(page).toHaveURL(new RegExp(role==='admin'?'/portal/admin':role==='operator'?'/portal/operator':role==='approver'?'/':'/portal/company'));await page.goto('/');await expect(page.getByRole('button',{name:'로그아웃',exact:true})).toBeVisible();}
 async function register(page:Page){await page.goto('/company?tab=onboarding');await page.getByLabel('등록 기업명').fill('TEST V03 initial '+Date.now());await page.getByLabel('등록 사업자번호 10자리').fill(String(Date.now()).slice(-10));await page.getByRole('button',{name:'기업 식별 등록 후 자료 제출'}).click();await expect(page.getByRole('heading',{name:'기업 증빙자료 제출',exact:true})).toBeVisible();return new URL(page.url()).searchParams.get('company')!;}
 const intake=(page:Page)=>page.getByRole('region',{name:'증빙 우선 기업정보 등록'});
 

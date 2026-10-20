@@ -41,3 +41,6 @@ test-results/
 
 # User-provided DMP source; never commit without explicit approval
 /_local_inputs/
+
+# Generated authenticated portal assets (built before dev/build)
+apps/web/.role-portals/

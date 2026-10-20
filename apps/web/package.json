@@ -11,7 +11,10 @@
     "start": "next start --hostname localhost",
     "lint": "eslint .",
     "api:types": "openapi-typescript http://127.0.0.1:8000/openapi.json -o src/generated/api.d.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "build:portals": "node build-role-portals.mjs",
+    "predev": "npm run build:portals",
+    "prebuild": "npm run build:portals"
   },
   "dependencies": {
     "next": "16.4.0",
