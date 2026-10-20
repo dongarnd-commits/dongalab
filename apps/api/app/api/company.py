@@ -105,3 +105,8 @@ def improvement_action(version_id:str,body:ImprovementAction,session:DB,who=Depe
 @router.get('/improvements/{version_id}/context',response_model=dict,responses=errors(401,403,404))
 def context(version_id:str,session:DB,who=Depends(actor)):
  return application(session).read_context(who,version_id)
+
+@router.get('/{company_id}/navigation',response_model=dict,responses=errors(401,403,404,409,422))
+def navigation(company_id:str,session:DB,who=Depends(actor),site_id:str|None=Query(default=None,max_length=36),improvement_id:str|None=Query(default=None,max_length=36),version_id:str|None=Query(default=None,max_length=36),site_ordinal:int|None=Query(default=None,ge=1)):
+ from app.company.navigation import read_navigation
+ return read_navigation(application(session),who,company_id,site_id,improvement_id,version_id,site_ordinal)

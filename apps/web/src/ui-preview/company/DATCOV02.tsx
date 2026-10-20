@@ -1,3 +1,4 @@
+import {BusinessContextBar,ContextReadout,selectedContext} from "../../portal/context";
 import type {PortalProps} from "../../portal/types";
 // UI reproduction from the user-provided MagicPath DATCOV02 v0.2. Development preview only.
 import React, { useEffect, useRef, useState } from 'react';
@@ -142,7 +143,7 @@ function IntakeFiles({disabled=false,stage,documents,onFiles,onReference,onManag
   {documents.some(d=>d.usedIn.includes(stage))&&<ul className="space-y-1 text-[12px] text-slate-600">{documents.filter(d=>d.usedIn.includes(stage)).map(d=><li key={d.id}>{d.name} · {d.category} · 파싱 미연결</li>)}</ul>}
  </div>;
 }
-export const DATCOV02 = ({session,onLogout}:PortalProps) => {
+export const DATCOV02 = ({session,onLogout,business}:PortalProps) => {
   const authenticated=!!session;
   const [loggedIn, setLoggedIn] = useState(() => authenticated || new URLSearchParams(window.location.search).get('screen') !== null && new URLSearchParams(window.location.search).get('screen') !== 'login');
   const [loginId, setLoginId] = useState('');
@@ -150,7 +151,7 @@ export const DATCOV02 = ({session,onLogout}:PortalProps) => {
   const [loginErr, setLoginErr] = useState('');
   const [page, setPage] = useState<Screen>(() => {const p=new URLSearchParams(window.location.search).get('screen');return menu.flatMap(g=>g.items).some(x=>x.id===p)?p as Screen:'home';});
   const [mobileMenu, setMobileMenu] = useState(false);
-  const [data, setData] = useState<FieldData>(preset);
+  const [previewData, setData] = useState<FieldData>(preset);
   const [sites, setSites] = useState(authenticated?[]:[{id:1,name:preset.site,address:'',person:'',open:true}]);
   const [historyStatus, setHistoryStatus] = useState<'yes'|'none'|'unknown'>('unknown');
   const [projects, setProjects] = useState<Array<{id:number;name:string;period:string;agency:string;details:string;evidence:string}>>([]);
@@ -163,9 +164,14 @@ export const DATCOV02 = ({session,onLogout}:PortalProps) => {
   const [fileQuery,setFileQuery]=useState('');
   const [financeYear, setFinanceYear] = useState(authenticated?'':'2025');
   const [saved, setSaved] = useState(false);
-  const [problem, setProblem] = useState(authenticated?'':'재고 수량이 실제 수량과 다르고 입출고를 수기로 처리합니다. 생산실적과 불량 발생 현황을 체계적으로 관리하고 싶습니다.');
-  const [goal, setGoal] = useState(authenticated?'':'재고·입출고 현황과 생산실적·품질정보를 통합적으로 확인하고 관리하고 싶습니다.');
-  const [limits, setLimits] = useState(authenticated?'':'기존 ERP 연동 가능 여부와 현장 데이터 수집 방식 확인이 필요합니다.');
+  const [previewProblem, setProblem] = useState(authenticated?'':'재고 수량이 실제 수량과 다르고 입출고를 수기로 처리합니다. 생산실적과 불량 발생 현황을 체계적으로 관리하고 싶습니다.');
+  const [previewGoal, setGoal] = useState(authenticated?'':'재고·입출고 현황과 생산실적·품질정보를 통합적으로 확인하고 관리하고 싶습니다.');
+  const [previewLimits, setLimits] = useState(authenticated?'':'기존 ERP 연동 가능 여부와 현장 데이터 수집 방식 확인이 필요합니다.');
+  const actual=selectedContext(business?.state.value);
+  const data=authenticated?{...preset,company:business?.state.value?.company.name??'',site:actual.siteVersion?.data.name??'',address:actual.siteVersion?.data.address??''}:previewData;
+  const problem=authenticated?actual.version?.data.as_is??'':previewProblem;
+  const goal=authenticated?actual.version?.data.to_be??'':previewGoal;
+  const limits=authenticated?actual.version?.data.constraints??'':previewLimits;
   const [needSaved, setNeedSaved] = useState(false);
   const [documents, setDocuments] = useState<Doc[]>([]);
   const [dragging, setDragging] = useState(false);
@@ -309,7 +315,9 @@ export const DATCOV02 = ({session,onLogout}:PortalProps) => {
   <div className="flex min-w-0 flex-1 flex-col">
    <header className="flex h-[75px] shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-8"><div className="flex items-center gap-3"><button className="rounded-lg p-2 text-slate-500 lg:hidden" onClick={() => setMobileMenu(true)} aria-label="메뉴 열기"><Menu size={20} /></button><span className="hidden text-[12px] text-slate-400 sm:block">수요기업 포털</span><ChevronRight size={15} className="hidden text-slate-300 sm:block" /><span className="text-[13px] font-bold">{menu.flatMap(x => x.items).find(x => x.id === page)?.name}</span></div><div className="flex items-center gap-3"><Chip color="blue">{authenticated?<span className="block max-w-[160px] truncate" title={session.name}>{session.name}</span>:data.company || '기업정보 입력 중'}</Chip><div className="grid h-8 w-8 place-items-center rounded-full bg-[#EAF3FF] text-[12px] font-bold text-[#1767C7]">기</div><button onClick={logout} className={S + ' hidden sm:inline-flex'}><LogOut size={15} /> 로그아웃</button></div></header>
    <main ref={scroller} className="min-h-0 flex-1 overflow-y-auto"><div className="mx-auto max-w-[1190px] px-4 pb-14 pt-7 md:px-8">
-    {authenticated&&<p role="note" className="mb-5 rounded-xl bg-blue-50 p-4 text-sm">인증된 기업 포털 · 업무 데이터 연결 후 표시됩니다. 입력·업로드·저장·분석·제출·승인은 아직 연결되지 않았습니다. <button className="underline" onClick={()=>window.location.assign(new URL("/",window.location.href).href)}>기존 업무 화면 열기</button></p>}
+    {authenticated&&<p role="note" className="mb-5 rounded-xl bg-blue-50 p-4 text-sm">입력·업로드·저장·분석·제출·승인은 아직 연결되지 않았습니다. <button className="underline" onClick={()=>window.location.assign(new URL("/",window.location.href).href)}>기존 업무 화면 열기</button></p>}
+    {business&&<BusinessContextBar business={business}/>}
+    {business&&['company','needs','review'].includes(page)&&<ContextReadout value={business.state.value}/>}
     {toaster && <div role="status" className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-[12px] text-blue-800"><div className="flex items-center gap-2"><Info size={16} /><span>{toaster}</span></div><button onClick={() => setToaster('')} aria-label="알림 닫기"><X size={16} /></button></div>}
 
 
@@ -393,7 +401,7 @@ export const DATCOV02 = ({session,onLogout}:PortalProps) => {
 
 
     {page === 'company' && <>
-     <Header eyebrow="COMPANY / 03" title="기업 · 사업장 관리" sub="문서에서 가져온 값을 수정하거나 직접 정보를 작성할 수 있습니다."><Chip color={saved ? 'green' : 'amber'}>{saved ? '미리보기 보관 · 서버 미저장' : '확인·저장 필요'}</Chip></Header>
+     <Header eyebrow="COMPANY / 03" title="기업 · 사업장 관리" sub="문서에서 가져온 값을 수정하거나 직접 정보를 작성할 수 있습니다."><Chip color={saved ? 'green' : 'amber'}>{business?'읽기 전용':saved ? '미리보기 보관 · 서버 미저장' : '확인·저장 필요'}</Chip></Header>
      <Card className="mb-5 flex flex-wrap items-center justify-between gap-3 p-4"><div className="flex items-center gap-2 text-[12px] text-slate-600"><Info size={18} className="text-blue-600" />서류에서 추출한 입력 후보를 가져올 수 있습니다.</div><button className={S} onClick={() => goto('onboarding')}><UploadCloud size={15} /> 문서에서 다시 가져오기</button></Card>
      <Card className="p-5 md:p-7"><h3 className="mb-5 text-[16px] font-bold">기업 기본정보</h3><div className="grid gap-5 sm:grid-cols-2">{[{
                   key: 'company',
@@ -414,7 +422,7 @@ export const DATCOV02 = ({session,onLogout}:PortalProps) => {
                   }
                   setSaved(true);notify('미리보기 입력값을 현재 세션에 보관했습니다. 실제 서버 저장은 미연결입니다.');
                 }}><Check size={15} /> 기업정보 저장</button><button className={S} onClick={() => goto('finance')}>재무정보 이동 <ArrowRight size={15} /></button></div></Card>
-<Card className="mt-5 p-6"><div className="flex flex-wrap items-center justify-between gap-3"><h3 className="text-[16px] font-bold">사업장 목록</h3><button disabled={authenticated} className={P} onClick={()=>setSites(a=>[...a,{id:Date.now(),name:'',address:'',person:'',open:true}])}><Plus size={15}/> 사업장 추가</button></div><p className="mt-3 text-[12px] text-slate-500">미리보기 입력 · 현재 화면 세션에서만 유지되며 실제 DB에 저장되지 않습니다.</p><div className="mt-5 space-y-4">{sites.map((site,i)=><section key={site.id} aria-label={'사업장 '+(i+1)} className="rounded-xl border border-slate-200 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><h4 className="text-[14px] font-bold">사업장 {i+1} — {site.name||'이름 입력 필요'}</h4><button disabled={authenticated} className={S} onClick={()=>removeSite(site.id)}><Trash2 size={15}/> 사업장 삭제</button><button disabled={authenticated} className={S} aria-expanded={site.open} onClick={()=>setSites(a=>a.map(x=>x.id===site.id?{...x,open:!x.open}:x))}>{site.open?'접기':'수정 · 펼치기'}</button></div>{site.open&&<div className="mt-4 grid gap-4 sm:grid-cols-2">{([{key:'name',label:'사업장명'},{key:'address',label:'사업장 소재지'},{key:'person',label:'사업장 담당자'}] as const).map(f=><Label key={f.key} name={f.label}><input disabled={authenticated} className={I} value={site[f.key]} onChange={e=>setSites(a=>a.map(x=>x.id===site.id?{...x,[f.key]:e.target.value}:x))}/></Label>)}</div>}</section>)}</div></Card>    </>}
+{business?<Card className="mt-5 p-6"><h3 className="mb-4 text-[16px] font-bold">사업장 목록 · 읽기 전용</h3>{business.state.value?.sites.map(site=>{const ordinal=site.id===business.state.value?.selection.site_id?business.state.value.selection.site_ordinal:site.current_ordinal;const version=site.versions.find(v=>v.ordinal===ordinal);return <section key={site.id} data-site-id={site.id} className="mb-4 rounded-xl border border-slate-200 p-4"><h4 className="mb-3 font-bold">{version?.data.name??site.name} · v{version?.ordinal??'—'}</h4><div className="grid gap-4 sm:grid-cols-2">{(['address','industry','process'] as const).map((field,i)=><Label key={field} name={['소재지','업종','공정'][i]}><textarea disabled className={I} value={version?.data[field]??''} readOnly/></Label>)}</div></section>})}{business.state.status==='ready'&&business.state.value?.sites.length===0&&<p>등록된 사업장이 없습니다.</p>}<p className="text-xs text-slate-500">사업장 등록·수정·삭제는 후속 단계에서 연결합니다.</p></Card>:<Card className="mt-5 p-6"><div className="flex flex-wrap items-center justify-between gap-3"><h3 className="text-[16px] font-bold">사업장 목록</h3><button disabled={authenticated} className={P} onClick={()=>setSites(a=>[...a,{id:Date.now(),name:'',address:'',person:'',open:true}])}><Plus size={15}/> 사업장 추가</button></div><p className="mt-3 text-[12px] text-slate-500">미리보기 입력 · 현재 화면 세션에서만 유지되며 실제 DB에 저장되지 않습니다.</p><div className="mt-5 space-y-4">{sites.map((site,i)=><section key={site.id} aria-label={'사업장 '+(i+1)} className="rounded-xl border border-slate-200 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><h4 className="text-[14px] font-bold">사업장 {i+1} — {site.name||'이름 입력 필요'}</h4><button disabled={authenticated} className={S} onClick={()=>removeSite(site.id)}><Trash2 size={15}/> 사업장 삭제</button><button disabled={authenticated} className={S} aria-expanded={site.open} onClick={()=>setSites(a=>a.map(x=>x.id===site.id?{...x,open:!x.open}:x))}>{site.open?'접기':'수정 · 펼치기'}</button></div>{site.open&&<div className="mt-4 grid gap-4 sm:grid-cols-2">{([{key:'name',label:'사업장명'},{key:'address',label:'사업장 소재지'},{key:'person',label:'사업장 담당자'}] as const).map(f=><Label key={f.key} name={f.label}><input disabled={authenticated} className={I} value={site[f.key]} onChange={e=>setSites(a=>a.map(x=>x.id===site.id?{...x,[f.key]:e.target.value}:x))}/></Label>)}</div>}</section>)}</div></Card>}    </>}
 
 
     {page === 'finance' && <>
