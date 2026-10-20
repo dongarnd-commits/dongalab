@@ -14,7 +14,7 @@ def main():
  assert url.host in ('127.0.0.1','localhost') and url.database=='datco_ci_admin'
  nonce=uuid4().hex[:12];db='datco_test_'+nonce;role='datco_test_role_'+nonce;password=secrets.token_urlsafe(32)
  out=ROOT/'storage/private/runtime/ci'/nonce;out.mkdir(parents=True)
- env=dict(os.environ,DATABASE_URL=url.set(database=db,username=role,password=password).render_as_string(hide_password=False),DATCO_TEST_DATABASE=db,DATCO_TEST_DB_ROLE=role,DATCO_TEST_NONCE=nonce,DATCO_CI_SYNTHETIC='1',BIZINFO_API_KEY='',PYTHONPATH=str(API)+os.pathsep+str(API/'tests'),PYTHONIOENCODING='utf-8',DATCO_TEST_FILES=str(out/'files'),DATCO_TEST_WORKER_READY=str(out/'worker-ready.json'))
+ env=dict(os.environ,DATABASE_URL=url.set(database=db,username=role,password=password).render_as_string(hide_password=False),DATCO_TEST_DATABASE=db,DATCO_TEST_DB_ROLE=role,DATCO_TEST_NONCE=nonce,DATCO_CI_SYNTHETIC='1',DATCO_TEST_PYTHON=sys.executable,BIZINFO_API_KEY='',PYTHONPATH=str(API)+os.pathsep+str(API/'tests'),PYTHONIOENCODING='utf-8',DATCO_TEST_FILES=str(out/'files'),DATCO_TEST_WORKER_READY=str(out/'worker-ready.json'))
  env.pop('DATCO_CI_ADMIN_URL',None)
  admin=psycopg.connect(host=url.host,port=url.port,dbname=url.database,user=url.username,password=url.password,autocommit=True)
  made_db=made_role=False;children=[];logs=[]
@@ -70,7 +70,7 @@ def main():
     time.sleep(.1)
    worker=json.loads((out/'worker-ready.json').read_text());assert worker['database']==db and worker['db_user']==role
    start('web',['npm','run','dev','--','--port',str(web_port)],WEB);wait(origin)
-   run(['npm','run','test:e2e','--','tests/smoke.spec.ts','tests/notice.spec.ts','tests/proposal.spec.ts','tests/company.spec.ts','tests/workspace.spec.ts','tests/company-document-first.spec.ts','--workers=1','--reporter=line'],WEB)
+   run(['npm','run','test:e2e','--','tests/smoke.spec.ts','tests/notice.spec.ts','tests/proposal.spec.ts','tests/company.spec.ts','tests/workspace.spec.ts','tests/company-document-first.spec.ts','tests/role-portals.spec.ts','--workers=1','--reporter=line'],WEB)
  except Exception:
   for log in logs:log.flush()
   for name in ('api','worker','web'):
