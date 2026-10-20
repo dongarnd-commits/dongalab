@@ -2,6 +2,7 @@
 import {useState,useRef,useEffect} from "react";
 import "./workspace.css";
 import DocumentFirst from "./document-first";
+import {companyReasons as reasons} from "../../company/client";
 export type Profile={name:string;business_number:string;industry:string;representative:string;contact:string;overview:string;financials:{year:number;revenue:string;unit:string;currency:string;period:string}[];history:{name:string;period:string;agency:string;role:string}[]};
 export type Site={id:string;name:string;current_ordinal:number;versions:{data:{name:string;address:string;industry:string;process:string}}[]};
 export type Evidence={id:string;site_id:string|null;file_id:string|null;descriptor:string;text:string;mode:string;page:number|null};
@@ -12,7 +13,7 @@ type IV={id:string;ordinal:number;data:Improvement;actor_name?:string;created_at
 export type Detail={company:{id:string;name:string;current_ordinal:number};inputs:{data:Profile}[];sites:Site[];files:{id:string;name:string;size:number;media_type:string;actor_name?:string;created_at:string;digest:string;site_id:string|null;parses:{error:string|null;limitations:string[]}[]}[];evidence:Evidence[];candidates:Candidate[];facts:Fact[];improvements:IR[]};
 const blankProfile:Profile={name:"",business_number:"",industry:"",representative:"",contact:"",overview:"",financials:[],history:[]};
 const blankImprovement:Improvement={title:"",site_id:"",original_text:"",as_is:"",problem:"",impact:"",goal:"",to_be:"",required_functions:"",constraints:"",missing:"",fact_version_ids:[],evidence_ids:[]};
-const reasons:Record<string,string>={AUTHENTICATION_REQUIRED:"로그인해 주세요.",ACTION_NOT_AUTHORIZED:"이 업무를 수행할 권한이 없습니다.",OBJECT_NOT_FOUND:"조회할 수 있는 자료가 없습니다.",STALE_INPUT_VERSION:"다른 변경 또는 오래된 입력입니다. 최신 자료를 다시 조회해 주세요.",COMPANY_ALREADY_REGISTERED:"이미 등록된 사업자 정보입니다. 관리자에게 소속 확인을 요청해 주세요.",DUPLICATE_COMPANY_FILE:"이미 제출한 동일 파일입니다.",INVALID_REQUEST:"입력값·필수 항목을 확인해 주세요.",INVALID_FILENAME:"경로가 포함되지 않은 파일명을 사용해 주세요.",UNSUPPORTED_FORMAT:"지원하지 않는 파일 형식입니다.",FORMAT_MISMATCH:"파일 내용과 확장자가 일치하지 않습니다.",DOCUMENT_PARSE_FAILED:"문서 분석에 실패했습니다. 원본을 확인하고 다시 시도해 주세요.",COMPANY_CONFIRMATION_OR_CURRENT_EVIDENCE_REQUIRED:"기업의 사실확인 또는 현재 유효한 근거가 필요합니다.",COMPANY_CONFIRMATION_REQUIRED:"기업이 이 구조화 Version을 확인해야 합니다.",EXISTING_FACT_COMPARISON_REQUIRED:"같은 항목의 기존 FactVersion을 선택해 비교해 주세요.",MISSING_REQUIRED_INFORMATION:"As-Is·문제·목표·To-Be·근거와 미확인 사항을 확인해 주세요.",TRANSITION_NOT_ALLOWED:"현재 단계에서 수행할 수 없습니다.",EXTRACTED_VALUE_NOT_IN_EVIDENCE:"입력값이 선택한 원문 근거에 없습니다. 올바른 근거를 선택하거나 수동 확인 근거를 작성해 주세요.",UPLOAD_SIZE_INVALID:"파일은 20MB 이하로 제출해 주세요.",BUSINESS_IDENTITY_CHANGE_REQUIRES_REVIEW:"사업자번호 변경은 별도 검토가 필요합니다."};
+
 const fields:Record<string,string>={company_name:"기업명",business_number:"사업자번호",industry:"업종",representative:"대표자",address:"소재지",revenue:"매출액",employees:"인원",assets:"자산",liabilities:"부채",support_history:"사업 수행이력",problem:"문제",to_be:"To-Be",constraint:"제약"};
 export default function Workspace(){
  const epoch=useRef(0);const [actor,setActor]=useState<{id:string;role:string}|null>(null),[username,setUsername]=useState(""),[password,setPassword]=useState("");

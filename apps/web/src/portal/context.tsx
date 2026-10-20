@@ -42,7 +42,7 @@ export function useBusinessContext(session:PortalIdentity){
    setState({status:'error',companies,value:null,error});}
  },[session]);
  useEffect(()=>{const initial=window.setTimeout(()=>void load(),0);const changed=()=>{setState({status:'loading',companies:[],value:null,error:''});void load();};const verified=()=>void load(true);window.addEventListener('popstate',changed);window.addEventListener('datco-session-verified',verified);return()=>{controller.current?.abort();clearTimeout(initial);window.removeEventListener('popstate',changed);window.removeEventListener('datco-session-verified',verified);};},[load]);
- const choose=(changes:Record<string,string|null>)=>{setState({status:'loading',companies:[],value:null,error:''});editQuery({...changes,context_actor:session.id});void load();};
+ const choose=(changes:Record<string,string|null>)=>{setState({status:'loading',companies:[],value:null,error:''});editQuery({...changes,context_actor:session.id});return load();};
  return {state,refresh:()=>void load(),choose};
 }
 export type BusinessContext=ReturnType<typeof useBusinessContext>;

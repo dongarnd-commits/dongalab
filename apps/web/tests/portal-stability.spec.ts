@@ -27,7 +27,8 @@ test('v04 actual 90 seconds idle and three tab returns retain mounted UI and sec
  // Delay real session responses to expose duplicate visibility/focus requests without replacing API data.
  await page.route('**/api/notice/session',async route=>{const response=await route.fetch();await new Promise(r=>setTimeout(r,200));await route.fulfill({response});});
  for(let i=0;i<3;i++){await second.bringToFront();await page.waitForTimeout(150);const before=sessions;await page.bringToFront();await page.waitForTimeout(100);if(sessions===before)await page.evaluate(()=>window.dispatchEvent(new Event('focus')));await expect.poll(()=>sessions).toBeGreaterThan(before);await page.waitForTimeout(400);expect(sessions-before).toBe(1);await expect(root).toHaveAttribute('data-company-id',c.a.id);}
- await page.unroute('**/api/notice/session');await second.close();
+ // Drain delayed real responses before removing the handler; do not race route.fulfill.
+ await page.unrouteAll({behavior:'wait'});await second.close();
  const stability=await page.evaluate(()=>(window as typeof window & {stability:{missing:number;loading:number;empty:number;remount:number}}).stability);expect(stability.missing).toBe(0);expect(stability.loading).toBe(0);expect(stability.empty).toBe(0);expect(stability.remount).toBe(0);expect(navigations).toBe(0);expect(errors).toEqual([]);
  await test.info().attach('90s-stability.json',{body:JSON.stringify({idle,focusReturns:3,navigations,stability,errors}),contentType:'application/json'});await page.screenshot({path:test.info().outputPath('after-90s-focus.png'),fullPage:true});
 });

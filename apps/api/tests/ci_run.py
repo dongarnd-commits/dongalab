@@ -63,6 +63,7 @@ def main():
    env['DATCO_COMPANY_CONTEXT']=(out/'company-ready.json').read_text(encoding='utf-8')
    proposal=json.loads((out/'proposal-ready.json').read_text(encoding='utf-8'));env['DATCO_PROPOSAL_CONTEXT']=json.dumps(proposal)
    env['DATCO_TEST_CONTEXT_READY']=str(out/'context-ready.json');run([sys.executable,'tests/portal_context_setup.py']);env['DATCO_PORTAL_CONTEXT']=(out/'context-ready.json').read_text(encoding='utf-8')
+   env['DATCO_TEST_HANDOFF_READY']=str(out/'handoff-ready.json');run([sys.executable,'tests/portal_handoff_setup.py']);env['DATCO_HANDOFF_CONTEXT']=(out/'handoff-ready.json').read_text(encoding='utf-8')
    start('worker',[sys.executable,'tests/isolated_worker.py'],API)
    deadline=time.monotonic()+30
    while not (out/'worker-ready.json').exists():
@@ -71,7 +72,7 @@ def main():
     time.sleep(.1)
    worker=json.loads((out/'worker-ready.json').read_text());assert worker['database']==db and worker['db_user']==role
    start('web',['npm','run','dev','--','--port',str(web_port)],WEB);wait(origin)
-   run(['npm','run','test:e2e','--','tests/smoke.spec.ts','tests/notice.spec.ts','tests/proposal.spec.ts','tests/company.spec.ts','tests/workspace.spec.ts','tests/company-document-first.spec.ts','tests/role-portals.spec.ts','tests/portal-context.spec.ts','tests/portal-stability.spec.ts','--workers=1','--reporter=line'],WEB)
+   run(['npm','run','test:e2e','--','tests/smoke.spec.ts','tests/notice.spec.ts','tests/proposal.spec.ts','tests/company.spec.ts','tests/workspace.spec.ts','tests/company-document-first.spec.ts','tests/role-portals.spec.ts','tests/portal-context.spec.ts','tests/portal-stability.spec.ts','tests/portal-handoff.spec.ts','--workers=1','--reporter=line'],WEB)
  except Exception:
   for log in logs:log.flush()
   for name in ('api','worker','web'):

@@ -25,7 +25,7 @@ for(const role of ['editor','operator','admin'] as const)test('Slice0a real logi
    await expect(page.getByText('공정 운영자료 추가 요청',{exact:true})).toHaveCount(0);
   }
   await page.locator('aside').getByRole('button',{name:'기업 · 사업장 관리',exact:true}).click();
-  await expect(page.getByRole('button',{name:'기업정보 저장',exact:true})).toBeDisabled();
+  const allowed=await(await page.request.get('/api/company')).json();if(allowed.length>1)await page.getByLabel('업무 기업 선택',{exact:true}).selectOption(allowed[0].id);await expect(page.getByRole('button',{name:'기업정보 저장',exact:true})).toBeEnabled();
  }else{
   const menu=page.getByRole('navigation',{name:role==='operator'?'운영자 업무 메뉴':'관리자 메뉴'});
   const buttons=await menu.getByRole('button').all();expect(buttons.length).toBe(12);
