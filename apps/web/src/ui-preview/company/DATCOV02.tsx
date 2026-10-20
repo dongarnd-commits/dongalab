@@ -1,4 +1,4 @@
-import {BusinessContextBar,ContextReadout,selectedContext,improvementStateLabel} from "../../portal/context";
+import {BusinessContextBar,CompanyContextStatus,ContextReadout,selectedContext,improvementStateLabel} from "../../portal/context";
 import type {PortalProps} from "../../portal/types";
 // UI reproduction from the user-provided MagicPath DATCOV02 v0.2. Development preview only.
 import React, { useEffect, useRef, useState } from 'react';
@@ -302,7 +302,7 @@ export const DATCOV02 = ({session,onLogout,business}:PortalProps) => {
    <div className="mt-6 rounded-xl bg-slate-50 p-4 text-[11px] leading-6 text-slate-500"><p className="mb-1 font-semibold text-slate-700">개발 전용 화면 미리보기</p><p>실제 계정을 입력하지 마세요.</p><p>인증·권한·세션을 생성하지 않습니다.</p><p className="mt-2 text-slate-400">로그인 버튼은 수요기업 홈 미리보기로만 이동합니다.</p></div>
   </form></div>
  </div>;
-  return <div className="flex h-[900px] min-h-[690px] w-full overflow-hidden bg-[#F7F9FC] text-slate-800" style={{
+  return <div data-testid={business?"company-business-context":undefined} data-company-id={business?.state.value?.company.id??''} data-site-id={business?.state.value?.selection.site_id??''} data-improvement-id={business?.state.value?.selection.improvement_id??''} data-version-id={business?.state.value?.selection.improvement_version_id??''} className="flex h-[900px] min-h-[690px] w-full overflow-hidden bg-[#F7F9FC] text-slate-800" style={{
     fontFamily: 'Pretendard, -apple-system, BlinkMacSystemFont, Segoe UI, Noto Sans KR, sans-serif'
   }}>
   {mobileMenu && <div className="fixed inset-0 z-40 bg-slate-900/40 lg:hidden" onClick={() => setMobileMenu(false)} />}
@@ -315,9 +315,8 @@ export const DATCOV02 = ({session,onLogout,business}:PortalProps) => {
   <div className="flex min-w-0 flex-1 flex-col">
    <header className="flex h-[75px] shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-8"><div className="flex items-center gap-3"><button className="rounded-lg p-2 text-slate-500 lg:hidden" onClick={() => setMobileMenu(true)} aria-label="메뉴 열기"><Menu size={20} /></button><span className="hidden text-[12px] text-slate-400 sm:block">수요기업 포털</span><ChevronRight size={15} className="hidden text-slate-300 sm:block" /><span className="text-[13px] font-bold">{menu.flatMap(x => x.items).find(x => x.id === page)?.name}</span></div><div className="flex items-center gap-3"><Chip color="blue">{authenticated?<span className="block max-w-[160px] truncate" title={session.name}>{session.name}</span>:data.company || '기업정보 입력 중'}</Chip><div className="grid h-8 w-8 place-items-center rounded-full bg-[#EAF3FF] text-[12px] font-bold text-[#1767C7]">기</div><button onClick={logout} className={S + ' hidden sm:inline-flex'}><LogOut size={15} /> 로그아웃</button></div></header>
    <main ref={scroller} className="min-h-0 flex-1 overflow-y-auto"><div className="mx-auto max-w-[1190px] px-4 pb-14 pt-7 md:px-8">
-    {business&&<BusinessContextBar business={business} view={page==='company'?'sites':page==='needs'?'improvements':'summary'} onNavigate={goto}/>}
-    {business&&['needs','review'].includes(page)&&<ContextReadout value={business.state.value}/>}
-    {toaster && <div role="status" className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-[12px] text-blue-800"><div className="flex items-center gap-2"><Info size={16} /><span>{toaster}</span></div><button onClick={() => setToaster('')} aria-label="알림 닫기"><X size={16} /></button></div>}
+    {business&&<CompanyContextStatus business={business}/>}
+     {toaster && <div role="status" className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-[12px] text-blue-800"><div className="flex items-center gap-2"><Info size={16} /><span>{toaster}</span></div><button onClick={() => setToaster('')} aria-label="알림 닫기"><X size={16} /></button></div>}
 
 
     {page === 'home' && <>
@@ -405,7 +404,7 @@ export const DATCOV02 = ({session,onLogout,business}:PortalProps) => {
      {authenticated&&<p className="mb-3 text-xs text-slate-500">현재 조회만 가능합니다. 입력·저장·분석·제출은 아직 연결되지 않았습니다.</p>}
      <Header eyebrow="COMPANY / 03" title="기업 · 사업장 관리" sub="문서에서 가져온 값을 수정하거나 직접 정보를 작성할 수 있습니다."><Chip color={saved ? 'green' : 'amber'}>{business?'읽기 전용':saved ? '미리보기 보관 · 서버 미저장' : '확인·저장 필요'}</Chip></Header>
      <Card className="mb-5 flex flex-wrap items-center justify-between gap-3 p-4"><div className="flex items-center gap-2 text-[12px] text-slate-600"><Info size={18} className="text-blue-600" />서류에서 추출한 입력 후보를 가져올 수 있습니다.</div><button className={S} onClick={() => goto('onboarding')}><UploadCloud size={15} /> 문서에서 다시 가져오기</button></Card>
-     <Card className="p-5 md:p-7"><h3 className="mb-5 text-[16px] font-bold">기업 기본정보</h3><div className="grid gap-5 sm:grid-cols-2">{[{
+     <Card className="p-5 md:p-7"><h3 className="mb-5 text-[16px] font-bold">기업 기본정보</h3>{business&&<BusinessContextBar business={business} view="sites" embedded onNavigate={goto}/>}<div className="grid gap-5 sm:grid-cols-2">{[{
                   key: 'company',
                   label: '기업명'
                 }, {
@@ -442,7 +441,7 @@ export const DATCOV02 = ({session,onLogout,business}:PortalProps) => {
     {page === 'needs' && <>
      {authenticated&&<p className="mb-3 text-xs text-slate-500">현재 조회만 가능합니다. 입력·저장·분석·제출은 아직 연결되지 않았습니다.</p>}
      <Header eyebrow="IMPROVEMENT / 05" title="개선요구 등록" sub="현재 문제와 희망하는 개선 방향을 자유롭게 작성하세요."><Chip color={needSaved ? 'green' : 'amber'}>{authenticated?(actual.improvement?improvementStateLabel(actual.improvement.state):'개선요구 미선택'):needSaved ? '요구사항 작성 완료' : '작성 중'}</Chip></Header>
-     <div className="grid gap-5 lg:grid-cols-[1.6fr_.75fr]"><Card className="p-6"><div className="space-y-5"><Label name="현재 문제 (As-Is)"><textarea disabled={authenticated} aria-label="현재 문제 (As-Is)" className={I + ' min-h-[150px] resize-y leading-6'} value={problem} onChange={e => {
+     <div className="grid gap-5 lg:grid-cols-[1.6fr_.75fr]"><Card className="p-6">{business&&<><BusinessContextBar business={business} view="improvements" embedded/><ContextReadout value={business.state.value}/></>}<div className="space-y-5"><Label name="현재 문제 (As-Is)"><textarea disabled={authenticated} aria-label="현재 문제 (As-Is)" className={I + ' min-h-[150px] resize-y leading-6'} value={problem} onChange={e => {
                       setProblem(e.target.value);
                       setNeedSaved(false);
                     }} /></Label><Label name="희망 개선목표 (To-Be)"><textarea disabled={authenticated} aria-label="희망 개선목표 (To-Be)" className={I + ' min-h-[130px] resize-y leading-6'} value={goal} onChange={e => {
