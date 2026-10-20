@@ -6,23 +6,29 @@ export function mountPortal(render:(identity:PortalIdentity,logout:()=>void)=>Re
  function Session(){
   const [ready,setReady]=useState(false),[error,setError]=useState('');
   const ending=useRef(false);
+  // Error UI is committed without business data before revealing a failed cached-page check.
+  useEffect(()=>{if(error)document.getElementById('root')!.style.visibility='visible';},[error]);
   useEffect(()=>{
-   let live=true,sequence=0;const channel=new BroadcastChannel('datco-session');
-   const exit=()=>{live=false;setReady(false);sessionStorage.clear();window.location.replace('/login');};
-   const check=async()=>{if(ending.current)return;const epoch=++sequence;try{
-    const r=await fetch('/api/notice/session',{cache:'no-store',credentials:'same-origin',signal:AbortSignal.timeout(10000)});
+   let live=true,sequence=0,pending=false,cacheHidden=false,request:AbortController|null=null;const channel=new BroadcastChannel('datco-session');
+   const exit=()=>{live=false;++sequence;request?.abort();setReady(false);sessionStorage.clear();window.location.replace('/login');};
+   const check=async(fresh=false)=>{if(!live||ending.current||pending&&!fresh)return;const epoch=++sequence;request?.abort();request=new AbortController();pending=true;try{
+    const r=await fetch('/api/notice/session',{cache:'no-store',credentials:'same-origin',signal:AbortSignal.any([request.signal,AbortSignal.timeout(10000)])});
     if(!live||ending.current||epoch!==sequence)return;
     if(r.status===401||r.status===403){exit();return;}if(!r.ok)throw Error();
     const actual=await r.json();if(!live||ending.current||epoch!==sequence)return;
     if(actual.id!==identity.id||actual.role!==identity.role){exit();return;}
-    setError('');setReady(true);
-   }catch{if(live&&epoch===sequence){setReady(false);setError('세션을 확인할 수 없습니다. 다시 로그인해 주세요.');}}};
-   const hide=()=>{++sequence;setReady(false);document.getElementById('root')!.style.visibility='hidden';};
-   const show=()=>{setReady(false);document.getElementById('root')!.style.visibility='visible';void check();};
-   const visible=()=>{if(document.hidden)hide();else show();};
-   channel.onmessage=exit;window.addEventListener('pagehide',hide);window.addEventListener('pageshow',show);window.addEventListener('focus',show);document.addEventListener('visibilitychange',visible);
+    setError('');setReady(true);if(!cacheHidden)document.getElementById('root')!.style.visibility='visible';
+    window.dispatchEvent(new Event('datco-session-verified'));
+   }catch{if(live&&!ending.current&&epoch===sequence){setReady(false);setError('세션을 확인할 수 없습니다. 다시 로그인해 주세요.');}}
+   finally{if(epoch===sequence)pending=false;}};
+   // Preserve mounted business UI during normal session checks. Hide only cached page restoration.
+   const hide=()=>{cacheHidden=true;++sequence;request?.abort();pending=false;document.getElementById('root')!.style.visibility='hidden';};
+   const show=()=>{cacheHidden=false;void check(true);};
+   const focus=()=>void check();const visible=()=>{if(!document.hidden)void check();};
+   channel.onmessage=exit;window.addEventListener('pagehide',hide);window.addEventListener('pageshow',show);window.addEventListener('focus',focus);document.addEventListener('visibilitychange',visible);
+   // Session security polling is retained; business revalidation follows this single verified event.
    const timer=window.setInterval(()=>{if(!document.hidden)void check();},15000);void check();
-   return()=>{live=false;++sequence;clearInterval(timer);channel.close();window.removeEventListener('pagehide',hide);window.removeEventListener('pageshow',show);window.removeEventListener('focus',show);document.removeEventListener('visibilitychange',visible);};
+   return()=>{live=false;++sequence;request?.abort();clearInterval(timer);channel.close();window.removeEventListener('pagehide',hide);window.removeEventListener('pageshow',show);window.removeEventListener('focus',focus);document.removeEventListener('visibilitychange',visible);};
   },[]);
   const logout=async()=>{ending.current=true;setReady(false);setError('로그아웃 중입니다.');try{
    const r=await fetch('/api/notice/session/logout',{method:'POST',cache:'no-store',signal:AbortSignal.timeout(10000)});

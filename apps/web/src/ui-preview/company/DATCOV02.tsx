@@ -1,3 +1,4 @@
+import {BusinessContextBar,CompanyContextStatus,ContextReadout,selectedContext,improvementStateLabel} from "../../portal/context";
 import type {PortalProps} from "../../portal/types";
 // UI reproduction from the user-provided MagicPath DATCOV02 v0.2. Development preview only.
 import React, { useEffect, useRef, useState } from 'react';
@@ -142,7 +143,7 @@ function IntakeFiles({disabled=false,stage,documents,onFiles,onReference,onManag
   {documents.some(d=>d.usedIn.includes(stage))&&<ul className="space-y-1 text-[12px] text-slate-600">{documents.filter(d=>d.usedIn.includes(stage)).map(d=><li key={d.id}>{d.name} · {d.category} · 파싱 미연결</li>)}</ul>}
  </div>;
 }
-export const DATCOV02 = ({session,onLogout}:PortalProps) => {
+export const DATCOV02 = ({session,onLogout,business}:PortalProps) => {
   const authenticated=!!session;
   const [loggedIn, setLoggedIn] = useState(() => authenticated || new URLSearchParams(window.location.search).get('screen') !== null && new URLSearchParams(window.location.search).get('screen') !== 'login');
   const [loginId, setLoginId] = useState('');
@@ -150,7 +151,7 @@ export const DATCOV02 = ({session,onLogout}:PortalProps) => {
   const [loginErr, setLoginErr] = useState('');
   const [page, setPage] = useState<Screen>(() => {const p=new URLSearchParams(window.location.search).get('screen');return menu.flatMap(g=>g.items).some(x=>x.id===p)?p as Screen:'home';});
   const [mobileMenu, setMobileMenu] = useState(false);
-  const [data, setData] = useState<FieldData>(preset);
+  const [previewData, setData] = useState<FieldData>(preset);
   const [sites, setSites] = useState(authenticated?[]:[{id:1,name:preset.site,address:'',person:'',open:true}]);
   const [historyStatus, setHistoryStatus] = useState<'yes'|'none'|'unknown'>('unknown');
   const [projects, setProjects] = useState<Array<{id:number;name:string;period:string;agency:string;details:string;evidence:string}>>([]);
@@ -163,9 +164,14 @@ export const DATCOV02 = ({session,onLogout}:PortalProps) => {
   const [fileQuery,setFileQuery]=useState('');
   const [financeYear, setFinanceYear] = useState(authenticated?'':'2025');
   const [saved, setSaved] = useState(false);
-  const [problem, setProblem] = useState(authenticated?'':'재고 수량이 실제 수량과 다르고 입출고를 수기로 처리합니다. 생산실적과 불량 발생 현황을 체계적으로 관리하고 싶습니다.');
-  const [goal, setGoal] = useState(authenticated?'':'재고·입출고 현황과 생산실적·품질정보를 통합적으로 확인하고 관리하고 싶습니다.');
-  const [limits, setLimits] = useState(authenticated?'':'기존 ERP 연동 가능 여부와 현장 데이터 수집 방식 확인이 필요합니다.');
+  const [previewProblem, setProblem] = useState(authenticated?'':'재고 수량이 실제 수량과 다르고 입출고를 수기로 처리합니다. 생산실적과 불량 발생 현황을 체계적으로 관리하고 싶습니다.');
+  const [previewGoal, setGoal] = useState(authenticated?'':'재고·입출고 현황과 생산실적·품질정보를 통합적으로 확인하고 관리하고 싶습니다.');
+  const [previewLimits, setLimits] = useState(authenticated?'':'기존 ERP 연동 가능 여부와 현장 데이터 수집 방식 확인이 필요합니다.');
+  const actual=selectedContext(business?.state.value);
+  const data=authenticated?{...preset,company:business?.state.value?.company.name??'',site:actual.siteVersion?.data.name??'',address:actual.siteVersion?.data.address??''}:previewData;
+  const problem=authenticated?actual.version?.data.as_is??'':previewProblem;
+  const goal=authenticated?actual.version?.data.to_be??'':previewGoal;
+  const limits=authenticated?actual.version?.data.constraints??'':previewLimits;
   const [needSaved, setNeedSaved] = useState(false);
   const [documents, setDocuments] = useState<Doc[]>([]);
   const [dragging, setDragging] = useState(false);
@@ -296,7 +302,7 @@ export const DATCOV02 = ({session,onLogout}:PortalProps) => {
    <div className="mt-6 rounded-xl bg-slate-50 p-4 text-[11px] leading-6 text-slate-500"><p className="mb-1 font-semibold text-slate-700">개발 전용 화면 미리보기</p><p>실제 계정을 입력하지 마세요.</p><p>인증·권한·세션을 생성하지 않습니다.</p><p className="mt-2 text-slate-400">로그인 버튼은 수요기업 홈 미리보기로만 이동합니다.</p></div>
   </form></div>
  </div>;
-  return <div className="flex h-[900px] min-h-[690px] w-full overflow-hidden bg-[#F7F9FC] text-slate-800" style={{
+  return <div data-testid={business?"company-business-context":undefined} data-company-id={business?.state.value?.company.id??''} data-site-id={business?.state.value?.selection.site_id??''} data-improvement-id={business?.state.value?.selection.improvement_id??''} data-version-id={business?.state.value?.selection.improvement_version_id??''} className="flex h-[900px] min-h-[690px] w-full overflow-hidden bg-[#F7F9FC] text-slate-800" style={{
     fontFamily: 'Pretendard, -apple-system, BlinkMacSystemFont, Segoe UI, Noto Sans KR, sans-serif'
   }}>
   {mobileMenu && <div className="fixed inset-0 z-40 bg-slate-900/40 lg:hidden" onClick={() => setMobileMenu(false)} />}
@@ -309,8 +315,8 @@ export const DATCOV02 = ({session,onLogout}:PortalProps) => {
   <div className="flex min-w-0 flex-1 flex-col">
    <header className="flex h-[75px] shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-8"><div className="flex items-center gap-3"><button className="rounded-lg p-2 text-slate-500 lg:hidden" onClick={() => setMobileMenu(true)} aria-label="메뉴 열기"><Menu size={20} /></button><span className="hidden text-[12px] text-slate-400 sm:block">수요기업 포털</span><ChevronRight size={15} className="hidden text-slate-300 sm:block" /><span className="text-[13px] font-bold">{menu.flatMap(x => x.items).find(x => x.id === page)?.name}</span></div><div className="flex items-center gap-3"><Chip color="blue">{authenticated?<span className="block max-w-[160px] truncate" title={session.name}>{session.name}</span>:data.company || '기업정보 입력 중'}</Chip><div className="grid h-8 w-8 place-items-center rounded-full bg-[#EAF3FF] text-[12px] font-bold text-[#1767C7]">기</div><button onClick={logout} className={S + ' hidden sm:inline-flex'}><LogOut size={15} /> 로그아웃</button></div></header>
    <main ref={scroller} className="min-h-0 flex-1 overflow-y-auto"><div className="mx-auto max-w-[1190px] px-4 pb-14 pt-7 md:px-8">
-    {authenticated&&<p role="note" className="mb-5 rounded-xl bg-blue-50 p-4 text-sm">인증된 기업 포털 · 업무 데이터 연결 후 표시됩니다. 입력·업로드·저장·분석·제출·승인은 아직 연결되지 않았습니다. <button className="underline" onClick={()=>window.location.assign(new URL("/",window.location.href).href)}>기존 업무 화면 열기</button></p>}
-    {toaster && <div role="status" className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-[12px] text-blue-800"><div className="flex items-center gap-2"><Info size={16} /><span>{toaster}</span></div><button onClick={() => setToaster('')} aria-label="알림 닫기"><X size={16} /></button></div>}
+    {business&&<CompanyContextStatus business={business}/>}
+     {toaster && <div role="status" className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-[12px] text-blue-800"><div className="flex items-center gap-2"><Info size={16} /><span>{toaster}</span></div><button onClick={() => setToaster('')} aria-label="알림 닫기"><X size={16} /></button></div>}
 
 
     {page === 'home' && <>
@@ -334,7 +340,7 @@ export const DATCOV02 = ({session,onLogout}:PortalProps) => {
                   t: '결과·제안서 확인',
                   s: 'proposals'
                 }].map((x, i) => <button key={x.t} onClick={() => goto(x.s as Screen)} className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-4 text-left hover:bg-blue-50 sm:flex-col sm:items-start"><span className={'grid h-7 w-7 shrink-0 place-items-center rounded-full text-[11px] font-bold ' + (progress[i] ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-slate-500')}>{progress[i] ? <Check size={15} /> : i + 1}</span><span className="text-[11px] font-semibold">{x.t}</span></button>)}</div></Card>
-     <p className="mt-3 text-[11px] text-amber-700">{authenticated?"업무 데이터가 미연결되어 진행 상태를 표시하지 않습니다.":"진행 표시는 미리보기 세션 기준입니다. 실제 저장·분석·전송 완료를 의미하지 않습니다."}</p>
+     <p className="mt-3 text-[11px] text-amber-700">{authenticated?"진행현황 조회는 아직 연결되지 않았습니다.":"진행 표시는 미리보기 세션 기준입니다. 실제 저장·분석·전송 완료를 의미하지 않습니다."}</p>
      <div className="mt-5 grid gap-4 lg:grid-cols-2"><Card className="p-6"><h3 className="mb-4 text-[15px] font-bold">자주 사용하는 업무</h3><div className="grid gap-3 sm:grid-cols-2">{[{
                     t: '기업정보 관리',
                     d: '기본정보·사업장·재무',
@@ -372,6 +378,7 @@ export const DATCOV02 = ({session,onLogout}:PortalProps) => {
 
 
     {page === 'onboarding' && <>
+     {authenticated&&<p className="mb-3 text-xs text-slate-500">현재 조회만 가능합니다. 입력·저장·분석·제출은 아직 연결되지 않았습니다.</p>}
      <Header eyebrow="COMPANY ONBOARDING / 01" title="기업정보 등록" sub="보유 서류에서 정보를 가져오거나 필요한 정보를 직접 작성할 수 있습니다." />
      <div className="grid gap-5 lg:grid-cols-2"><Card className="p-6 md:p-8"><div className="grid h-12 w-12 place-items-center rounded-xl bg-blue-50 text-blue-600"><UploadCloud size={25} /></div><h2 className="mt-4 text-[18px] font-bold">서류로 기업정보 가져오기</h2><p className="mt-3 min-h-[65px] text-[13px] leading-7 text-slate-500">사업자등록증·사업자등록증명원 등 기업·사업장 기본정보 확인자료를 등록합니다. 현재 미리보기는 문서 내용을 추출하지 않습니다.</p><IntakeFiles disabled={authenticated} stage="onboarding" documents={documents} onFiles={(files,category)=>{void receive(files,null,'onboarding',category);}} onReference={id=>referenceFile(id,'onboarding')} onManage={()=>openFiles('onboarding')} onReview={()=>goto('extraction')}/></Card>
       <Card className="p-6 md:p-8"><div className="grid h-12 w-12 place-items-center rounded-xl bg-slate-100 text-slate-600"><Pencil size={24} /></div><h2 className="mt-4 text-[18px] font-bold">기업정보 직접 입력</h2><p className="mt-3 min-h-[65px] text-[13px] leading-7 text-slate-500">첨부자료가 없거나 추출할 수 없는 항목이 있다면 직접 입력하거나 누락된 내용을 보완할 수 있습니다.</p><div className="mt-3 space-y-4 rounded-xl bg-slate-50 p-5">{['기업명·사업자등록정보', '사업장·담당자·업종', '재무정보 및 지원사업 이력'].map(x => <div key={x} className="flex items-center gap-2 text-[12px] text-slate-600"><CheckCircle2 size={16} className="text-blue-600" />{x}</div>)}</div><button onClick={() => goto('company')} className={S + ' mt-5'}>직접 작성 <ArrowRight size={15} /></button></Card></div>
@@ -380,6 +387,7 @@ export const DATCOV02 = ({session,onLogout}:PortalProps) => {
 
 
     {page === 'extraction' && <>
+     {authenticated&&<p className="mb-3 text-xs text-slate-500">현재 조회만 가능합니다. 입력·저장·분석·제출은 아직 연결되지 않았습니다.</p>}
      <Header eyebrow="EXTRACTION / 02" title="추출된 기업정보 확인" sub="원본에서 가져온 정보의 값과 출처를 확인하고 기업정보 입력란에 반영하세요."><Chip color="blue">{candidates.length}개 후보</Chip></Header>
      <div className="grid gap-5 lg:grid-cols-[.85fr_1.55fr]"><Card className="p-6"><h3 className="text-[14px] font-bold">추출 원본</h3><div className="mt-4 flex gap-3 rounded-xl bg-slate-50 p-4"><FileIcon name={candidateSource || 'info.txt'} /><div><p className="break-all text-[12px] font-semibold">{candidateSource || '등록된 추출 원본이 없습니다.'}</p><p className="mt-1 text-[11px] text-slate-400">등록 자료 · 파싱 미연결</p></div></div><div className="mt-5 rounded-xl bg-amber-50 p-4 text-[12px] leading-6 text-amber-800">추출값을 적용해도 DATCO의 최종 Fact 확정이 자동으로 이루어지는 것은 아닙니다.</div><button onClick={() => goto('onboarding')} className={S + ' mt-5 w-full'}><ChevronLeft size={15} /> 다른 서류 선택</button></Card>
      <Card className="p-6"><div className="mb-4 flex items-center justify-between"><h3 className="text-[14px] font-bold">항목별 정보 검토</h3><Chip color="amber">사용자 확인 필요</Chip></div>{candidates.length === 0 ? <div className="rounded-xl bg-slate-50 px-5 py-10 text-center"><p className="text-[13px] text-slate-500">추출된 항목이 없습니다.</p><button className={S + ' mt-3'} onClick={() => goto('company')}>직접 정보 입력</button></div> : <div className="space-y-3">{candidates.map((x, i) => <div key={x.key} className="flex gap-3 rounded-xl border border-slate-100 p-4"><input disabled={authenticated} type="checkbox" aria-label={x.label + ' 적용'} checked={x.selected} onChange={e => setCandidates(a => a.map((v, j) => j === i ? {
@@ -393,9 +401,10 @@ export const DATCOV02 = ({session,onLogout}:PortalProps) => {
 
 
     {page === 'company' && <>
-     <Header eyebrow="COMPANY / 03" title="기업 · 사업장 관리" sub="문서에서 가져온 값을 수정하거나 직접 정보를 작성할 수 있습니다."><Chip color={saved ? 'green' : 'amber'}>{saved ? '미리보기 보관 · 서버 미저장' : '확인·저장 필요'}</Chip></Header>
+     {authenticated&&<p className="mb-3 text-xs text-slate-500">현재 조회만 가능합니다. 입력·저장·분석·제출은 아직 연결되지 않았습니다.</p>}
+     <Header eyebrow="COMPANY / 03" title="기업 · 사업장 관리" sub="문서에서 가져온 값을 수정하거나 직접 정보를 작성할 수 있습니다."><Chip color={saved ? 'green' : 'amber'}>{business?'읽기 전용':saved ? '미리보기 보관 · 서버 미저장' : '확인·저장 필요'}</Chip></Header>
      <Card className="mb-5 flex flex-wrap items-center justify-between gap-3 p-4"><div className="flex items-center gap-2 text-[12px] text-slate-600"><Info size={18} className="text-blue-600" />서류에서 추출한 입력 후보를 가져올 수 있습니다.</div><button className={S} onClick={() => goto('onboarding')}><UploadCloud size={15} /> 문서에서 다시 가져오기</button></Card>
-     <Card className="p-5 md:p-7"><h3 className="mb-5 text-[16px] font-bold">기업 기본정보</h3><div className="grid gap-5 sm:grid-cols-2">{[{
+     <Card className="p-5 md:p-7"><h3 className="mb-5 text-[16px] font-bold">기업 기본정보</h3>{business&&<BusinessContextBar business={business} view="sites" embedded onNavigate={goto}/>}<div className="grid gap-5 sm:grid-cols-2">{[{
                   key: 'company',
                   label: '기업명'
                 }, {
@@ -414,10 +423,11 @@ export const DATCOV02 = ({session,onLogout}:PortalProps) => {
                   }
                   setSaved(true);notify('미리보기 입력값을 현재 세션에 보관했습니다. 실제 서버 저장은 미연결입니다.');
                 }}><Check size={15} /> 기업정보 저장</button><button className={S} onClick={() => goto('finance')}>재무정보 이동 <ArrowRight size={15} /></button></div></Card>
-<Card className="mt-5 p-6"><div className="flex flex-wrap items-center justify-between gap-3"><h3 className="text-[16px] font-bold">사업장 목록</h3><button disabled={authenticated} className={P} onClick={()=>setSites(a=>[...a,{id:Date.now(),name:'',address:'',person:'',open:true}])}><Plus size={15}/> 사업장 추가</button></div><p className="mt-3 text-[12px] text-slate-500">미리보기 입력 · 현재 화면 세션에서만 유지되며 실제 DB에 저장되지 않습니다.</p><div className="mt-5 space-y-4">{sites.map((site,i)=><section key={site.id} aria-label={'사업장 '+(i+1)} className="rounded-xl border border-slate-200 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><h4 className="text-[14px] font-bold">사업장 {i+1} — {site.name||'이름 입력 필요'}</h4><button disabled={authenticated} className={S} onClick={()=>removeSite(site.id)}><Trash2 size={15}/> 사업장 삭제</button><button disabled={authenticated} className={S} aria-expanded={site.open} onClick={()=>setSites(a=>a.map(x=>x.id===site.id?{...x,open:!x.open}:x))}>{site.open?'접기':'수정 · 펼치기'}</button></div>{site.open&&<div className="mt-4 grid gap-4 sm:grid-cols-2">{([{key:'name',label:'사업장명'},{key:'address',label:'사업장 소재지'},{key:'person',label:'사업장 담당자'}] as const).map(f=><Label key={f.key} name={f.label}><input disabled={authenticated} className={I} value={site[f.key]} onChange={e=>setSites(a=>a.map(x=>x.id===site.id?{...x,[f.key]:e.target.value}:x))}/></Label>)}</div>}</section>)}</div></Card>    </>}
+{business?<Card className="mt-5 p-6"><h3 className="mb-4 text-[16px] font-bold">사업장 목록 · 읽기 전용</h3>{business.state.value?.sites.map(site=>{const ordinal=site.id===business.state.value?.selection.site_id?business.state.value.selection.site_ordinal:site.current_ordinal;const version=site.versions.find(v=>v.ordinal===ordinal);return <section key={site.id} data-site-id={site.id} className="mb-4 rounded-xl border border-slate-200 p-4"><h4 className="mb-3 font-bold">{version?.data.name??site.name}</h4><div className="grid gap-4 sm:grid-cols-2">{(['address','industry','process'] as const).map((field,i)=><Label key={field} name={['소재지','업종','공정'][i]}><textarea disabled className={I} value={version?.data[field]??''} readOnly/></Label>)}</div></section>})}{business.state.status==='ready'&&business.state.value?.sites.length===0&&<p>등록된 사업장이 없습니다.</p>}<button className={S} onClick={()=>goto('needs')}>사업장별 개선요구 확인</button><p className="text-xs text-slate-500">사업장 등록·수정·삭제는 후속 단계에서 연결합니다.</p></Card>:<Card className="mt-5 p-6"><div className="flex flex-wrap items-center justify-between gap-3"><h3 className="text-[16px] font-bold">사업장 목록</h3><button disabled={authenticated} className={P} onClick={()=>setSites(a=>[...a,{id:Date.now(),name:'',address:'',person:'',open:true}])}><Plus size={15}/> 사업장 추가</button></div><p className="mt-3 text-[12px] text-slate-500">미리보기 입력 · 현재 화면 세션에서만 유지되며 실제 DB에 저장되지 않습니다.</p><div className="mt-5 space-y-4">{sites.map((site,i)=><section key={site.id} aria-label={'사업장 '+(i+1)} className="rounded-xl border border-slate-200 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><h4 className="text-[14px] font-bold">사업장 {i+1} — {site.name||'이름 입력 필요'}</h4><button disabled={authenticated} className={S} onClick={()=>removeSite(site.id)}><Trash2 size={15}/> 사업장 삭제</button><button disabled={authenticated} className={S} aria-expanded={site.open} onClick={()=>setSites(a=>a.map(x=>x.id===site.id?{...x,open:!x.open}:x))}>{site.open?'접기':'수정 · 펼치기'}</button></div>{site.open&&<div className="mt-4 grid gap-4 sm:grid-cols-2">{([{key:'name',label:'사업장명'},{key:'address',label:'사업장 소재지'},{key:'person',label:'사업장 담당자'}] as const).map(f=><Label key={f.key} name={f.label}><input disabled={authenticated} className={I} value={site[f.key]} onChange={e=>setSites(a=>a.map(x=>x.id===site.id?{...x,[f.key]:e.target.value}:x))}/></Label>)}</div>}</section>)}</div></Card>}    </>}
 
 
     {page === 'finance' && <>
+     {authenticated&&<p className="mb-3 text-xs text-slate-500">현재 조회만 가능합니다. 입력·저장·분석·제출은 아직 연결되지 않았습니다.</p>}
      <Header eyebrow="FINANCE / 04" title="재무 · 사업이력" sub="연도와 단위를 구분해 재무정보 및 기존 지원사업 수행이력을 관리합니다." />
      <div className="mb-5 grid gap-5 lg:grid-cols-2"><Card className="p-6"><h2 className="text-[18px] font-bold">재무·정부사업 자료로 가져오기</h2><IntakeFiles disabled={authenticated} stage="finance" documents={documents} onFiles={(files,category)=>{void receive(files,null,'finance',category);}} onReference={id=>referenceFile(id,'finance')} onManage={()=>openFiles('finance')} onReview={()=>setFinanceReview(true)}/></Card><Card className="p-6"><h2 className="text-[18px] font-bold">직접 입력</h2><p className="mt-3 text-[13px] leading-7 text-slate-500">자료가 없거나 파싱이 미연결된 항목은 아래 재무정보와 수행이력에 직접 입력하세요.</p><button disabled={authenticated} className={S+' mt-4'} onClick={()=>document.getElementById('finance-direct')?.scrollIntoView({block:'start'})}>직접 입력으로 이동</button></Card></div>
      {financeReview&&<Card className="mb-5 p-5"><h3 className="text-[15px] font-bold">재무 자료 추출·입력내용 검토</h3><p className="mt-3 text-[12px] leading-6 text-amber-800">파싱 미연결 · 추출 후보가 없습니다. 자동 입력·후보 적용은 수행하지 않았습니다.</p><ul className="mt-3 text-[12px]">{documents.filter(d=>d.usedIn.includes('finance')).map(d=><li key={d.id}>{d.name} · {d.category}</li>)}</ul><button className={P+' mt-4'} disabled={authenticated || (true)}>추출 후보 적용 (파싱 미연결)</button><button disabled={authenticated} className={S+' ml-2 mt-4'} onClick={()=>document.getElementById('finance-direct')?.scrollIntoView({block:'start'})}>직접 입력폼 확인</button></Card>}
@@ -429,8 +439,9 @@ export const DATCOV02 = ({session,onLogout}:PortalProps) => {
 
 
     {page === 'needs' && <>
-     <Header eyebrow="IMPROVEMENT / 05" title="개선요구 등록" sub="현재 문제와 희망하는 개선 방향을 자유롭게 작성하세요."><Chip color={needSaved ? 'green' : 'amber'}>{needSaved ? '요구사항 작성 완료' : '작성 중'}</Chip></Header>
-     <div className="grid gap-5 lg:grid-cols-[1.6fr_.75fr]"><Card className="p-6"><div className="space-y-5"><Label name="현재 문제 (As-Is)"><textarea disabled={authenticated} aria-label="현재 문제 (As-Is)" className={I + ' min-h-[150px] resize-y leading-6'} value={problem} onChange={e => {
+     {authenticated&&<p className="mb-3 text-xs text-slate-500">현재 조회만 가능합니다. 입력·저장·분석·제출은 아직 연결되지 않았습니다.</p>}
+     <Header eyebrow="IMPROVEMENT / 05" title="개선요구 등록" sub="현재 문제와 희망하는 개선 방향을 자유롭게 작성하세요."><Chip color={needSaved ? 'green' : 'amber'}>{authenticated?(actual.improvement?improvementStateLabel(actual.improvement.state):'개선요구 미선택'):needSaved ? '요구사항 작성 완료' : '작성 중'}</Chip></Header>
+     <div className="grid gap-5 lg:grid-cols-[1.6fr_.75fr]"><Card className="p-6">{business&&<><BusinessContextBar business={business} view="improvements" embedded/><ContextReadout value={business.state.value}/></>}<div className="space-y-5"><Label name="현재 문제 (As-Is)"><textarea disabled={authenticated} aria-label="현재 문제 (As-Is)" className={I + ' min-h-[150px] resize-y leading-6'} value={problem} onChange={e => {
                       setProblem(e.target.value);
                       setNeedSaved(false);
                     }} /></Label><Label name="희망 개선목표 (To-Be)"><textarea disabled={authenticated} aria-label="희망 개선목표 (To-Be)" className={I + ' min-h-[130px] resize-y leading-6'} value={goal} onChange={e => {
@@ -444,6 +455,7 @@ export const DATCOV02 = ({session,onLogout}:PortalProps) => {
 
 
     {page === 'files' && <>
+     {authenticated&&<p className="mb-3 text-xs text-slate-500">현재 조회만 가능합니다. 입력·저장·분석·제출은 아직 연결되지 않았습니다.</p>}
      <Header eyebrow="DOCUMENTS / 06" title="첨부자료 관리" sub="자료 추가, 분류 변경, 파일 교체, 이력 확인을 한곳에서 관리합니다." />
      {fileReturn&&<Card className="mb-5 flex flex-wrap items-center justify-between gap-3 p-4"><p className="text-[12px]">전체 단계의 공통 자료함 · 입력은 원래 화면에 유지됩니다.</p><button className={S} onClick={()=>goto(fileReturn)}>{fileReturn==='needs'?'개선요구 등록':fileReturn==='finance'?'재무·사업이력':'기업정보 등록 시작'}으로 돌아가기</button></Card>}
      <Card className="mb-5 grid gap-4 p-5 sm:grid-cols-3"><Label name="자료 검색"><input disabled={authenticated} aria-label="자료 검색" className={I} placeholder="파일명 또는 설명" value={fileQuery} onChange={e=>setFileQuery(e.target.value)}/></Label><Label name="자료 유형 필터"><select disabled={authenticated} aria-label="자료 유형 필터" className={I} value={typeFilter} onChange={e=>setTypeFilter(e.target.value)}><option value="">전체 자료 유형</option>{categories.map(c=><option key={c}>{c}</option>)}</select></Label><Label name="등록 단계 필터"><select disabled={authenticated} aria-label="등록 단계 필터" className={I} value={stageFilter} onChange={e=>setStageFilter(e.target.value)}><option value="">전체 등록 단계</option>{Object.entries(stageNames).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></Label></Card>
@@ -469,6 +481,7 @@ export const DATCOV02 = ({session,onLogout}:PortalProps) => {
 
 
     {page === 'review' && <>
+     {authenticated&&<p className="mb-3 text-xs text-slate-500">현재 조회만 가능합니다. 입력·저장·분석·제출은 아직 연결되지 않았습니다.</p>}
      <Header eyebrow="ANALYSIS / 07" title="분석 결과 확인" sub="기업의 개선 요구를 항목별로 구조화하여 검토하고 입력값을 확인합니다."><Chip color="violet">{authenticated?"분석 미연결":"미리보기 예시 · 분석 미연결"}</Chip></Header>
      <Card className="p-6"><div className="mb-5 flex items-center gap-2"><Sparkles size={19} className="text-blue-600" /><h3 className="text-[15px] font-bold">개선요구 항목 정리</h3></div><p className="rounded-xl bg-slate-50 p-4 text-[12px] leading-7 text-slate-600"><b className="text-slate-900">입력 원문 · As-Is</b><br />{problem}</p><div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{problems.map((x, i) => <div className="rounded-xl border border-slate-100 bg-white p-4" key={x.title}><p className="text-[10px] font-bold text-blue-600">문제 {i + 1}</p><h4 className="mt-3 text-[13px] font-bold">{x.title}</h4><p className="mt-2 text-[11px] leading-6 text-slate-500">{x.desc}</p></div>)}</div><p className="mt-5 text-[12px] leading-7"><b>개선목표 · To-Be:</b> {goal}</p><p className="mt-2 text-[11px] leading-6 text-amber-700">{authenticated?"데이터 연결 후 표시됩니다. 실제 AI 분석은 수행하지 않았습니다.":"화면 디자인을 위한 고정 예시입니다. 입력 문장을 분석하지 않으며 실제 AI·사실확인 결과가 아닙니다."}</p><p className="mt-2 whitespace-pre-wrap text-[12px]">제약 및 확인 필요사항: {limits}</p><button className={S+' mt-5 mr-2'} onClick={()=>goto('needs')}>개선요구 수정</button><button disabled={authenticated} className={P + ' mt-5'} onClick={() => {
                 setInputChecked(true);goto('home');notify('입력내용을 미리보기에서 확인했습니다. 실제 DATCO 전송은 미연결입니다.');
@@ -477,6 +490,7 @@ export const DATCOV02 = ({session,onLogout}:PortalProps) => {
 
 
     {page === 'requests' && <>
+     {authenticated&&<p className="mb-3 text-xs text-slate-500">현재 조회만 가능합니다. 입력·저장·분석·제출은 아직 연결되지 않았습니다.</p>}
      <Header eyebrow="REQUESTS / 08" title="보완 요청함" sub="추가로 필요한 자료와 담당자 요청사항을 확인하고 보완할 수 있습니다." />
      {authenticated?<Card className="p-6">데이터 연결 후 표시됩니다.</Card>:<>
      <Card className="p-6"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-xl bg-amber-50 text-amber-600"><MessageSquareText size={21} /></div><div><h3 className="text-[15px] font-bold">공정 운영자료 추가 요청</h3><p className="mt-1 text-[11px] text-slate-500">제1사업장 · 요청 내용 예시</p></div></div><Chip color={requestSent ? 'green' : 'amber'}>{requestSent ? '제출 완료' : '응답 필요'}</Chip></div><p className="mt-5 text-[12px] leading-7 text-slate-600">현재 재고 입출고 기록 방식과 생산 작업실적 관리 방법을 확인할 수 있는 자료를 등록해 주세요.</p><div className="mt-6 flex flex-wrap justify-end gap-2"><button className={S} onClick={() => goto('files')}><Paperclip size={15} /> 자료 등록</button><button disabled={authenticated} className={P} onClick={() => {
@@ -487,6 +501,7 @@ export const DATCOV02 = ({session,onLogout}:PortalProps) => {
 
 
     {page === 'proposals' && <>
+     {authenticated&&<p className="mb-3 text-xs text-slate-500">현재 조회만 가능합니다. 입력·저장·분석·제출은 아직 연결되지 않았습니다.</p>}
      <Header eyebrow="PROPOSALS / 09" title={proposalOpen ? '제안서 상세 · 확인' : '받은 제안서'} sub="서비스 개선 방향, 정부지원사업 후보와 제안 범위를 확인하세요."><Chip color={decision === '확인' ? 'green' : 'amber'}>{authenticated?'데이터 미연결':decision === '미확인' ? '검토 대기' : decision}</Chip></Header>
      {authenticated?<Card className="p-6">데이터 연결 후 표시됩니다.</Card>:<>
      {!proposalOpen ? <Card className="p-6"><div className="flex flex-wrap items-center gap-4"><div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-blue-50 text-blue-600"><FileCheck2 size={27} /></div><div className="min-w-[210px] flex-1"><h3 className="text-[16px] font-bold">재고·생산·품질관리 개선 제안서</h3><p className="mt-2 text-[12px] text-slate-500">{data.company || '㈜한빛정밀'} · {data.site} · 제안서 v1.0</p><div className="mt-2"><Chip color="blue">사전 준비된 예시 제안서</Chip></div></div><button className={P} onClick={() => setProposalOpen(true)}>제안서 열람 <ArrowRight size={15} /></button></div></Card> : <>
