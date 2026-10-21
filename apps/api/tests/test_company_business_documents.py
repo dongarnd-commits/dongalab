@@ -24,5 +24,11 @@ def test_plain_parser_keeps_source_and_separates_analysis_from_profile():
 def test_actual_financial_korean_scan_uses_existing_local_ocr():
     from business_sources import financial_scan
     p=parse_business('TEST-finance-scan.pdf',financial_scan(),'finance');r=entries(p,'finance')
-    assert r and r[0]['year']==2023 and r[0]['revenue']=='12340000'
+    assert len(r)==1 and r[0]['year']==2023 and r[0]['revenue']=='12340000'
     assert any(l.page==1 and 'OCR' in l.descriptor for l in p.locations)
+
+    # OCR label errors remain unconfirmed; never guess a financial field.
+    from app.company.documents import Location
+    from dataclasses import replace
+    unreadable=replace(p,locations=(Location(descriptor='TEST OCR label error',page=1,text='연도: 2023\n매출맥: 12340000'),))
+    assert entries(unreadable,'finance')==[]

@@ -22,6 +22,7 @@ def sources(directory):
 def financial_scan():
     from PIL import Image,ImageDraw,ImageFont
     font=next(p for p in [Path('C:/Windows/Fonts/malgun.ttf'),Path('/usr/share/fonts/truetype/nanum/NanumGothic.ttf')] if p.exists())
-    image=Image.new('RGB',(1654,2339),'white');draw=ImageDraw.Draw(image);f=ImageFont.truetype(str(font),44)
+    # Fixed basic layout avoids platform-dependent shaping in this readable control scan.
+    image=Image.new('RGB',(1654,2339),'white');draw=ImageDraw.Draw(image);f=ImageFont.truetype(str(font),44,layout_engine=ImageFont.Layout.BASIC)
     for i,line in enumerate(['TEST 합성 재무자료','연도 : 2023','매출액 : 12340000','기준기간 : 2023','단위 : 원','통화 : KRW']):draw.text((100,120+i*160),line,font=f,fill='black')
     out=BytesIO();image.save(out,format='PDF',resolution=200);image.close();return out.getvalue()
