@@ -103,8 +103,9 @@ def download(file_id:str,session:DB,who=Depends(actor)):
  f,raw=application(session).download(who,file_id)
  return Response(raw,media_type=f['media_type'],headers={'Content-Disposition':"attachment; filename*=UTF-8''"+quote(f['name'],safe=''),'X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; sandbox",'Cache-Control':'no-store'})
 @router.post('/files/{file_id}/parse',response_model=dict,dependencies=[Depends(trusted_origin)],responses=errors(401,403,404))
-def parse(file_id:str,session:DB,who=Depends(actor),registration:bool=False):
- r=application(session).parse(who,file_id,registration=registration);session.commit();return r
+def parse(file_id:str,session:DB,who=Depends(actor),registration:bool=False,purpose:Literal['finance','history']|None=None):
+ if registration and purpose:raise Denied('INVALID_REQUEST',422)
+ r=application(session).parse(who,file_id,registration=registration,purpose=purpose);session.commit();return r
 @router.post('/{company_id}/evidence',response_model=dict,dependencies=[Depends(trusted_origin)],responses=errors(401,403,404,422))
 def evidence(company_id:str,body:Evidence,session:DB,who=Depends(actor)):
  r=application(session).manual_evidence(who,company_id,body.file_id,body.site_id,body.descriptor,body.transcription);session.commit();return r

@@ -9,9 +9,9 @@ export default function Login() {
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
   return <main className="workspace-login">
-    <p className="workspace-eyebrow">DATCO WORKSPACE</p>
-    <h1>DATCO 정부지원사업 운영관리 시스템</h1>
-    <p>기업정보 제출부터 검토·매칭·제안서까지, 내 역할에 맞는 업무를 시작하세요.</p>
+    <p className="workspace-eyebrow">DATCO ONE</p>
+    <h1>DATCO ONE 로그인</h1>
+    <p>계정으로 로그인하고 업무를 시작하세요.</p>
     <form aria-busy={busy} onSubmit={async e=>{
       e.preventDefault(); if(busy)return;
       setBusy(true);setError("");

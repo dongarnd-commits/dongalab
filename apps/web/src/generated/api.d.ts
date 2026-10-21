@@ -6017,6 +6017,7 @@ export interface operations {
         parameters: {
             query?: {
                 registration?: boolean;
+                purpose?: ("finance" | "history") | null;
             };
             header?: never;
             path: {

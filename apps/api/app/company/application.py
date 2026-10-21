@@ -103,10 +103,13 @@ class CompanyApplication:
   # approval-scoped sharing relation; approved Proposal documents use /proposal.
   self.role(who,'COMPANY_EDITOR','DATCO_OPERATOR')
   return f,self.files.read(f['storage_key'],f['digest'])
- def parse(self,who,file_id,registration=False):
+ def parse(self,who,file_id,registration=False,purpose=None):
   f=self.get(S.files,file_id);self.scope(who,f['company_id'],True)
   try:
-   if registration:
+   if purpose:
+    from app.company.business_documents import parse_business
+    p=parse_business(f['name'],self.files.read(f['storage_key'],f['digest']),purpose)
+   elif registration:
     from app.company.registration import parse_registration
     p=parse_registration(f['name'],self.files.read(f['storage_key'],f['digest']))
    else:p=parse_document(f['name'],self.files.read(f['storage_key'],f['digest']))
@@ -141,7 +144,11 @@ class CompanyApplication:
      aid=identity()
      c=self.add(S.candidates,company_id=f['company_id'],site_id=f['site_id'],evidence_id=e['id'],field=field,value=value,period=period,unit=unit,currency=currency,valid_from=date.today().isoformat(),mode='RULE_BASED_EXTRACTION',actor_id=who.id,analysis_candidate_id=aid)
      self.add(N.candidates,id=aid,run_id=analysis_run['id'],analysis_kind='COMPANY_FACT_EXTRACTION',company_candidate_id=c['id'],kind='COMPANY_FACT_EXTRACTION',content=c['value'],reason='Exact labelled source value; rule-based candidate, not confirmed fact')
-  self.record(who,f['company_id'],'PARSE_COMPANY_FILE',file_id=file_id);return run
+  self.record(who,f['company_id'],'PARSE_COMPANY_FILE',file_id=file_id)
+  if purpose:
+   from app.company.business_documents import entries
+   return dict(run,entries=entries(p,purpose))
+  return run
  def manual_evidence(self,who,cid,file_id,site_id,descriptor,transcription):
   self.scope(who,cid,True);f=self.get(S.files,file_id);self.site(cid,site_id)
   if f['company_id']!=cid or (f['site_id'] and f['site_id']!=site_id):raise Denied('OBJECT_NOT_FOUND',404)

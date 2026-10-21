@@ -12,7 +12,7 @@ for(const role of ['editor','operator','admin'] as const)test('Slice0a real logi
  page.on('request',r=>{if(r.method()!=='GET'&&!r.url().includes('/api/notice/session'))writes.push(r.method()+' '+new URL(r.url()).pathname);});
  await login(page,role);await page.screenshot({path:test.info().outputPath('landing-'+role+'.png'),fullPage:true});const actor=await(await page.request.get('/api/notice/session')).json();
  expect(actor.role).toBe({editor:'COMPANY_EDITOR',operator:'DATCO_OPERATOR',admin:'DATCO_ADMIN'}[role]);
- await expect(page.getByText(context().accounts[role],{exact:true}).first()).toBeVisible();
+ const identity=JSON.parse((await page.locator('#portal-identity').textContent())!);expect(identity.name).toBe(context().accounts[role]);expect(identity.id).toBe(actor.id);expect(identity.role).toBe(actor.role);if(role==='editor'){await expect(page.getByText('기업 사용자',{exact:true}).first()).toBeVisible();await expect(page.getByText(context().accounts[role],{exact:true})).toHaveCount(0);}else await expect(page.getByText(context().accounts[role],{exact:true}).first()).toBeVisible();
  expect((await page.context().cookies()).find(c=>c.name==='datco_session')?.httpOnly).toBe(true);
  expect(await page.evaluate(()=>localStorage.length)).toBe(0);
  await page.reload();await expect(page.getByRole('button',{name:'로그아웃',exact:true}).first()).toBeVisible();
@@ -25,7 +25,7 @@ for(const role of ['editor','operator','admin'] as const)test('Slice0a real logi
    await expect(page.getByText('공정 운영자료 추가 요청',{exact:true})).toHaveCount(0);
   }
   await page.locator('aside').getByRole('button',{name:'기업 · 사업장 관리',exact:true}).click();
-  const allowed=await(await page.request.get('/api/company')).json();if(allowed.length>1)await page.getByLabel('업무 기업 선택',{exact:true}).selectOption(allowed[0].id);await expect(page.getByRole('button',{name:'기업정보 저장',exact:true})).toBeEnabled();
+  const allowed=await(await page.request.get('/api/company')).json();if(allowed.length>1){const own=page.getByLabel('소속 기업',{exact:true});if(await own.isVisible())await own.selectOption(allowed[0].id);else await page.getByLabel('업무 기업 선택',{exact:true}).selectOption(allowed[0].id);}await expect(page.getByRole('button',{name:'기업정보 저장',exact:true})).toBeEnabled();
  }else{
   const menu=page.getByRole('navigation',{name:role==='operator'?'운영자 업무 메뉴':'관리자 메뉴'});
   const buttons=await menu.getByRole('button').all();expect(buttons.length).toBe(12);

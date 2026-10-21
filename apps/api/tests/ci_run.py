@@ -72,7 +72,7 @@ def main():
     time.sleep(.1)
    worker=json.loads((out/'worker-ready.json').read_text());assert worker['database']==db and worker['db_user']==role
    start('web',['npm','run','dev','--','--port',str(web_port)],WEB);wait(origin)
-   run(['npm','run','test:e2e','--','tests/smoke.spec.ts','tests/notice.spec.ts','tests/proposal.spec.ts','tests/company.spec.ts','tests/workspace.spec.ts','tests/company-document-first.spec.ts','tests/role-portals.spec.ts','tests/portal-context.spec.ts','tests/portal-stability.spec.ts','tests/portal-handoff.spec.ts','tests/registration.spec.ts','--workers=1','--reporter=line'],WEB)
+   run(['npm','run','test:e2e','--','tests/smoke.spec.ts','tests/notice.spec.ts','tests/proposal.spec.ts','tests/company.spec.ts','tests/workspace.spec.ts','tests/company-document-first.spec.ts','tests/role-portals.spec.ts','tests/portal-context.spec.ts','tests/portal-stability.spec.ts','tests/portal-handoff.spec.ts','tests/registration.spec.ts','tests/business-ux.spec.ts','--workers=1','--reporter=line'],WEB)
  except Exception:
   for log in logs:log.flush()
   for name in ('api','worker','web'):

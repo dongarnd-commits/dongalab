@@ -46,7 +46,7 @@ export function useBusinessContext(session:PortalIdentity){
  return {state,refresh:()=>void load(),choose};
 }
 export type BusinessContext=ReturnType<typeof useBusinessContext>;
-export function CompanyContextStatus({business}:{business:BusinessContext}){const {state,choose}=business;if(state.status==='ready')return null;return <p role={state.status==='error'?'alert':'status'}>{state.status==='error'?state.error:state.status==='empty'?'접근 가능한 기업이 없습니다.':'조회 중입니다.'}{state.status==='error'&&<button type="button" onClick={()=>choose({company:null,site:null,site_version:null,improvement:null,version:null})}>선택 초기화</button>}</p>;}
+export function CompanyContextStatus({business,hideEmpty=false}:{business:BusinessContext;hideEmpty?:boolean}){const {state,choose}=business;if(state.status==='ready'||hideEmpty&&state.status==='empty')return null;return <p role={state.status==='error'?'alert':'status'}>{state.status==='error'?state.error:state.status==='empty'?'접근 가능한 기업이 없습니다.':'조회 중입니다.'}{state.status==='error'&&<button type="button" onClick={()=>choose({company:null,site:null,site_version:null,improvement:null,version:null})}>선택 초기화</button>}</p>;}
 export function BusinessContextBar({business,view='operator',onNavigate,embedded=false}:{business:BusinessContext;embedded?:boolean;view?:'summary'|'sites'|'improvements'|'operator';onNavigate?:(page:'company'|'needs')=>void}){
  const {state,choose,refresh}=business,value=state.value,selected=selectedContext(value);
  const sites=view==='sites'||view==='improvements'||view==='operator',needs=view==='improvements'||view==='operator';

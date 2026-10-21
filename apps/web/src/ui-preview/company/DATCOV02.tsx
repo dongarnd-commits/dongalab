@@ -151,6 +151,7 @@ export const DATCOV02 = ({session,onLogout,business,workflow}:PortalProps) => {
   const [password, setPassword] = useState('');
   const [loginErr, setLoginErr] = useState('');
   const [page, setPage] = useState<Screen>(() => {const p=new URLSearchParams(window.location.search).get('screen');return menu.flatMap(g=>g.items).some(x=>x.id===p)?p as Screen:'home';});
+  const companyUserLabel=session?(/^(?:TEST_|MANUAL_)/i.test(session.name)?'기업 사용자':session.name):'';
   const [mobileMenu, setMobileMenu] = useState(false);
   const [previewData, setData] = useState<FieldData>(preset);
   const [sites, setSites] = useState(authenticated?[]:[{id:1,name:preset.site,address:'',person:'',open:true}]);
@@ -311,12 +312,12 @@ export const DATCOV02 = ({session,onLogout,business,workflow}:PortalProps) => {
    <div className="flex h-[75px] items-center gap-3 border-b border-slate-100 px-5"><div className="grid h-9 w-9 place-items-center rounded-xl bg-[#1767C7] text-white"><Layers3 size={19} /></div><div><b className="text-[17px] tracking-tight">DATCO <span className="text-[#1767C7]">ONE</span></b><p className="text-[10px] text-slate-400">정부지원사업 운영관리</p></div><button className="ml-auto lg:hidden" onClick={() => setMobileMenu(false)} aria-label="메뉴 닫기"><X size={20} /></button></div>
    <div className="min-h-0 flex-1 overflow-y-auto px-3 py-5">{menu.map(g => <div key={g.head} className="mb-6"><p className="mb-2 px-3 text-[10px] font-bold tracking-[.12em] text-slate-400">{g.head}</p>{g.items.map(x => <button key={x.id} onClick={() => goto(x.id)} className={'my-0.5 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[12px] font-semibold transition-colors ' + (page === x.id ? 'bg-[#EAF3FF] text-[#1465BF]' : 'text-slate-600 hover:bg-slate-50')}><x.icon size={18} /><span className="flex-1">{x.name}</span>{page === x.id && <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />}{x.id === 'requests' && !authenticated && !requestSent && <span className="rounded-full bg-amber-100 px-2 text-[10px] text-amber-700">1</span>}</button>)}</div>)}</div>
    <div className="m-3 rounded-xl border border-slate-100 bg-[#F7F9FC] p-4"><div className="flex items-center gap-2"><ShieldCheck className="text-[#1767C7]" size={17} /><span className="text-[12px] font-semibold">기업정보 보호</span></div><p className="mt-2 text-[11px] leading-6 text-slate-500">문서 추출 후보와 확정된 기업정보를 구분합니다.</p></div>
-   <div className="flex items-center gap-3 border-t border-slate-100 px-5 py-4"><div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-blue-50 text-blue-600"><UserRound size={18} /></div><div className="min-w-0 flex-1"><p title={session?.name} className="truncate text-[12px] font-bold">{session?.name??"수요기업 사용자"}</p><p className="truncate text-[11px] text-slate-400">{session?.role??"회사 담당자"}</p></div><button onClick={logout} className="rounded-lg p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-600" title="로그아웃" aria-label="로그아웃"><LogOut size={19} /></button></div>
+   <div className="flex items-center gap-3 border-t border-slate-100 px-5 py-4"><div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-blue-50 text-blue-600"><UserRound size={18} /></div><div className="min-w-0 flex-1"><p title={companyUserLabel} className="truncate text-[12px] font-bold">{companyUserLabel||"수요기업 사용자"}</p><p className="truncate text-[11px] text-slate-400">{authenticated?"수요기업 담당자":"회사 담당자"}</p></div><button onClick={logout} className="rounded-lg p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-600" title="로그아웃" aria-label="로그아웃"><LogOut size={19} /></button></div>
   </aside>
   <div className="flex min-w-0 flex-1 flex-col">
-   <header className="flex h-[75px] shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-8"><div className="flex items-center gap-3"><button className="rounded-lg p-2 text-slate-500 lg:hidden" onClick={() => setMobileMenu(true)} aria-label="메뉴 열기"><Menu size={20} /></button><span className="hidden text-[12px] text-slate-400 sm:block">수요기업 포털</span><ChevronRight size={15} className="hidden text-slate-300 sm:block" /><span className="text-[13px] font-bold">{menu.flatMap(x => x.items).find(x => x.id === page)?.name}</span></div><div className="flex items-center gap-3"><Chip color="blue">{authenticated?<span className="block max-w-[160px] truncate" title={session.name}>{session.name}</span>:data.company || '기업정보 입력 중'}</Chip><div className="grid h-8 w-8 place-items-center rounded-full bg-[#EAF3FF] text-[12px] font-bold text-[#1767C7]">기</div><button onClick={logout} className={S + ' hidden sm:inline-flex'}><LogOut size={15} /> 로그아웃</button></div></header>
+   <header className="flex h-[75px] shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-8"><div className="flex items-center gap-3"><button className="rounded-lg p-2 text-slate-500 lg:hidden" onClick={() => setMobileMenu(true)} aria-label="메뉴 열기"><Menu size={20} /></button><span className="hidden text-[12px] text-slate-400 sm:block">수요기업 포털</span><ChevronRight size={15} className="hidden text-slate-300 sm:block" /><span className="text-[13px] font-bold">{menu.flatMap(x => x.items).find(x => x.id === page)?.name}</span></div><div className="flex items-center gap-3"><Chip color="blue">{authenticated?<span className="block max-w-[160px] truncate" title={companyUserLabel}>{companyUserLabel}</span>:data.company || '기업정보 입력 중'}</Chip><div className="grid h-8 w-8 place-items-center rounded-full bg-[#EAF3FF] text-[12px] font-bold text-[#1767C7]">기</div><button onClick={logout} className={S + ' hidden sm:inline-flex'}><LogOut size={15} /> 로그아웃</button></div></header>
    <main ref={scroller} className="min-h-0 flex-1 overflow-y-auto"><div className="mx-auto max-w-[1190px] px-4 pb-14 pt-7 md:px-8">
-    {business&&<CompanyContextStatus business={business}/>}
+    {business&&<CompanyContextStatus business={business} hideEmpty/>}
      {toaster && <div role="status" className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-[12px] text-blue-800"><div className="flex items-center gap-2"><Info size={16} /><span>{toaster}</span></div><button onClick={() => setToaster('')} aria-label="알림 닫기"><X size={16} /></button></div>}
 
 
@@ -333,7 +334,7 @@ export const DATCOV02 = ({session,onLogout,business,workflow}:PortalProps) => {
                   t: '개선요구 작성',
                   s: 'needs'
                 }, {
-                  t: '관련자료 제출',
+                  t: authenticated?'첨부자료 확인':'관련자료 제출',
                   s: 'files'
                 }, {
                   t: '분석·입력내용 확인',
@@ -342,7 +343,7 @@ export const DATCOV02 = ({session,onLogout,business,workflow}:PortalProps) => {
                   t: '결과·제안서 확인',
                   s: 'proposals'
                 }].map((x, i) => <button key={x.t} onClick={() => goto(x.s as Screen)} className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-4 text-left hover:bg-blue-50 sm:flex-col sm:items-start"><span className={'grid h-7 w-7 shrink-0 place-items-center rounded-full text-[11px] font-bold ' + (progress[i] ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-slate-500')}>{progress[i] ? <Check size={15} /> : i + 1}</span><span className="text-[11px] font-semibold">{x.t}</span></button>)}</div></Card>
-     <p className="mt-3 text-[11px] text-amber-700">{authenticated?"단계별 완료율을 추정하지 않습니다. 저장·제출 내역은 실제 서버 기록을 확인하세요.":"진행 표시는 미리보기 세션 기준입니다. 실제 저장·분석·전송 완료를 의미하지 않습니다."}</p>
+     <p className="mt-3 text-[11px] text-amber-700">{!authenticated&&"진행 표시는 미리보기 세션 기준입니다. 실제 저장·분석·전송 완료를 의미하지 않습니다."}</p>
      <div className="mt-5 grid gap-4 lg:grid-cols-2"><Card className="p-6"><h3 className="mb-4 text-[15px] font-bold">자주 사용하는 업무</h3><div className="grid gap-3 sm:grid-cols-2">{[{
                     t: '기업정보 관리',
                     d: '기본정보·사업장·재무',
@@ -363,7 +364,7 @@ export const DATCOV02 = ({session,onLogout,business,workflow}:PortalProps) => {
                     d: '열람·수정 요청·확인',
                     i: FileCheck2,
                     s: 'proposals'
-                  }].map(x => <button key={x.s} onClick={() => goto(x.s as Screen)} className="flex gap-3 rounded-xl border border-slate-100 p-4 text-left hover:border-blue-200 hover:bg-blue-50/20"><div className="grid h-9 w-9 place-items-center rounded-lg bg-blue-50 text-blue-600"><x.i size={18} /></div><div><p className="text-[12px] font-bold">{x.t}</p><p className="mt-1 text-[11px] text-slate-400">{x.d}</p></div></button>)}</div></Card><Card className="p-6"><h3 className="mb-4 text-[15px] font-bold">확인할 업무</h3>{[{
+                  }].map(x => <button key={x.s} onClick={() => goto(x.s as Screen)} className="flex gap-3 rounded-xl border border-slate-100 p-4 text-left hover:border-blue-200 hover:bg-blue-50/20"><div className="grid h-9 w-9 place-items-center rounded-lg bg-blue-50 text-blue-600"><x.i size={18} /></div><div><p className="text-[12px] font-bold">{x.t}</p><p className="mt-1 text-[11px] text-slate-400">{authenticated&&x.s==='files'?'등록자료 조회·원본 다운로드':x.d}</p></div></button>)}</div></Card><Card className="p-6"><h3 className="mb-4 text-[15px] font-bold">확인할 업무</h3>{[{
                   t: '보완자료 요청 확인',
                   d: '추가 자료 제출 및 답변',
                   s: 'requests'
@@ -531,8 +532,8 @@ export const DATCOV02 = ({session,onLogout,business,workflow}:PortalProps) => {
     </>}
 
 
-    <nav aria-label={authenticated?"업무 화면 이동":"미리보기 화면 이동"} className="mt-6 flex flex-wrap items-center gap-3"><button className={S} onClick={()=>window.history.back()}>이전 화면</button><button className={S} onClick={()=>goto('home')}>홈으로</button><button className={P} onClick={()=>{const list=menu.flatMap(g=>g.items);goto(list[(list.findIndex(x=>x.id===page)+1)%list.length].id);}}>다음 화면</button>{!(workflow&&['onboarding','extraction'].includes(page))&&<span className="text-[11px] text-amber-700">{authenticated?'실제 서버 조회 · 연결된 기능만 처리':'미리보기 데이터 · 실제 업무 처리 없음'}</span>}</nav>
-    <footer className="mt-9 flex flex-wrap justify-between gap-3 border-t border-slate-200 pt-5 text-[10px] leading-5 text-slate-400"><span>DATCO ONE · 수요기업 포털</span>{!(workflow&&['onboarding','extraction'].includes(page))&&<span>{workflow?'저장·제출 버튼이 연결된 기능은 실제 서버에 기록됩니다. 외부 AI·DMP와 최종 검토는 미연결입니다.':'화면 체험 환경의 입력값은 서버에 저장되지 않습니다. 실제 SSO·AI·DMP 연동은 별도 구축 대상입니다.'}</span>}</footer>
+    <nav aria-label={authenticated?"업무 화면 이동":"미리보기 화면 이동"} className="mt-6 flex flex-wrap items-center gap-3"><button className={S} onClick={()=>window.history.back()}>이전 화면</button><button className={S} onClick={()=>goto('home')}>홈으로</button><button className={P} onClick={()=>{const list=menu.flatMap(g=>g.items);goto(list[(list.findIndex(x=>x.id===page)+1)%list.length].id);}}>다음 화면</button>{!(workflow&&['home','onboarding','extraction','company','finance','needs','files'].includes(page))&&<span className="text-[11px] text-amber-700">{authenticated?'실제 서버 조회 · 연결된 기능만 처리':'미리보기 데이터 · 실제 업무 처리 없음'}</span>}</nav>
+    <footer className="mt-9 flex flex-wrap justify-between gap-3 border-t border-slate-200 pt-5 text-[10px] leading-5 text-slate-400"><span>DATCO ONE · 수요기업 포털</span>{!(workflow&&['home','onboarding','extraction','company','finance','needs','files'].includes(page))&&<span>{workflow?'저장·제출 버튼이 연결된 기능은 실제 서버에 기록됩니다. 외부 AI·DMP와 최종 검토는 미연결입니다.':'화면 체험 환경의 입력값은 서버에 저장되지 않습니다. 실제 SSO·AI·DMP 연동은 별도 구축 대상입니다.'}</span>}</footer>
    </div></main>
   </div>
   {confirm && <div className="fixed inset-0 z-[80] grid place-items-center bg-slate-900/50 p-4"><div className="w-full max-w-[420px] rounded-3xl bg-white p-7 shadow-2xl" role="dialog" aria-modal="true" aria-label="제안서 확인"><div className="mb-3 grid h-12 w-12 place-items-center rounded-xl bg-blue-50 text-blue-600"><FileCheck2 size={25} /></div><h2 className="text-[19px] font-bold">제안서 v1.0을 확인하시겠습니까?</h2><p className="mt-3 text-[12px] leading-7 text-slate-500">이 동작은 화면의 확인 상태만 변경하며 DATCO 운영자에게 전송하거나 실제 승인 처리하지 않습니다.</p><div className="mt-6 flex justify-end gap-2"><button disabled={authenticated} className={S} onClick={() => setConfirm(false)}>취소</button><button disabled={authenticated} className={P} onClick={() => {

@@ -21,7 +21,7 @@ test('UI1 CASE-01 company entry, password visibility, failed login and permissio
   await page.goto('/company');
   expect((await page.request.get('/api/company')).status()).toBe(401);
   await page.goto('/login');
-  await expect(page.getByRole('heading',{name:'DATCO 정부지원사업 운영관리 시스템'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'DATCO ONE 로그인'})).toBeVisible();
   await page.screenshot({path:test.info().outputPath('ui1-login.png'),fullPage:true});
   await page.getByLabel('아이디',{exact:true}).fill(c.accounts.editor);
   const password=page.getByLabel('비밀번호',{exact:true});

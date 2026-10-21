@@ -40,3 +40,22 @@ def test_scan_original_and_ocr_evidence_survive_registration_and_operator_read(e
     o=call(e,'operator','/company/'+cid)
     for key in ['company','inputs','files','evidence','candidates','facts']:assert d[key]==o[key]
     result=e['clients']['operator'].get('/company/files/'+f['id']+'/download');assert sha256(result.content).hexdigest()==f['digest']
+
+
+def test_business_document_mode_actual_http_profile_linked_improvement_and_scope(env):
+    from test_company_workflow import fresh
+    e=env;c,site,p=fresh(e);cid=c['id'];raw='연도: 2024\n매출액: 12345\n기준기간: 2024\n단위: 원\n통화: KRW'.encode()
+    headers={'Origin':get_settings().web_origin,'X-Upload-Name':'TEST-finance.txt'}
+    r=e['clients']['editor'].post('/company/'+cid+'/files',content=raw,headers=headers);assert r.status_code==200;f=r.json()
+    for who,status in [('other',404),('approver',403),('admin',403)]:call(e,who,'/company/files/'+f['id']+'/parse?purpose=finance',{},status=status)
+    analysis=call(e,'editor','/company/files/'+f['id']+'/parse?purpose=finance',{});assert analysis['error'] is None
+    assert analysis['entries']==[dict(year=2024,revenue='12345',period='2024',unit='원',currency='KRW')]
+    before=call(e,'editor','/company/'+cid);assert before['inputs'][-1]['data']['financials']==p['financials'];assert before['facts']==[]
+    updated={**before['inputs'][-1]['data'],'financials':analysis['entries']};call(e,'editor','/company/'+cid+'/profile',dict(data=updated,expected_ordinal=before['company']['current_ordinal']))
+    after=call(e,'editor','/company/'+cid);assert after['inputs'][-1]['data']['financials']==analysis['entries'];assert after['inputs'][0]['data']['financials']==p['financials']
+    ev=call(e,'editor','/company/'+cid+'/evidence',dict(file_id=f['id'],site_id=site['id'],descriptor='개선요구 첨부자료',transcription='TEST 사용자 첨부자료 연결'))
+    data=dict(title='TEST 문제',site_id=site['id'],original_text='TEST As-Is\nTEST To-Be',as_is='TEST As-Is',to_be='TEST To-Be',evidence_ids=[ev['id']])
+    v=call(e,'editor','/company/'+cid+'/improvements',dict(data=data));call(e,'editor','/company/improvements/'+v['id']+'/actions',dict(action='SUBMIT',note='TEST 사용자가 제출 확인'))
+    d=call(e,'operator','/company/'+cid);root=next(i for i in d['improvements'] if i['id']==v['improvement_id']);assert root['state']=='SUBMITTED';assert root['versions'][-1]['data']['evidence_ids']==[ev['id']]
+    assert next(x for x in d['evidence'] if x['id']==ev['id'])['file_id']==f['id'];assert sha256(e['clients']['operator'].get('/company/files/'+f['id']+'/download').content).hexdigest()==f['digest']
+    call(e,'editor','/company/files/'+f['id']+'/parse?registration=true&purpose=finance',{},status=422)
