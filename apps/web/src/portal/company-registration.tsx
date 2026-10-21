@@ -38,8 +38,8 @@ export function InitialRegistration({w,goto}:{w:CompanyWorkflow;goto:(s:string)=
     for(const c of extracted){const key=c.field==='company_name'?'name':c.field;if(['name','business_number','representative'].includes(key)&&!profile[key as keyof Profile])Object.assign(profile,{[key]:c.value});if(c.field==='address'&&!address)address=c.value;}
     const unique=(label:string)=>Array.from(new Set(extracted.filter(c=>c.field==='industry'&&c.source_label===label).map(c=>c.value))).join('\n');
     businessType=businessType||unique('업태');businessItems=businessItems||unique('종목');
-    const unspecified=extracted.filter(c=>c.field==='industry'&&!c.source_label).map(c=>c.value).join('\n');
-    profile.industry=industry(businessType,businessItems)||profile.industry||unspecified;
+    // Unclassified industry text remains in the source; never save an invisible value.
+    profile.industry=industry(businessType,businessItems);
     update({documents,profile,address,businessType,businessItems});
    }
   }catch(e){if(!controller.signal.aborted)update({error:e instanceof Error?e.message:'문서 분석을 완료하지 못했습니다.'});}
