@@ -2,30 +2,56 @@ import {useState,useRef,useEffect} from 'react';
 import type {CompanyWorkflow} from './workflow';
 import {emptyProfile,companyReasons,type Profile,type CompanyData} from '../company/client';
 import {BusinessCard,BusinessField,BusinessHeading,input,primary,secondary} from './business-ui';
-type Candidate={field:string;value:string;page:number|null;descriptor:string;text:string};
-type Document={file:File;kind:string;digest?:string;candidates:Candidate[];locations:{descriptor:string;text:string;page:number|null}[];error:string;fileId?:string;parsed?:boolean};
-type Draft={mode:string;profile:Profile;documents:Document[];reviewed:boolean;created:string;error:string;address:string;siteId:string;createSite:boolean};
-const blank=():Draft=>({mode:'',profile:structuredClone(emptyProfile),documents:[],reviewed:false,created:'',error:'',address:'',siteId:'',createSite:false});
-const names:Record<string,string>={company_name:'기업명',business_number:'사업자등록번호',representative:'대표자',industry:'업종·업태',address:'사업장 소재지',opened_on:'개업일(원문 참고)'};
-function validNumber(value:string){if(!/^(?:[0-9]{10}|[0-9]{3}-[0-9]{2}-[0-9]{5})$/.test(value.trim()))return false;const n=value.trim().replaceAll('-','');if(!/^[0-9]{10}$/.test(n))return false;const d=[...n].map(Number),weights=[1,3,7,1,3,7,1,3,5];const total=weights.reduce((s,w,i)=>s+w*d[i],0)+Math.floor(d[8]*5/10);return new Set(n).size>1&&(10-total%10)%10===d[9];}
+
+type Candidate={field:string;source_label?:string;value:string;page:number|null;descriptor:string;text:string};
+type Document={file:File;digest?:string;candidates:Candidate[];locations:{descriptor:string;text:string;page:number|null}[];error:string;analyzed?:boolean;fileId?:string;parsed?:boolean};
+type Draft={mode:string;profile:Profile;documents:Document[];created:string;error:string;address:string;siteId:string;businessType:string;businessItems:string;saving:boolean};
+const blank=():Draft=>({mode:'documents',profile:structuredClone(emptyProfile),documents:[],created:'',error:'',address:'',siteId:'',businessType:'',businessItems:'',saving:false});
+const names:Record<string,string>={company_name:'기업명',business_number:'사업자등록번호',representative:'대표자',industry:'업종',address:'사업장 소재지'};
+const industry=(businessType:string,businessItems:string)=>[businessType&&'업태: '+businessType,businessItems&&'종목: '+businessItems].filter(Boolean).join('\n');
+function validNumber(value:string){if(!/^(?:[0-9]{10}|[0-9]{3}-[0-9]{2}-[0-9]{5})$/.test(value.trim()))return false;const n=value.trim().replaceAll('-','');const d=[...n].map(Number),weights=[1,3,7,1,3,7,1,3,5];const total=weights.reduce((s,w,i)=>s+w*d[i],0)+Math.floor(d[8]*5/10);return new Set(n).size>1&&(10-total%10)%10===d[9];}
+function Original({file}:{file:File}){
+ const [url,setUrl]=useState('');useEffect(()=>{const value=URL.createObjectURL(file);const t=setTimeout(()=>setUrl(value),0);return()=>{clearTimeout(t);URL.revokeObjectURL(value);};},[file]);
+ return <a className="text-blue-700 underline" href={url||undefined} target="_blank" rel="noopener noreferrer">{file.name} 원본 열기</a>;
+}
 export function InitialRegistration({w,goto}:{w:CompanyWorkflow;goto:(s:string)=>void}){
- // Actor-memory draft intentionally survives initial Company selection. Never browser storage.
- const request=useRef<AbortController|null>(null);useEffect(()=>()=>request.current?.abort(),[]);
- const [draft,setState]=useState<Draft>(()=>w.drafts.get('initial-registration') as Draft??blank()),[busy,setBusy]=useState(false),[drag,setDrag]=useState(false),[kind,setKind]=useState('사업자등록증');
+ // Actor-memory only: survives the initial company selection, never browser storage.
+ const request=useRef<AbortController|null>(null),continuing=useRef(false);useEffect(()=>()=>request.current?.abort(),[]);
+ const [draft,setState]=useState<Draft>(()=>w.drafts.get('initial-registration') as Draft??blank()),[busy,setBusy]=useState(false),[drag,setDrag]=useState(false);
  const update=(patch:Partial<Draft>)=>{const next={...(w.drafts.get('initial-registration') as Draft??draft),...patch};w.drafts.set('initial-registration',next);setState(next);return next;};
- const setProfile=(patch:Partial<Profile>)=>update({profile:{...draft.profile,...patch},reviewed:false});
- function add(files:File[]){if(files.length+draft.documents.length>2||files.some(f=>!f.size||f.size>20*1024*1024||!f.name.toLowerCase().endsWith('.pdf'))){update({error:'사업자등록증 또는 사업자등록증명원 PDF를 최대 2개, 파일당 20MB 이하로 선택해 주세요.'});return;}update({documents:[...draft.documents,...files.map(file=>({file,kind,candidates:[],locations:[],error:''}))],reviewed:false,error:''});}
- async function analyze(index:number){if(busy||request.current&&!request.current.signal.aborted)return;const controller=new AbortController();request.current=controller;setBusy(true);update({error:''});try{const doc=draft.documents[index];const response=await fetch('/api/company/registration/preview',{method:'POST',headers:{'Content-Type':'application/octet-stream','X-Upload-Name':encodeURIComponent(doc.file.name)},body:doc.file,credentials:'same-origin',signal:AbortSignal.any([controller.signal,AbortSignal.timeout(55000)])});const data=await response.json();if(controller.signal.aborted)return;if(!response.ok)throw Error(companyReasons[data.reason]??'문서를 분석하지 못했습니다. 직접 입력을 사용할 수 있습니다.');const current=w.drafts.get('initial-registration') as Draft;if(current.documents[index]?.file!==doc.file)return;const documents=current.documents.map((d,i)=>i===index?{...d,...data,error:data.error?(companyReasons[data.error]??'OCR을 완료하지 못했습니다. 직접 입력으로 진행할 수 있습니다.'):''}:d);const profile={...current.profile};let address=current.address;
- // First-source fill only when empty. Conflicting values remain visible below.
- for(const c of data.candidates as Candidate[]){const key=c.field==='company_name'?'name':c.field;if(['name','business_number','representative','industry'].includes(key)&&!profile[key as keyof Profile])Object.assign(profile,{[key]:c.value});if(c.field==='address'&&!address)address=c.value;}
- update({documents,profile,address,reviewed:false});}catch(e){if(!controller.signal.aborted)update({error:e instanceof Error?e.message:'문서 분석을 완료하지 못했습니다.'});}finally{if(request.current===controller){request.current=null;setBusy(false);}}}
+ const setProfile=(patch:Partial<Profile>)=>update({profile:{...draft.profile,...patch}});
+ function add(files:File[]){if(files.length+draft.documents.length>2||files.some(f=>!f.size||f.size>20*1024*1024||!f.name.toLowerCase().endsWith('.pdf'))){update({error:'PDF를 최대 2개, 파일당 20MB 이하로 선택해 주세요.'});return;}update({documents:[...draft.documents,...files.map(file=>({file,candidates:[],locations:[],error:''}))],error:''});}
+ async function analyze(){
+  if(busy||request.current&&!request.current.signal.aborted)return;
+  const controller=new AbortController();request.current=controller;setBusy(true);update({error:''});
+  try{const total=(w.drafts.get('initial-registration') as Draft).documents.length;
+   for(let index=0;index<total;index++){
+    const doc=(w.drafts.get('initial-registration') as Draft).documents[index];
+    if(doc.analyzed&&!doc.error)continue;
+    const response=await fetch('/api/company/registration/preview',{method:'POST',headers:{'Content-Type':'application/octet-stream','X-Upload-Name':encodeURIComponent(doc.file.name)},body:doc.file,credentials:'same-origin',signal:AbortSignal.any([controller.signal,AbortSignal.timeout(55000)])});
+    const data=await response.json();if(controller.signal.aborted)return;
+    if(!response.ok)throw Error(companyReasons[data.reason]??'문서를 분석하지 못했습니다. 직접 입력으로 진행해 주세요.');
+    const current=w.drafts.get('initial-registration') as Draft;if(current.documents[index]?.file!==doc.file)return;
+    const documents=current.documents.map((d,i)=>i===index?{...d,...data,analyzed:true,error:data.error?'문서의 일부 내용을 읽지 못했습니다. 직접 확인·입력해 주세요.':''}:d);
+    const profile={...current.profile};let address=current.address,businessType=current.businessType,businessItems=current.businessItems;
+    const extracted=data.candidates as Candidate[];
+    for(const c of extracted){const key=c.field==='company_name'?'name':c.field;if(['name','business_number','representative'].includes(key)&&!profile[key as keyof Profile])Object.assign(profile,{[key]:c.value});if(c.field==='address'&&!address)address=c.value;}
+    const unique=(label:string)=>Array.from(new Set(extracted.filter(c=>c.field==='industry'&&c.source_label===label).map(c=>c.value))).join('\n');
+    businessType=businessType||unique('업태');businessItems=businessItems||unique('종목');
+    const unspecified=extracted.filter(c=>c.field==='industry'&&!c.source_label).map(c=>c.value).join('\n');
+    profile.industry=industry(businessType,businessItems)||profile.industry||unspecified;
+    update({documents,profile,address,businessType,businessItems});
+   }
+  }catch(e){if(!controller.signal.aborted)update({error:e instanceof Error?e.message:'문서 분석을 완료하지 못했습니다.'});}
+  finally{if(request.current===controller){request.current=null;setBusy(false);}}
+ }
  async function preserve(cid:string){let current=w.drafts.get('initial-registration') as Draft;update({created:cid,error:''});try{
-  if(current.createSite&&current.address&&!current.siteId){const s=await w.request<{site:{id:string}}>('/'+cid+'/sites',{data:{name:'본사',address:current.address,industry:current.profile.industry,process:''},expected_ordinal:0});current=update({siteId:s.site.id});}
+  if(current.address&&!current.siteId){const s=await w.request<{site:{id:string}}>('/'+cid+'/sites',{data:{name:'본사',address:current.address,industry:current.profile.industry,process:''},expected_ordinal:0});current=update({siteId:s.site.id});}
   for(let index=0;index<current.documents.length;index++){let doc=current.documents[index];if(!doc.fileId){const digest=doc.digest??Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await doc.file.arrayBuffer())),b=>b.toString(16).padStart(2,'0')).join('');const known=await w.request<CompanyData>('/'+cid);let f=known.files.find(f=>f.digest===digest);if(!f)f=await w.uploadTo(cid,doc.file);current=update({documents:current.documents.map((d,i)=>i===index?{...d,digest,fileId:f!.id}:d)});doc=current.documents[index];}
    if(!doc.parsed){const parsed=await w.request<{error:string|null}>('/files/'+doc.fileId+'/parse?registration=true',{});if(parsed.error)throw Error(companyReasons[parsed.error]??'원본은 보존되었지만 문서 근거 추출은 미완료입니다. 다시 시도하세요.');current=update({documents:current.documents.map((d,i)=>i===index?{...d,parsed:true}:d)});}
   }
   const actual=await w.request<CompanyData>('/'+cid);
-  // The final registration checkbox is the editor's explicit review action.
+  // Clicking register is the editor's explicit review action for the visible form.
   // Record it using existing ACK/manual-correction commands, never Fact confirm.
   const reviewed:Record<string,string>={company_name:current.profile.name,business_number:current.profile.business_number.trim().replaceAll('-',''),representative:current.profile.representative,industry:current.profile.industry,address:current.address};
   const sourceFiles=new Set(current.documents.map(d=>d.fileId));
@@ -38,15 +64,49 @@ export function InitialRegistration({w,goto}:{w:CompanyWorkflow;goto:(s:string)=
    }
   }
 if(current.documents.some(d=>!actual.files.some(f=>f.id===d.fileId&&(!d.digest||f.digest===d.digest))))throw Error('원본 보존 결과를 재확인하지 못했습니다.');update({error:''});
- }catch(e){update({error:'기업 생성/저장 여부와 문서 보존을 구분하세요. '+(e instanceof Error?e.message:'원본 보존이 미완료입니다.')});throw e;}}
+ }catch(e){update({saving:false,error:'기업정보는 등록되었지만 자료 저장이 완료되지 않았습니다. 다시 시도해 주세요. '+(e instanceof Error?e.message:'원본 보존이 미완료입니다.')});throw e;}}
+ // Registration remains two guarded server phases, but continuation is automatic.
+ // Wait for the new Company context/epoch to settle before preserving sources.
+ useEffect(()=>{
+  if(!draft.created||!draft.saving||w.cid!==draft.created||!w.detail||w.busy||continuing.current)return;
+  const timer=setTimeout(()=>{
+   if(continuing.current)return;continuing.current=true;
+   void w.run(async()=>{try{await preserve(draft.created);await w.reload();update(blank());goto('company');}catch(e){update({saving:false});throw e;}},'기업정보를 등록했습니다.').finally(()=>{continuing.current=false;});
+  },0);
+  return()=>clearTimeout(timer);
+ });
  const existing=!!w.cid&&!draft.created;
- if(existing)return <><BusinessHeading title="기업정보 등록 시작" description="이미 접근 가능한 등록 기업이 있습니다. 초기 등록으로 기존 기업을 다시 만들거나 덮어쓰지 않습니다."/><BusinessCard><button className={primary} onClick={()=>goto('company')}>기업정보 확인·수정</button><button className={secondary} onClick={()=>goto('files')}>기존 첨부자료 관리</button></BusinessCard></>;
- const candidates=draft.documents.flatMap((doc,index)=>doc.candidates.map(c=>({...c,index,file:doc.file.name})));
- return <><BusinessHeading title="기업정보 등록 시작" description="서류로 시작하거나 직접 입력한 뒤 내용을 확인하고 기업을 등록하세요."/>{draft.error&&<p role="alert">{draft.error}</p>}
- <div className="business-grid"><BusinessCard title="서류로 기업정보 가져오기"><p>사업자등록증 또는 사업자등록증명원 PDF 한 개로 시작할 수 있습니다. 기업명·번호를 먼저 입력하지 않습니다.</p><button disabled={busy||w.busy||!!draft.created} className={primary} onClick={()=>update({mode:'documents',error:''})}>서류로 시작</button></BusinessCard><BusinessCard title="기업정보 직접 입력"><p>OCR 없이 직접 입력·확인 후 같은 서버 등록 검사를 사용합니다.</p><button disabled={busy||w.busy||!!draft.created} className={secondary} onClick={()=>update({mode:'direct',error:''})}>직접 입력</button></BusinessCard></div>
- {draft.mode==='documents'&&<BusinessCard title="최초 등록 증빙"><BusinessField label="등록 증빙 종류"><select disabled={!!draft.created} className={input} value={kind} onChange={e=>setKind(e.target.value)}><option>사업자등록증</option><option>사업자등록증명원</option></select></BusinessField><div className={'rounded-xl border-2 border-dashed p-6 '+(drag?'border-blue-500 bg-blue-50':'border-slate-200')} onDragOver={e=>{e.preventDefault();setDrag(true);}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);if(!draft.created&&!busy)add(Array.from(e.dataTransfer.files));}}><BusinessField label="최초 등록 PDF 선택"><input disabled={busy||!!draft.created} type="file" multiple accept=".pdf,application/pdf" onChange={e=>{add(Array.from(e.target.files??[]));e.currentTarget.value='';}}/></BusinessField><p>PDF 선택 또는 드래그 앤 드롭 · 최대 2개 · 각 20MB</p></div>{draft.documents.map((doc,i)=><article key={i} className="mt-4"><h4>{doc.file.name} · {doc.kind}</h4><p>{doc.fileId?(doc.parsed?'원본·근거 보존 확인':'원본 보존됨 / 근거 추출 미완료'):'등록 전 탭 메모리 · 서버 영구 저장 전'}</p>{doc.error&&<p role="alert">{doc.error}</p>}<button className={secondary} disabled={busy||w.busy||!!draft.created} onClick={()=>void analyze(i)}>문서 분석</button>{!draft.created&&<button disabled={busy} className={secondary} onClick={()=>update({documents:draft.documents.filter((_,n)=>n!==i),reviewed:false})}>선택 취소</button>}{doc.locations.map((l,n)=><details key={n}><summary>{l.descriptor}</summary><pre className="business-evidence">{l.text}</pre></details>)}</article>)}{busy&&<button className={secondary} onClick={()=>{request.current?.abort();setBusy(false);update({error:'분석 요청을 취소했습니다. 등록 전 원본은 서버에 영구 저장되지 않았습니다.'});}}>분석 요청 취소</button>}{busy&&<p role="status">로컬 문서 파싱·한글 OCR 실행 중입니다. 원문·후보를 확인하기 전 등록되지 않습니다.</p>}<button className={secondary} disabled={busy||!!draft.created} onClick={()=>update({mode:'direct'})}>직접 입력으로 진행</button></BusinessCard>}
- {draft.mode&&<BusinessCard title="등록정보 확인·수정"><p>문서 후보와 입력값은 확정 Fact가 아닙니다. 같은 항목의 서로 다른 후보는 원문을 대조하여 선택·수정하세요.</p>{Object.entries(names).filter(([field])=>new Set(candidates.filter(c=>c.field===field).map(c=>field==='business_number'?c.value.trim().replaceAll('-',''):c.value)).size>1).map(([field,label])=><p role="alert" key={field}>{label}: 서류 간 값이 다릅니다. 원문과 최종 입력값을 확인하세요.</p>)}{candidates.map((c,i)=><div key={i} className="mb-3"><strong>{names[c.field]??c.field}: {c.value}</strong><p>{c.file} · {c.descriptor}</p><details><summary>필드 원문 근거</summary><pre className="business-evidence">{c.text}</pre></details>{c.field!=='opened_on'&&<button disabled={!!draft.created} className={secondary} onClick={()=>{if(c.field==='address')update({address:c.value,reviewed:false});else setProfile({[c.field==='company_name'?'name':c.field]:c.value});}}>이 후보를 입력값으로 선택</button>}</div>)}<p>개업일은 현재 Profile 저장 필드가 없어 원문 근거로만 보존됩니다. 금융자료·연락처를 추정해 채우지 않습니다.</p>
- <form onSubmit={e=>{e.preventDefault();if(!draft.reviewed||!validNumber(draft.profile.business_number))return;void w.run(async()=>{if(draft.created){if(w.cid!==draft.created)throw Error('현재 등록 기업을 다시 선택해 주세요.');await preserve(draft.created);await w.reload();}else {await w.register(draft.profile,async id=>{update({created:id,error:''});});if(draft.documents.length||draft.createSite)return;}update(blank());goto('company');},draft.created?'원본·근거 보존과 사용자 확인을 서버에서 재조회했습니다.':'기업 생성 결과를 재조회했습니다. 선택한 문서는 원본 보존 완료 단계에서 연결합니다.');}}>
- <div className="business-grid">{([['name','등록 기업명'],['business_number','등록 사업자등록번호'],['representative','등록 대표자'],['industry','등록 업종·업태'],['contact','등록 담당자·연락처']] as const).map(([key,label])=><BusinessField label={label} key={key}><input className={input} required={key==='name'||key==='business_number'} readOnly={!!draft.created} maxLength={key==='business_number'?12:key==='contact'?1000:200} value={draft.profile[key]} onChange={e=>setProfile({[key]:e.target.value})}/></BusinessField>)}</div><BusinessField label="등록 기업 현황"><textarea className={input} readOnly={!!draft.created} maxLength={10000} value={draft.profile.overview} onChange={e=>setProfile({overview:e.target.value})}/></BusinessField><BusinessField label="등록 사업장 소재지"><input className={input} readOnly={!!draft.created} value={draft.address} onChange={e=>update({address:e.target.value,reviewed:false})}/></BusinessField><label><input type="checkbox" disabled={!!draft.created} checked={draft.createSite} onChange={e=>update({createSite:e.target.checked,reviewed:false})}/>확인한 소재지를 본사 사업장으로 함께 등록</label>
- {draft.profile.business_number&&!validNumber(draft.profile.business_number)&&<p role="alert">사업자등록번호 형식·체크디지트를 확인하세요. 숫자 10자리 또는 000-00-00000을 입력합니다.</p>}<p>등록번호 체크디지트 검사는 국세청 사업자 상태 조회가 아닙니다. 외부 API를 호출하지 않습니다.</p><label className="mt-4 block"><input type="checkbox" checked={draft.reviewed} onChange={e=>update({reviewed:e.target.checked})}/>원문과 최종 입력값을 확인·수정했으며 이 내용으로 기업 등록을 확인합니다.</label><button disabled={busy||w.busy||!draft.reviewed||!validNumber(draft.profile.business_number)||draft.createSite&&!draft.address} className={primary}>{draft.created?(draft.error?'미완료 원본·근거 보존 재시도':'원본·근거 보존 완료'):'기업 등록'}</button>{!draft.created&&<button type="button" className={secondary} disabled={busy||w.busy} onClick={()=>{if(window.confirm('선택 문서와 등록 전 입력을 취소할까요? 서버에는 아직 저장되지 않았습니다.')){w.drafts.set('initial-registration',blank());setState(blank());}}}>등록 취소</button>}{draft.created&&<button type="button" className={secondary} onClick={()=>goto('company')}>등록된 기업정보로 계속</button>}{draft.created&&<p>기업은 생성되었습니다. 원본·근거 보존 완료 버튼으로 문서 보존을 마무리하세요. 실패 시 새 기업을 만들지 않고 이 기업에 재시도합니다.</p>}</form></BusinessCard>}</>;
+ if(existing)return <><BusinessHeading title="기업정보 등록 시작" description="등록된 기업정보와 첨부자료를 확인할 수 있습니다."/><BusinessCard><button className={primary} onClick={()=>goto('company')}>기업정보 확인·수정</button><button className={secondary} onClick={()=>goto('files')}>첨부자료 관리</button></BusinessCard></>;
+ const saving=draft.saving,locked=busy||saving||w.busy;
+ const candidates=draft.documents.flatMap(doc=>doc.candidates.map(c=>({...c,file:doc.file.name})));
+ const conflicts=Object.entries(names).filter(([field])=>field!=='industry'&&new Set(candidates.filter(c=>c.field===field).map(c=>field==='business_number'?c.value.trim().replaceAll('-',''):c.value)).size>1).map(([,label])=>label);
+ for(const label of ['업태','종목']){const perDocument=draft.documents.map(d=>Array.from(new Set(d.candidates.filter(c=>c.source_label===label).map(c=>c.value))).join('\n')).filter(Boolean);if(new Set(perDocument).size>1)conflicts.push(label);}
+ const showForm=draft.mode==='direct'||draft.documents.some(d=>d.analyzed)||!!draft.created;
+ return <><BusinessHeading title="기업정보 등록 시작" description="서류를 올려 정보를 가져오거나 직접 입력해 주세요."/>{draft.error&&<p role="alert">{draft.error}</p>}
+ {draft.mode==='documents'?<BusinessCard title="사업자등록 서류 업로드"><p>사업자등록증 또는 사업자등록증명원 PDF 중 하나만 있어도 됩니다.</p>
+ <div className={'mt-4 rounded-xl border-2 border-dashed p-6 '+(drag?'border-blue-500 bg-blue-50':'border-slate-200')} onDragOver={e=>{e.preventDefault();setDrag(true);}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);if(!locked&&!draft.created)add(Array.from(e.dataTransfer.files));}}>
+ <BusinessField label="최초 등록 PDF 선택"><input className="block w-full min-w-0" disabled={locked||!!draft.created} type="file" multiple accept=".pdf,application/pdf" onChange={e=>{add(Array.from(e.target.files??[]));e.currentTarget.value='';}}/></BusinessField><p>파일 선택 또는 드래그 앤 드롭 · 최대 2개 · 각 20MB</p>
+ </div><div className="mt-4 flex flex-wrap items-center gap-3" aria-label="서류 작업">
+ <button className={primary} disabled={locked||!!draft.created||!draft.documents.length} onClick={()=>void analyze()}>문서 분석</button>
+ <button className={secondary} disabled={locked||!!draft.created||!draft.documents.length} onClick={()=>update({documents:[],error:''})}>선택 취소</button>
+ <button className={secondary} disabled={locked||!!draft.created} onClick={()=>update({mode:'direct',error:''})}>직접 입력으로 진행</button></div>
+ {draft.documents.map((doc,i)=><article className="mt-4" key={i}><p>{doc.file.name}{doc.analyzed&&!doc.error?' · 분석 완료':''}</p>{doc.error&&<p role="alert">{doc.error}</p>}</article>)}
+ {busy&&<div role="status"><p>문서를 읽고 있습니다. 잠시 기다려 주세요.</p><button className={secondary} onClick={()=>{request.current?.abort();setBusy(false);update({error:'분석을 취소했습니다. 직접 입력으로 진행할 수 있습니다.'});}}>분석 취소</button></div>}
+ </BusinessCard>:<BusinessCard title="기업정보 직접 입력"><p>아래 내용을 작성해 주세요.</p><button disabled={locked||!!draft.created} className={secondary} onClick={()=>update({mode:'documents',error:''})}>서류로 등록</button></BusinessCard>}
+ {showForm&&<BusinessCard title="기업정보 확인·수정"><p>내용을 확인하고 틀린 부분을 수정한 후 기업정보 등록을 눌러 주세요.</p>
+ {conflicts.map(label=><p role="alert" key={label}>{label}: 서류 간 값이 다릅니다. 원본과 입력 내용을 확인해 주세요.</p>)}
+ <form onSubmit={e=>{e.preventDefault();if(locked||!validNumber(draft.profile.business_number))return;
+  if(draft.created){update({saving:true,error:''});return;}
+  update({saving:true,error:''});void w.run(async()=>{try{await w.register(draft.profile,async id=>{update({created:id});});}catch(e){update({saving:false,error:e instanceof Error?e.message:'등록하지 못했습니다. 다시 확인해 주세요.'});throw e;}},'');
+ }}>
+ <div className="business-grid grid gap-4 sm:grid-cols-2">{([['name','등록 기업명'],['business_number','등록 사업자등록번호'],['representative','등록 대표자']] as const).map(([key,label])=><BusinessField key={key} label={label}><input className={input} required={key!=='representative'} readOnly={saving||!!draft.created} maxLength={key==='business_number'?12:200} value={draft.profile[key]} onChange={e=>setProfile({[key]:e.target.value})}/></BusinessField>)}
+ <BusinessField label="등록 사업장 소재지"><input className={input} maxLength={1000} readOnly={saving||!!draft.created} value={draft.address} onChange={e=>update({address:e.target.value})}/></BusinessField>
+ {([['businessType','등록 업태'],['businessItems','등록 종목']] as const).map(([key,label])=><BusinessField key={key} label={label}><textarea aria-label={label} placeholder={draft.mode==='documents'?'원본을 확인하고 입력해 주세요.':undefined} className={input} rows={3} readOnly={saving||!!draft.created} value={draft[key]} onChange={e=>{const values={businessType:draft.businessType,businessItems:draft.businessItems,[key]:e.target.value};update({...values,profile:{...draft.profile,industry:industry(values.businessType,values.businessItems)}});}}/></BusinessField>)}</div>
+ {draft.profile.industry.length>500&&<p role="alert">업태와 종목을 합쳐 500자 이내로 입력해 주세요.</p>}
+ {draft.profile.business_number&&!validNumber(draft.profile.business_number)&&<p role="alert">사업자등록번호를 확인해 주세요. 숫자 10자리 또는 000-00-00000으로 입력합니다.</p>}
+ {draft.documents.length>0&&<details className="my-4"><summary>원본 확인</summary>{draft.documents.map((doc,i)=><div key={i}><Original file={doc.file}/>{doc.locations.map((l,n)=><details key={n}><summary>{l.page?l.page+'쪽':'추출된 원문'}</summary><pre className="business-evidence">{l.text}</pre></details>)}</div>)}</details>}
+ <div className="mt-6 flex flex-wrap gap-3"><button className={primary} disabled={locked||!draft.profile.name.trim()||!validNumber(draft.profile.business_number)||draft.profile.industry.length>500}>{saving?'등록 중…':draft.created?'등록 다시 시도':'기업정보 등록'}</button>
+ {!draft.created&&<button type="button" className={secondary} disabled={locked} onClick={()=>{if(window.confirm('입력과 선택한 서류를 취소할까요?')){w.drafts.set('initial-registration',blank());setState(blank());}}}>등록 취소</button>}</div>
+ {saving&&<p role="status">기업정보와 첨부서류를 저장하고 있습니다.</p>}
+ </form></BusinessCard>}</>;
 }

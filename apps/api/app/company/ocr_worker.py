@@ -5,8 +5,9 @@ from app.company.documents import MAX_UPLOAD,DocumentError
 
 # Selected after synthetic registration scans are compared; this is a render
 # setting, never a claim that OCR text is accurate or human-confirmed.
-DPI=300
-PSM=4
+TABLE=os.environ.get('DATCO_OCR_CATEGORY_TABLE')=='1'
+DPI=180 if TABLE else 300
+PSM=6 if TABLE else 4
 
 def recognize(png):
     image=os.environ.get('DATCO_OCR_DOCKER_IMAGE','')
@@ -51,7 +52,7 @@ def run(raw):
                     image=bitmap.to_pil();out=io.BytesIO();image.save(out,format='PNG');image.close()
                 finally:bitmap.close()
                 text=recognize(out.getvalue())
-                if text.strip():result.append({'descriptor':f'PDF page {n+1} / local Tesseract kor+eng OCR / {DPI} dpi / psm {PSM}','page':n+1,'text':text})
+                if text.strip():result.append({'descriptor':f'PDF page {n+1} / local Tesseract kor+eng OCR / {DPI} dpi / psm {PSM}'+(' / category table' if TABLE else ''),'page':n+1,'text':text})
             finally:page.close()
     return {'locations':result}
 

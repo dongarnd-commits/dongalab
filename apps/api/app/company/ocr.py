@@ -5,10 +5,10 @@ import json,os,subprocess,sys
 from pathlib import Path
 from app.company.documents import DocumentError, Location
 
-def ocr_pdf(content: bytes) -> tuple[Location, ...]:
-    env=dict(os.environ, PYTHONUTF8='1', PYTHONIOENCODING='utf-8')
+def ocr_pdf(content: bytes, *, table=False, timeout=50) -> tuple[Location, ...]:
+    env=dict(os.environ, PYTHONUTF8='1', PYTHONIOENCODING='utf-8', DATCO_OCR_CATEGORY_TABLE='1' if table else '0')
     try:
-        r=subprocess.run([sys.executable,'-m','app.company.ocr_worker'],input=content,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=50,env=env,cwd=Path(__file__).resolve().parents[2],creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
+        r=subprocess.run([sys.executable,'-m','app.company.ocr_worker'],input=content,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=timeout,env=env,cwd=Path(__file__).resolve().parents[2],creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
         if len(r.stdout)>3_000_000:raise DocumentError('OCR_TEXT_LIMIT')
         result=json.loads(r.stdout)
         if r.returncode or result.get('error'):raise DocumentError(result.get('error','OCR_FAILED'))
