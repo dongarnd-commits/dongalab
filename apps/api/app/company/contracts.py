@@ -1,6 +1,6 @@
 from typing import Literal
 from datetime import date
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator, field_validator
 
 class Input(BaseModel):
  model_config=ConfigDict(extra='forbid',str_strip_whitespace=True)
@@ -16,8 +16,13 @@ class History(Input):
  agency:str=Field(min_length=1,max_length=500)
  role:str=Field(default='',max_length=1000)
 class Profile(Input):
+ @field_validator('business_number',mode='before')
+ @classmethod
+ def canonical_number(cls,value):
+  from app.company.business_number import normalize_business_number
+  return normalize_business_number(value)
  name:str=Field(min_length=1,max_length=200)
- business_number:str=Field(pattern=r'^[0-9]{10}$')
+ business_number:str=Field(pattern=r'^(?:[0-9]{10}|[0-9]{3}-[0-9]{2}-[0-9]{5})$')
  industry:str=Field(default='',max_length=500)
  representative:str=Field(default='',max_length=200)
  contact:str=Field(default='',max_length=1000)

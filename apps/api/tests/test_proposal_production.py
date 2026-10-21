@@ -1,3 +1,4 @@
+from registration_sources import number as synthetic_business_number
 import copy,io,zipfile
 from pathlib import Path
 from hashlib import sha256
@@ -270,7 +271,7 @@ def test_real_company_provider_approval_projection_and_workspace_context(tmp_pat
  with committed_environment(tmp_path/'real-company-approval') as e:
   with monkeypatch.context() as patch:
    patch.setattr(company_api,'application',lambda session:CompanyApplication(session,e.files))
-   c=e.call('company','/company',dict(name='TEST real provider company',business_number=str(int(e.nonce()[:12],16))[-10:].zfill(10)))
+   c=e.call('company','/company',dict(name='TEST real provider company',business_number=synthetic_business_number()))
    with e.factory.begin() as session:
     person=SqlNoticeStore(session).add('actors',username='TEST_REAL_APPROVER_'+e.nonce(),role='COMPANY_APPROVER',password_hash=hash_password(e.password))
    e.accounts['approver']=person;e.clients['approver']=TestClient(app);e.call('approver','/notice/session',dict(username=person['username'],password=e.password))

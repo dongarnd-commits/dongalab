@@ -1,3 +1,4 @@
+from registration_sources import number as synthetic_business_number
 """Actual frozen migration chain, guarded schemas and non-destructive Down."""
 from uuid import uuid4
 import importlib.util
@@ -41,7 +42,7 @@ def test_company_up_empty_down_reup_preserves_notice(migration):
 
 def test_company_history_down_refused_without_data_loss(migration,tmp_path):
  c,m,schema=migration;m.upgrade();session=Session(c,join_transaction_mode='create_savepoint');store=SqlNoticeStore(session);row=store.add('actors',username='TEST_'+uuid4().hex,role='COMPANY_EDITOR',password_hash='TEST_NOT_LOGIN')
- app=CompanyApplication(session,LocalPrivateFiles(tmp_path));company=app.register(Actor(row['id'],'COMPANY_EDITOR'),dict(name='TEST source company',business_number='1234567890'));session.flush();c.exec_driver_sql('SET CONSTRAINTS ALL IMMEDIATE')
+ app=CompanyApplication(session,LocalPrivateFiles(tmp_path));company=app.register(Actor(row['id'],'COMPANY_EDITOR'),dict(name='TEST source company',business_number=synthetic_business_number('123456789')));session.flush();c.exec_driver_sql('SET CONSTRAINTS ALL IMMEDIATE')
  with pytest.raises(RuntimeError,match='COMPANY_HISTORY_EXISTS'):m.downgrade()
  assert c.execute(text('SELECT name FROM companies WHERE id=:id'),dict(id=company['id'])).scalar_one()=='TEST source company'
  session.close()

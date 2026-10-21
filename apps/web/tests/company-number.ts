@@ -1,0 +1,1 @@
+export function syntheticBusinessNumber(){const n=String(Date.now()).slice(-6)+String(Math.floor(Math.random()*1000)).padStart(3,'0');const d=[...n].map(Number),w=[1,3,7,1,3,7,1,3,5];return n+String((10-(w.reduce((s,x,i)=>s+x*d[i],0)+Math.floor(d[8]*5/10))%10)%10);}

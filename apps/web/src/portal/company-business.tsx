@@ -1,3 +1,4 @@
+import {InitialRegistration as Registration} from './company-registration';
 import {CompanyFiles,CompanyCandidates} from './company-documents';
 import {CompanyImprovements} from './company-improvements';
 import type {CompanyWorkflow} from './workflow';
@@ -5,11 +6,6 @@ import {BusinessContextBar} from './context';
 import {emptyProfile,type Profile,type SiteData} from '../company/client';
 import {BusinessCard,BusinessField,BusinessHeading,BusinessMessages,useBusinessDraft,input,primary,secondary} from './business-ui';
 type Navigate=(screen:string)=>void;
-function Registration({w,goto}:{w:CompanyWorkflow;goto:Navigate}){
- const [mode,setMode]=useBusinessDraft(w,'registration-mode',()=>''),[profile,setProfile]=useBusinessDraft(w,'registration',()=>structuredClone(emptyProfile));
- return <><BusinessHeading title="기업정보 등록 시작" description="서류로 정보를 가져오거나 직접 입력하세요. 원본 자료는 등록한 기업에 연결됩니다."/><div className="grid gap-5 lg:grid-cols-2"><BusinessCard title="서류로 기업정보 가져오기"><p className="mb-4 text-sm text-slate-500">기업명과 사업자등록번호를 먼저 확인하여 등록한 뒤 증빙자료를 제출합니다.</p><button className={primary} onClick={()=>{if(w.cid)goto('files');else setMode('documents');}}>서류로 시작</button></BusinessCard><BusinessCard title="기업정보 직접 입력"><p className="mb-4 text-sm text-slate-500">기업과 사업장 정보를 직접 입력하고 서버에 저장합니다.</p><button className={secondary} onClick={()=>{if(w.cid)goto('company');else setMode('direct');}}>직접 입력</button></BusinessCard></div>{w.cid&&<CompanyFiles w={w}/>}
- {!w.cid&&mode&&<BusinessCard title="기업 기본 식별정보"><form onSubmit={e=>{e.preventDefault();void w.run(async()=>{await w.register(profile);goto(mode==='documents'?'files':'company');},'기업 식별정보를 등록하고 서버에서 재조회했습니다.');}}><div className="business-grid grid gap-4 sm:grid-cols-2"><BusinessField label="등록 기업명"><input required maxLength={200} className={input} value={profile.name} onChange={e=>setProfile({...profile,name:e.target.value})}/></BusinessField><BusinessField label="등록 사업자등록번호"><input required pattern="[0-9]{10}" maxLength={10} placeholder="숫자 10자리" className={input} value={profile.business_number} onChange={e=>setProfile({...profile,business_number:e.target.value})}/></BusinessField></div><p className="mb-4 text-xs text-slate-500">등록 버튼을 누르면 실제 기업과 본인 Membership을 생성합니다. 문서만 선택하여 기업을 자동 생성하지 않습니다.</p><button disabled={w.busy} className={primary}>기업 식별 등록</button></form></BusinessCard>}</>;
-}
 type ProfileDraft={data:Profile;expected:number};
 function ProfileForm({w,finance=false}:{w:CompanyWorkflow;finance?:boolean}){
  const [draft,setDraft]=useBusinessDraft<ProfileDraft>(w,'profile',()=>({data:structuredClone(w.detail!.inputs.at(-1)?.data??emptyProfile),expected:w.detail!.company.current_ordinal}));const p=draft.data;

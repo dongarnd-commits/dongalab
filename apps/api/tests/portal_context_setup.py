@@ -1,3 +1,4 @@
+from registration_sources import number as synthetic_business_number
 """Synthetic context fixture created via real APIs, only inside runner-owned PostgreSQL."""
 import os,json,secrets
 from pathlib import Path
@@ -21,7 +22,7 @@ def prepare():
    client=httpx.Client(base_url=api,headers={'Origin':origin});clients[label]=client;r=client.post('/notice/session',json=dict(username=accounts[label],password=c['password']));r.raise_for_status()
   def post(role,path,data):
    r=clients[role].post(path,json=data);r.raise_for_status();return r.json()
-  def company(role,label):return post(role,'/company',dict(name='TEST Context '+label+' '+nonce,business_number=str(int(uuid4().hex[:12],16))[-10:].zfill(10)))
+  def company(role,label):return post(role,'/company',dict(name='TEST Context '+label+' '+nonce,business_number=synthetic_business_number()))
   a=company('editor','A');b=company('multi','B');empty=company('multi','Empty');foreign=company('other','Foreign')
   for comp in [a,b]:post('admin','/company/'+comp['id']+'/access',dict(username=accounts['operator']))
   for comp in [a]:post('admin','/company/'+comp['id']+'/access',dict(username=accounts['multi']))

@@ -1,3 +1,4 @@
+from registration_sources import number as synthetic_business_number
 """Guarded real PostgreSQL/API W1 workflow, no business DB or external AI."""
 from uuid import uuid4
 from urllib.parse import quote
@@ -35,7 +36,7 @@ def env():
 def call(e,who,path,body=None,status=200):
  r=e['clients'][who].request('GET' if body is None else 'POST',path,json=body,headers={'Origin':get_settings().web_origin});assert r.status_code==status,(r.status_code,r.text);return r.json()
 def fresh(e):
- p=dict(name='TEST Company '+uuid4().hex[:8],business_number=str(int(uuid4().hex[:12],16))[-10:].zfill(10),industry='manufacturing',financials=[dict(year=2025,revenue='100',unit='million',currency='KRW',period='2025')],history=[dict(name='TEST project',period='2024',agency='TEST agency')])
+ p=dict(name='TEST Company '+uuid4().hex[:8],business_number=synthetic_business_number(),industry='manufacturing',financials=[dict(year=2025,revenue='100',unit='million',currency='KRW',period='2025')],history=[dict(name='TEST project',period='2024',agency='TEST agency')])
  c=call(e,'editor','/company',p)
  for who in ('operator','approver'):call(e,'admin','/company/'+c['id']+'/access',dict(username=e['people'][who]['username']))
  site=call(e,'editor','/company/'+c['id']+'/sites',{'data':dict(name='TEST Plant',address='TEST address')})['site'];return c,site,p
@@ -202,7 +203,7 @@ def test_approver_private_download_is_denied_by_application_and_http(env):
  from app.core.config import get_settings
  with e['factory'].begin() as session:
   user=SqlNoticeStore(session).add('actors',username='TEST_NONMEMBER_'+uuid4().hex,role='COMPANY_APPROVER',password_hash=hash_password('TEST_NONMEMBER_PASSWORD'))
- other_company=call(e,'other','/company',dict(p,name='TEST Different company',business_number=str(int(uuid4().hex[:12],16))[-10:].zfill(10)))
+ other_company=call(e,'other','/company',dict(p,name='TEST Different company',business_number=synthetic_business_number()))
  call(e,'admin','/company/'+other_company['id']+'/access',dict(username=user['username']))
  with TestClient(app) as client:
   assert client.post('/notice/session',json={'username':user['username'],'password':'TEST_NONMEMBER_PASSWORD'},headers={'Origin':get_settings().web_origin}).status_code==200

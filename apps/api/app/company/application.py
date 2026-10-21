@@ -45,6 +45,9 @@ class CompanyApplication:
   self.record(who,company_id,'GRANT_COMPANY_ACCESS');return {'ok':True}
  def register(self,who,data):
   self.role(who,'COMPANY_EDITOR');data=Profile.model_validate(data).model_dump()
+  from app.company.business_number import validate_business_number
+  try:data['business_number']=validate_business_number(data['business_number'])
+  except ValueError as e:raise Denied(str(e),422) from None
   self.session.execute(text('SELECT pg_advisory_xact_lock(:k)'),{'k':int.from_bytes(sha256(data['business_number'].encode()).digest()[:8],'big',signed=True)})
   if self.rows(S.companies,business_number=data['business_number']):raise Denied('COMPANY_ALREADY_REGISTERED',409)
   root=self.add(S.companies,business_number=data['business_number'],name=data['name'],current_ordinal=0)
@@ -100,9 +103,13 @@ class CompanyApplication:
   # approval-scoped sharing relation; approved Proposal documents use /proposal.
   self.role(who,'COMPANY_EDITOR','DATCO_OPERATOR')
   return f,self.files.read(f['storage_key'],f['digest'])
- def parse(self,who,file_id):
+ def parse(self,who,file_id,registration=False):
   f=self.get(S.files,file_id);self.scope(who,f['company_id'],True)
-  try:p=parse_document(f['name'],self.files.read(f['storage_key'],f['digest']))
+  try:
+   if registration:
+    from app.company.registration import parse_registration
+    p=parse_registration(f['name'],self.files.read(f['storage_key'],f['digest']))
+   else:p=parse_document(f['name'],self.files.read(f['storage_key'],f['digest']))
   except DocumentError as e:
    return self.add(S.parses,file_id=file_id,actor_id=who.id,parser_version='company-local-parser-v1',error=str(e),limitations=[])
   run=self.add(S.parses,file_id=file_id,actor_id=who.id,parser_version=p.parser_version,error=None,limitations=list(p.limitations))
@@ -111,7 +118,14 @@ class CompanyApplication:
    e=self.add(S.evidence,actor_id=who.id,company_id=f['company_id'],site_id=f['site_id'],file_id=file_id,input_version_id=None,parse_id=run['id'],descriptor=loc.descriptor,page=loc.page,text=loc.text,mode='RULE_BASED_EXTRACTION')
    # Only explicit labelled text, no inferred units/years or eligibility.
    labels={'회사명':'company_name','기업명':'company_name','업종':'industry','소재지':'address','대표자':'representative','사업자번호':'business_number','사업자등록번호':'business_number','상호':'company_name','상호명':'company_name','사업장 소재지':'address','직원수':'employees','근로자수':'employees'}
-   for line in loc.text.splitlines():
+   source_lines=loc.text.splitlines()
+   if registration:
+    from app.company.registration import registration_candidates
+    from dataclasses import replace
+    extracted=registration_candidates(replace(p,locations=(loc,)))
+    labels.update({c['field']:c['field'] for c in extracted if c['field'] in ('company_name','business_number','representative','address','industry')})
+    source_lines=[c['field']+': '+c['value'] for c in extracted if c['field'] in ('company_name','business_number','representative','address','industry')]
+   for line in source_lines:
     m=re.fullmatch(r'\s*([^:：]{1,20})[:：]\s*(.{1,500})\s*',line)
     financial=re.fullmatch(r'\s*매출액\s*\(\s*([0-9]{4})\s*,\s*([^,()]{1,30})\s*,\s*([^,()]{1,10})\s*\)[:：]\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*',line)
     field=labels.get(m[1].strip()) if m else None

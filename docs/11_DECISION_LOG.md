@@ -146,3 +146,10 @@ W2 자동 추천/W3 신규 Proposal 연계, R07 범용 조건 엔진, OCR·외�
 기존 인증에 서버 로그아웃이 없음을 확인하여 해당 세션의 expires_at 만료/동일 Cookie 삭제/LOGOUT Audit만 추가한다. 인증 방식·8시간 수명·Role/Permission/Schema/업무 State/승인 Guard는 변경하지 않는다. 홈·이름 선택용 GET /workspace는 실제 Membership 및 기존 Projection에서 허용된 요약만 읽는 최소 API이며 권한 확대나 새 업무 결정을 만들지 않는다.
 
 미구현 자동 추천·D~F·관리 전용 기능은 준비 중으로 구분한다. 기존 Capability/Matching/Proposal과 W1 데이터를 삭제·재작성하지 않는다. 사용자 실사용 수용은 PENDING이고 전체 Phase1 완료·SYSTEM ACCEPTANCE를 주장하지 않는다. 공용 DB Migration/업무 데이터 변경·새 Worktree·main Commit/Push/Merge·force 작업은 포함하지 않는다.
+
+
+## Decision-008 — PR14 최초 기업등록·로컬 한글 OCR 승인 증분 — 2026-10-21
+
+사용자는 PR14의 C02/C03 서류 우선 최초 등록, 직접 입력, 실제 한글 OCR, 사용자 확인/수정, 사업자번호 정규화·체크디지트 및 기존 Company 등록/원본/Evidence 보존을 명시 지시했다. 과거 W1의 OCR 미승인 기록은 당시 범위로 보존하며, 이번 증분은 로컬 Tesseract/PDFium Adapter에 한정한다. 외부 OCR/AI 전송은 승인하지 않았다. 상세 영향은 reviews/PR14_INITIAL_REGISTRATION_OCR.md.
+
+등록 전에는 기존 COMPANY_EDITOR 등록 권한으로 원문을 메모리 분석하며 Company/영속 File/공유 토큰을 만들지 않는다. 최종 사용자 확인 후 기존 Company/Membership Guard와 Private 파일/불변 Evidence를 재사용한다. 여러 서버 명령의 부분 실패는 회사 생성/문서 보존/추출 완료를 분리해 표시한다. 기업 ACK와 최종 Fact 확정은 계속 분리한다. DB Schema/Migration/Role/업무 State/Approval Guard/Assignment는 변경하지 않는다. 기존 저장 사업자번호나 과거 Version을 소급 수정하지 않는다. 실사용 인수는 PENDING이다.

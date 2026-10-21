@@ -54,6 +54,27 @@ def access(session:DB,who=Depends(actor)):
 @router.post('',response_model=dict,dependencies=[Depends(trusted_origin)],responses=errors(401,403,409,422))
 def register(body:Profile,session:DB,who=Depends(actor)):
  r=application(session).register(who,body.model_dump());session.commit();return r
+# Stateless preview is authorized by the existing editor registration role.
+# No persistent upload object or cross-company temporary token is created.
+@router.post('/registration/preview',response_model=dict,dependencies=[Depends(trusted_origin)],responses=errors(401,403,413,422))
+async def registration_preview(request:Request,who=Depends(actor),upload_name:str=Header(alias='X-Upload-Name',min_length=1,max_length=2400)):
+ if who.role!='COMPANY_EDITOR':raise Denied('ACTION_NOT_AUTHORIZED',403)
+ from app.company.registration import preview
+ from app.company.documents import DocumentError,MAX_UPLOAD
+ parts=[];size=0
+ async for chunk in request.stream():
+  size+=len(chunk)
+  if size>MAX_UPLOAD:raise Denied('UPLOAD_SIZE_INVALID',413)
+  parts.append(chunk)
+ try:
+  name=unquote(upload_name,encoding='utf-8',errors='strict')
+  if not name or len(name)>200 or '/' in name or chr(92) in name or any(ord(c)<32 for c in name):raise Denied('INVALID_FILENAME',422)
+  # CPU work is not performed on the event loop.
+  from starlette.concurrency import run_in_threadpool
+  return await run_in_threadpool(preview,name,b''.join(parts))
+ except UnicodeDecodeError:raise Denied('INVALID_FILENAME',422) from None
+ except DocumentError as e:raise Denied(str(e),422) from None
+
 @router.get('/{company_id}',response_model=dict,responses=errors(401,403,404))
 def detail(company_id:str,session:DB,who=Depends(actor)):
  return application(session).detail(who,company_id)
@@ -82,8 +103,8 @@ def download(file_id:str,session:DB,who=Depends(actor)):
  f,raw=application(session).download(who,file_id)
  return Response(raw,media_type=f['media_type'],headers={'Content-Disposition':"attachment; filename*=UTF-8''"+quote(f['name'],safe=''),'X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; sandbox",'Cache-Control':'no-store'})
 @router.post('/files/{file_id}/parse',response_model=dict,dependencies=[Depends(trusted_origin)],responses=errors(401,403,404))
-def parse(file_id:str,session:DB,who=Depends(actor)):
- r=application(session).parse(who,file_id);session.commit();return r
+def parse(file_id:str,session:DB,who=Depends(actor),registration:bool=False):
+ r=application(session).parse(who,file_id,registration=registration);session.commit();return r
 @router.post('/{company_id}/evidence',response_model=dict,dependencies=[Depends(trusted_origin)],responses=errors(401,403,404,422))
 def evidence(company_id:str,body:Evidence,session:DB,who=Depends(actor)):
  r=application(session).manual_evidence(who,company_id,body.file_id,body.site_id,body.descriptor,body.transcription);session.commit();return r

@@ -1,3 +1,4 @@
+import {syntheticBusinessNumber} from './company-number';
 import {test,expect,Page} from "@playwright/test";
 test.use({actionTimeout:30000});
 const config=()=>JSON.parse(process.env.DATCO_COMPANY_CONTEXT??"null");
@@ -5,7 +6,7 @@ async function login(page:Page,who:string){const c=config();expect(c).toBeTruthy
 async function tab(page:Page,name:string){await page.getByRole('button',{name,exact:true}).click();}
 
 test('W1 real company input, sources, fact review and immutable improvement handoff',async({page,browser})=>{
- test.setTimeout(180000);const c=config();const name='TEST Evidence Company';const number=String(Date.now()).slice(-10);const other=await browser.newContext(),operatorContext=await browser.newContext();const admin=await other.newPage(),operator=await operatorContext.newPage();
+ test.setTimeout(180000);const c=config();const name='TEST Evidence Company';const number=syntheticBusinessNumber();const other=await browser.newContext(),operatorContext=await browser.newContext();const admin=await other.newPage(),operator=await operatorContext.newPage();
  await login(page,'editor');await page.getByRole('button',{name:'신규 기업 등록'}).click();await page.getByLabel('기업명',{exact:true}).fill(name);await page.getByLabel('사업자번호 10자리').fill(number);await page.getByLabel('업종',{exact:true}).fill('manufacturing');await page.getByLabel('담당자·연락처').fill('TEST contact');
  await page.getByRole('button',{name:'재무 기준연도 추가'}).click();await page.getByLabel('기준연도',{exact:true}).fill('2025');await page.getByLabel('매출액',{exact:true}).fill('100');await page.getByLabel('단위',{exact:true}).fill('million');await page.getByLabel('통화',{exact:true}).fill('KRW');await page.getByLabel('기준기간',{exact:true}).fill('2025');
  await page.getByRole('button',{name:'사업이력 추가'}).click();await page.getByLabel('사업명',{exact:true}).fill('TEST support');await page.getByLabel('수행기간').fill('2024');await page.getByLabel('지원주체').fill('TEST agency');await page.getByRole('button',{name:'기업정보 저장',exact:true}).click();await expect(page.getByRole('heading',{name,exact:true})).toBeVisible();
@@ -34,7 +35,7 @@ test('W1 real company input, sources, fact review and immutable improvement hand
 
 
 test('W1 unsupported image uses manual evidence, invalid upload and cross-company access are blocked',async({page,browser})=>{
- test.setTimeout(120000);const c=config();const name='TEST Manual Image '+Date.now(),number=String(Date.now()).slice(-10);await login(page,'editor');await page.getByRole('button',{name:'신규 기업 등록'}).click();await page.getByLabel('기업명',{exact:true}).fill(name);await page.getByLabel('사업자번호 10자리').fill(number);await page.getByRole('button',{name:'기업정보 저장',exact:true}).click();await expect(page.getByRole('heading',{name,exact:true})).toBeVisible();
+ test.setTimeout(120000);const c=config();const name='TEST Manual Image '+Date.now(),number=syntheticBusinessNumber();await login(page,'editor');await page.getByRole('button',{name:'신규 기업 등록'}).click();await page.getByLabel('기업명',{exact:true}).fill(name);await page.getByLabel('사업자번호 10자리').fill(number);await page.getByRole('button',{name:'기업정보 저장',exact:true}).click();await expect(page.getByRole('heading',{name,exact:true})).toBeVisible();
  await tab(page,'제출자료·분석');await page.getByLabel('제출 파일').setInputFiles({name:'bad.pdf',mimeType:'application/pdf',buffer:Buffer.from('NOT PDF')});await page.getByRole('button',{name:'파일 제출',exact:true}).click();await expect(page.locator('main [role="alert"]')).toContainText('일치하지 않습니다');
  await page.getByLabel('제출 파일').setInputFiles(c.documents.find((x:string)=>x.endsWith('.png')));await page.getByRole('button',{name:'파일 제출',exact:true}).click();await expect(page.locator('main [role="alert"]')).toHaveCount(0);const image=page.locator('article').filter({has:page.getByRole('heading',{name:'TEST-layout.png',exact:true})});await image.getByRole('button',{name:'원문 추출 실행·재시도'}).click();await expect(image).toContainText('manual review');
  await page.getByText('이미지·미지원 자료 수동 근거 작성',{exact:true}).click();await page.getByLabel('원본 자료',{exact:false}).selectOption({label:'TEST-layout.png'});await page.getByLabel('페이지·구역 설명').fill('TEST image caption at top left');await page.getByLabel('원문 수동 전사').fill('TEST inventory area');await page.getByRole('button',{name:'수동 확인 근거 저장'}).click();await expect(page.locator('main [role="alert"]')).toHaveCount(0);
