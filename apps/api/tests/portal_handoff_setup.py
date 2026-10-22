@@ -28,7 +28,7 @@ def prepare():
  conflict=docs/'conflict.pdf';conflict.write_bytes(scan(context['registration_number'][:3]+'-'+context['registration_number'][3:5]+'-'+context['registration_number'][5:],'다른합성기업',certificate=True));context['conflict_document']=str(conflict)
  context['ux_v13_number']=synthetic_business_number()
  ux=docs/'TEST-ux-registration.pdf';ux.write_bytes(scan(context['ux_v13_number']));context['ux_v13_registration']=str(ux)
- from business_sources import sources
- context['business_documents']=sources(docs/'business')
+ from business_sources import portal_sources
+ context['business_documents']=portal_sources(docs/'business')
  Path(os.environ['DATCO_TEST_HANDOFF_READY']).write_text(json.dumps(context),encoding='utf-8')
 if __name__=='__main__':prepare()

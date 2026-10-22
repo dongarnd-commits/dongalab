@@ -153,3 +153,7 @@ W2 자동 추천/W3 신규 Proposal 연계, R07 범용 조건 엔진, OCR·외�
 사용자는 PR14의 C02/C03 서류 우선 최초 등록, 직접 입력, 실제 한글 OCR, 사용자 확인/수정, 사업자번호 정규화·체크디지트 및 기존 Company 등록/원본/Evidence 보존을 명시 지시했다. 과거 W1의 OCR 미승인 기록은 당시 범위로 보존하며, 이번 증분은 로컬 Tesseract/PDFium Adapter에 한정한다. 외부 OCR/AI 전송은 승인하지 않았다. 상세 영향은 reviews/PR14_INITIAL_REGISTRATION_OCR.md.
 
 등록 전에는 기존 COMPANY_EDITOR 등록 권한으로 원문을 메모리 분석하며 Company/영속 File/공유 토큰을 만들지 않는다. 최종 사용자 확인 후 기존 Company/Membership Guard와 Private 파일/불변 Evidence를 재사용한다. 여러 서버 명령의 부분 실패는 회사 생성/문서 보존/추출 완료를 분리해 표시한다. 기업 ACK와 최종 Fact 확정은 계속 분리한다. DB Schema/Migration/Role/업무 State/Approval Guard/Assignment는 변경하지 않는다. 기존 저장 사업자번호나 과거 Version을 소급 수정하지 않는다. 실사용 인수는 PENDING이다.
+
+## Decision — PR14 v1.4 기업 실사용 저장·보완·승인 근거 (2026-10-22)
+
+Status: ACCEPTED. 사용자가 PR14_V14_CONTRACT_APPROVAL.md의 A~C 증분과 D 별도 승인 모드를 각각 명시 승인했다. 기존 상세 계약을 전면 재설계하지 않고 03/04/05/08/10의 해당 증분을 적용한다. 신규 Role enum·외부 AI·Matching 엔진·과거 원본 삭제는 포함하지 않는다. 기존 COMPANY_APPROVER 직접 승인 경로와 새로운 정확한 지정 Editor의 기업 내부 승인 근거 기록 경로를 구분하고, 실제 승인권자/기록자를 분리한다. Migration은 새 격리 검증 환경에서 수행하며 기존 사용자 자료가 있는 업무/체험 DB의 Migration은 별도 승인 대상이다. 범위·안전 정책·검증은 [승인안](reviews/PR14_V14_CONTRACT_APPROVAL.md)을 참조한다.

@@ -426,3 +426,9 @@ W1 기술 Gate는 실제 격리 PostgreSQL/API/Private File/Web에서 Company·�
 ## W0 승인된 UI Foundation 증분 — 2026-10-19 / Decision-007
 
 W0는 실제 로그인/역할별 홈→기업 입력/저장/재조회→개선과제→공통 메뉴/후속 화면→서버 로그아웃→이전 Cookie API 거절→다른 계정/뒤로가기 비노출을 격리 Web/API/PostgreSQL에서 검증한다. 운영자 Fact/Composer/Matching/Proposal 진입, 관리자 Catalog/접근관리·비상속 및 준비 중 메뉴를 포함한다. 기존 W1·Notice·Capability·Matching·Proposal 회귀와 lint/build/API Type/공용 DB 전후 무결성을 확인한다. 서버 테스트만 통과하여 W0 Browser E2E를 PASS로 판정하지 않는다. 실제 실행 결과는 W0 검수 문서에 구분한다.
+
+## PR14 v1.4 승인 증분의 실행 수용기준 (2026-10-22)
+
+[승인 범위](reviews/PR14_V14_CONTRACT_APPROVAL.md)의 실제 DB/File/HTTP/Browser 검증을 수행한다. 상세 재무의 표별 코드·다중 페이지·발급일/결산연도·단위·정밀도·합계 불일치·분모0·수정·원본 관계를 검증한다. 결과보고서의 사업연도/수행기간·프로그램/과제·기관 후보·도입/공급기업을 구분한다. 실제 PDF는 Private 로컬 검증, CI는 합성 PDF만 사용한다.
+
+파일 교체/취소 후 과거 원본·Evidence·제출/승인 참조 유지, 타기업 차단 및 실제 이벤트 영속성을 검증한다. InformationRequest의 초안/발송/응답 Version/첨부/재보완/검증과 Company/State/Version Guard를 실제 DB로 확인한다. 기존 직접 Approver와 지정 Editor 기록 모드 각각의 허용/거부·실제 승인권자와 기록자 분리·근거 누락 차단·과거 Version/재승인 및 공개 Projection/PDF를 검증한다. 성공 실행과 사용자 인수를 구분하며 USER_ACCEPTANCE는 별도다. 이 기준의 추가만으로 실행 PASS를 선언하지 않는다.

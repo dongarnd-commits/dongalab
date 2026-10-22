@@ -1,3 +1,4 @@
+from v14_migration_chain import ThroughLatest,AFTER_COMPANY
 from registration_sources import number as synthetic_business_number
 """Actual frozen migration chain, guarded schemas and non-destructive Down."""
 from uuid import uuid4
@@ -24,7 +25,7 @@ def migration():
  try:
   with Operations.context(MigrationContext.configure(connection)):
    for filename in ['6d5ba2015303_notice_first_slice.py','a44df74db1ac_bizinfo_ingestion.py','b730cf01a649_capability_catalog.py','c941a0042026_common_analysis_lineage.py','d752a0012026_immutable_matching_inputs.py','e863p0012026_proposal_production.py']:load(filename).upgrade()
-   yield connection,load('f974c0012026_company_workflow.py'),schema
+   yield connection,ThroughLatest(load('f974c0012026_company_workflow.py'),AFTER_COMPANY),schema
  finally:outer.rollback();connection.close()
 
 def assert_model(c,schema):

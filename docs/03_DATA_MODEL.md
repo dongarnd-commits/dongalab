@@ -694,3 +694,9 @@ P01-P05 물리 구현: Proposal Root의 Company/현재 ordinal, 불변 ProposalV
 Company 입력·Site·파일·파싱 위치·Fact 후보/기업 사실확인/운영자 Review·FactVersion·ImprovementVersion을 실제 PostgreSQL에 저장한다. 입력·Site·Fact·개선과제 Root는 현재 ordinal만 전진시키며 Version·Evidence·Review·Audit는 불변이다. 재무 Fact 의미키는 Company/Site/항목/기간/단위/통화다. 새 근거의 동일값 재확인은 이전 FactVersion을 수정하지 않고 별도 Review로 연결한다.
 
 새 Migration f974c0012026은 e863p0012026 다음이다. 실제 Company 물리 객체만 FK를 연결하며 기존 외부 소비 계약을 유지한다. 승인된 공통 계보 증분은 analysis_company_contexts와 기존 Candidate/Review의 typed Company FK 2개다. RULE_BASED 후보만 공통 Run/Candidate/Review에 연결하고 직접입력·수동 후보를 AI 실행으로 위장하지 않는다. Company/file/parse/actor/값/Review 관계는 deferred 제약으로 검사한다. 데이터가 있는 Down은 COMPANY_HISTORY_EXISTS로 거절한다. 공용 DB에는 적용하지 않는다.
+
+## PR14 v1.4 승인된 물리 증분 (2026-10-22)
+
+승인 원문과 구체 범위: [PR14_V14_CONTRACT_APPROVAL](reviews/PR14_V14_CONTRACT_APPROVAL.md) A~D. 기존 CompanyInputVersion JSON에 상세 재무 후보/기업 입력과 출처 선택을 호환 증분으로 저장한다. 금액은 정확한 원 단위 정수 문자열, 누락은 미확인으로 구분한다. File/Parse/Evidence 및 불변 입력 Version/행을 typed 관계로 연결해 원문 값과 사용자 수정값을 구분한다. 원본 교체·현재 자료 등록 취소는 append-only 관계/이벤트로 남기며 과거 File/Evidence/제출본을 삭제·재연결하지 않는다. InformationRequest의 기존 논리 State를 물리 요청·불변 응답 Version·첨부·Review로 구현한다.
+
+ApprovalRequest는 기존 DIRECT_APPROVER 모드와, 명시적으로 지정된 같은 기업 Editor가 내부 승인 근거를 기록하는 COMPANY_RECORDED_AUTHORIZATION 모드를 구분한다. 실제 승인권자 성명·직책·승인 시각/방식·구두 경위 또는 결재 파일과 시스템 기록자·전송 시각은 별도 불변 기록이다. 시스템 Actor를 실제 승인권자 본인으로 조작하거나 전자서명으로 해석하지 않는다. 정확한 ProposalVersion/요청/지정 행위자/Scope 관계 및 과거 직접 승인 호환을 유지한다.

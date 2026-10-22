@@ -18,7 +18,7 @@ for(const role of ['editor','operator','admin'] as const)test('Slice0a real logi
  await page.reload();await expect(page.getByRole('button',{name:'로그아웃',exact:true}).first()).toBeVisible();
  const nav=page.locator('aside nav, aside').first();
  if(role==='editor'){
-  for(const name of ['기업정보 등록 시작','추출정보 확인','기업 · 사업장 관리','재무 · 사업이력','개선요구 등록','첨부자료 관리','분석 결과 확인','보완 요청함','받은 제안서','기업 홈']){
+  for(const name of ['기업정보 등록 시작','기업 · 사업장 관리','재무 · 사업이력','개선요구 등록','첨부자료 관리','보완 요청함','받은 제안서','기업 홈']){
    await page.locator('aside').getByRole('button',{name,exact:true}).click();
    await expect(page.getByRole('heading').first()).toBeVisible();
    await expect(page.getByText('㈜한빛정밀',{exact:false})).toHaveCount(0);

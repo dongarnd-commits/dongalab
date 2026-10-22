@@ -1,3 +1,4 @@
+from v14_migration_chain import ThroughLatest,AFTER_COMPANY,proposal_baseline
 from registration_sources import number as synthetic_business_number
 import copy,io,zipfile
 from pathlib import Path
@@ -128,10 +129,10 @@ def test_new_migration_up_empty_down_up_and_legacy_notice_preservation():
  from isolation import require_test_database
  require_test_database();schema='test_proposal_migration_'+uuid4().hex;new={P.roots,P.versions,P.reviews,P.requests,P.decisions,P.files,P.completions}
  with get_engine().connect().execution_options(schema_translate_map={None:schema}) as c:
-  transaction=c.begin();c.exec_driver_sql('CREATE SCHEMA '+schema);Base.metadata.create_all(c,tables=[t for t in Base.metadata.tables.values() if t not in new]);c.exec_driver_sql('SET LOCAL search_path='+schema+',public')
+  transaction=c.begin();c.exec_driver_sql('CREATE SCHEMA '+schema);c.exec_driver_sql('SET LOCAL search_path='+schema+',public');proposal_baseline(c)
   old=c.execute(N.notices.insert().values(external_key='TEST legacy',title='TEST preserved Notice',current_ordinal=1).returning(N.notices)).mappings().one()
   with Operations.context(MigrationContext.configure(c)):
-   m=migration_module();m.upgrade()
+   m=ThroughLatest(migration_module(),('f974c0012026_company_workflow.py',)+AFTER_COMPANY);m.upgrade()
    assert dict(c.execute(select(N.notices).where(N.notices.c.id==old['id'])).mappings().one())==dict(old)
    for t in new:assert set(t.c.keys())=={x['name'] for x in inspect(c).get_columns(t.name,schema=schema)}
    m.downgrade();m.upgrade()
@@ -214,10 +215,10 @@ def test_partial_migration_failure_rolls_back_and_can_retry(monkeypatch):
  from isolation import require_test_database
  require_test_database();schema='test_proposal_partial_'+uuid4().hex;new={P.roots,P.versions,P.reviews,P.requests,P.decisions,P.files,P.completions}
  with get_engine().connect().execution_options(schema_translate_map={None:schema}) as c:
-  transaction=c.begin();c.exec_driver_sql('CREATE SCHEMA '+schema);Base.metadata.create_all(c,tables=[t for t in Base.metadata.tables.values() if t not in new]);c.exec_driver_sql('SET LOCAL search_path='+schema+',public')
+  transaction=c.begin();c.exec_driver_sql('CREATE SCHEMA '+schema);c.exec_driver_sql('SET LOCAL search_path='+schema+',public');proposal_baseline(c)
   old=c.execute(N.notices.insert().values(external_key='TEST partial migration',title='TEST source preserved',current_ordinal=1).returning(N.notices)).mappings().one()
   with Operations.context(MigrationContext.configure(c)):
-   migration=migration_module();execute=migration.op.execute;calls=[]
+   migration=ThroughLatest(migration_module(),('f974c0012026_company_workflow.py',)+AFTER_COMPANY);execute=migration.op.execute;calls=[]
    def fail(statement,*args,**kwargs):
     calls.append(statement)
     if len(calls)==3:raise RuntimeError('TEST_PARTIAL_DDL_FAILURE')
@@ -257,7 +258,8 @@ def test_approval_scoped_public_documents_survive_company_source_lockdown(env):
  assert any(d['id']==decision['id'] and d['version_id']==vid for d in e.call('approver','/proposal/'+p['proposal_id'])['decisions'])
 
 
-def test_real_company_provider_approval_projection_and_workspace_context(tmp_path,monkeypatch):
+@pytest.mark.parametrize('approval_mode',['DIRECT_APPROVER','COMPANY_RECORDED_AUTHORIZATION'])
+def test_real_company_provider_approval_projection_and_workspace_context(tmp_path,monkeypatch,approval_mode):
  # Real W1 records/provider plus normal Proposal commands in an isolated schema.
  from app.company.application import CompanyApplication
  from app.company.provider import CompanyProvider
@@ -292,7 +294,19 @@ def test_real_company_provider_approval_projection_and_workspace_context(tmp_pat
    e.call('operator','/capability/matches/'+cid+'/review',dict(outcome='PROPOSABLE',note='TEST complete synthetic review',completion_items=items,idempotency_key=e.nonce()))
    p=e.call('operator','/proposal',dict(candidate_id=cid,title='TEST public proposal title',idempotency_key=e.nonce()));vid=p['version_id']
    assert not e.call('approver','/workspace')['proposals']
-   e.call('operator','/proposal/versions/'+vid+'/review',dict(confirmed=True,note='TEST_PRIVATE_PROPOSAL_NOTE',idempotency_key=e.nonce()));q=e.call('operator','/proposal/versions/'+vid+'/approval',dict(idempotency_key=e.nonce()))
+   e.call('operator','/proposal/versions/'+vid+'/review',dict(confirmed=True,note='TEST_PRIVATE_PROPOSAL_NOTE',idempotency_key=e.nonce()))
+   recorded=approval_mode=='COMPANY_RECORDED_AUTHORIZATION';recipient='company' if recorded else 'approver'
+   q=e.call('operator','/proposal/versions/'+vid+'/approval',dict(idempotency_key=e.nonce(),approval_mode=approval_mode,recorder_id=e.accounts['company']['id'] if recorded else None))
+   if recorded:
+    from datetime import datetime,timezone
+    inbox=e.call('company','/proposal/inbox/'+c['id']);item=next(v for v in inbox if v['version_id']==vid)
+    assert 'manifest' not in item and 'TEST_PRIVATE_FACT_NOTE' not in str(inbox) and 'TEST_PRIVATE_PROPOSAL_NOTE' not in str(inbox)
+    e.call('approver','/proposal/versions/'+vid,status=404);assert not e.call('approver','/workspace')['proposals']
+    exported=e.call('operator','/proposal/versions/'+vid+'/export',dict(kind='PDF',idempotency_key=e.nonce()));document=e.clients['company'].get('/proposal/files/'+exported['id']+'/download');assert document.status_code==200 and document.content.startswith(b'%PDF-')
+    proof=dict(actual_approver_name='TEST real-provider director',actual_approver_title='TEST CEO',approved_at=datetime.now(timezone.utc).isoformat(),method='ORAL',context='TEST exact version reviewed by internal approver')
+    decision=e.call('company','/proposal/approvals/'+q['id']+'/decision',dict(outcome='APPROVE',reason='TEST actual CompanyProvider authorization flow',authorization=proof,idempotency_key=e.nonce()));assert decision['outcome']=='APPROVE'
+    assert e.call('company','/proposal/inbox/'+c['id'])[0]['decisions'][0]['authorization']['actual_approver_name']==proof['actual_approver_name']
+    return
    workspace=e.call('approver','/workspace');company=next(x for x in workspace['companies'] if x['id']==c['id']);assert [x['version_id'] for x in company['improvements']]==[current['id']];assert company['improvements'][0]['title']=='TEST public proposal title';assert company['sites']==[dict(id=site['id'],name='TEST approved site')];assert len(workspace['proposals'])==1
    for path in ['/workspace','/company/'+c['id'],'/proposal/'+p['proposal_id'],'/proposal/versions/'+vid]:
     text=str(e.call('approver',path));assert 'TEST_PRIVATE_FACT_NOTE' not in text and 'TEST_PRIVATE_PROPOSAL_NOTE' not in text
@@ -302,3 +316,47 @@ def test_real_company_provider_approval_projection_and_workspace_context(tmp_pat
    response=e.clients['operator'].get(evidence_url);assert response.status_code==200 and response.content==raw
    exported=e.call('operator','/proposal/versions/'+vid+'/export',dict(kind='DOCX',idempotency_key=e.nonce()));response=e.clients['approver'].get('/proposal/files/'+exported['id']+'/download');assert response.status_code==200 and sha256(response.content).hexdigest()==exported['digest']
    decision=e.call('approver','/proposal/approvals/'+q['id']+'/decision',dict(outcome='APPROVE',reason='TEST exact version approved',idempotency_key=e.nonce()));assert decision['outcome']=='APPROVE'
+
+
+def test_recorded_authorization_exact_actor_evidence_and_safe_inbox(env):
+ from datetime import datetime,timezone,timedelta
+ from app.company.application import CompanyApplication
+ from app.infrastructure import company_schema as C
+ from app.notice.domain import Actor
+ e=env;editor=e.accounts['company'];cid='TEST_COMPANY_A'
+ with e.factory.begin() as session:
+  company=CompanyApplication(session,e.files)
+  if not company.rows(C.companies,id=cid):
+   number=synthetic_business_number()
+   company.add(C.companies,id=cid,business_number=number,name='TEST authorization company',current_ordinal=0)
+   for person in (editor,e.accounts['operator'],e.accounts['approver']):company.add(C.memberships,company_id=cid,actor_id=person['id'],granted_by=e.accounts['admin']['id'])
+   company.save_profile(Actor(editor['id'],'COMPANY_EDITOR'),cid,dict(name='TEST authorization company',business_number=number),0)
+ p,_,_=create(e);vid=p['version_id']
+ assert not any(item['version_id']==vid for item in e.call('company','/proposal/inbox/'+cid))
+ e.call('operator','/proposal/versions/'+vid+'/review',dict(confirmed=True,note='TEST content exact version',idempotency_key=e.nonce()))
+ q=e.call('operator','/proposal/versions/'+vid+'/approval',dict(approval_mode='COMPANY_RECORDED_AUTHORIZATION',recorder_id=editor['id'],idempotency_key=e.nonce()))
+ e.call('approver','/proposal/versions/'+vid,status=404)
+ visible=e.call('company','/proposal/versions/'+vid);assert 'manifest' not in visible and all(set(section)=={'heading','body'} for section in visible['sections'])
+ e.call('company','/proposal/'+p['proposal_id'],status=404)
+ item=next(item for item in e.call('company','/proposal/inbox/'+cid) if item['version_id']==vid)
+ assert set(item)=={'version_id','ordinal','title','created_at','sections','approval','files','decisions'}
+ body=dict(outcome='APPROVE',reason='TEST recorded actual internal authorization',idempotency_key=e.nonce())
+ e.call('company','/proposal/approvals/'+q['id']+'/decision',body,status=422)
+ e.call('company','/proposal/approvals/'+q['id']+'/decision',dict(body,outcome='REJECT',idempotency_key=e.nonce()),status=403)
+ e.call('approver','/proposal/approvals/'+q['id']+'/decision',body,status=404)
+ proof=dict(actual_approver_name='TEST actual director',actual_approver_title='TEST CEO',approved_at=datetime.now(timezone.utc).isoformat(),method='ORAL',context='TEST exact version confirmed in meeting')
+ e.call('company','/proposal/approvals/'+q['id']+'/decision',dict(body,authorization=dict(proof,approved_at=(datetime.now(timezone.utc)-timedelta(days=1)).isoformat()),idempotency_key=e.nonce()),status=422)
+ result=e.call('company','/proposal/approvals/'+q['id']+'/decision',dict(body,authorization=proof,idempotency_key=e.nonce()))
+ assert result['outcome']=='APPROVE'
+ audit=e.call('operator','/proposal/'+p['proposal_id'])['recorded_authorizations'];assert any(row['actual_approver_name']==proof['actual_approver_name'] and row['version_id']==vid for row in audit)
+ with e.factory() as session:
+  row=session.execute(select(P.authorizations).where(P.authorizations.c.decision_id==result['id'])).mappings().one()
+  assert row['recorder_id']==editor['id'] and row['actual_approver_name']==proof['actual_approver_name'] and row['version_id']==vid
+  from alembic.operations import Operations
+  from alembic.migration import MigrationContext
+  from v14_migration_chain import load
+  connection=session.connection();schema=connection.get_execution_options().get('schema_translate_map',{}).get(None,'public')
+  connection.exec_driver_sql('SET LOCAL search_path='+connection.dialect.identifier_preparer.quote(schema)+',public')
+  with Operations.context(MigrationContext.configure(connection)):
+   with pytest.raises(RuntimeError,match='RECORDED_AUTHORIZATION_HISTORY_EXISTS'):load('fc07d0012026_recorded_authorization.py').downgrade()
+  assert session.scalar(select(P.authorizations.c.id).where(P.authorizations.c.decision_id==result['id']))==row['id']

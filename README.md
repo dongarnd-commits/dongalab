@@ -438,3 +438,10 @@ CI adds Proposal API/Migration/concurrency/document tests to PostgreSQL Integrat
 Use `uv run python tests/ci_run.py proposal` for focused Proposal DB tests against a disposable `DATCO_CI_ADMIN_URL`; `integration` runs public regressions and `e2e` owns fresh API/Worker/Web.
 The runner supports Windows/Linux and its own Next output directory. Private DMP 649 input is still excluded; the public CI fixture has only three synthetic features.
 PHASE1_FULL_E2E remains NOT_COMPLETED while the real provider is missing. PHASE2_FULL_E2E/SYSTEM_ACCEPTANCE remain NOT_TESTED.
+
+
+### PR14 v1.4 company review workflows
+
+The authenticated company portal provides PDF-first NTS financial input (year and eleven exact won amounts), immutable extraction/source links, and explicit human edits. Derived ratios and consistency warnings do not confirm a Fact or decide eligibility. Original financial years, document pages and buyer/supplier candidates remain reviewable.
+
+File replacement/cancellation appends lifecycle events while retaining originals and historical references. Scoped InformationRequests persist draft/submitted response versions and operator verification/revision. Proposal delivery uses an exact sent-Version whitelist; `COMPANY_RECORDED_AUTHORIZATION` is an explicitly designated Editor recording an actual internal approver and evidence, distinct from direct `COMPANY_APPROVER` approval or electronic signature. See [approved contract increment](docs/reviews/PR14_V14_CONTRACT_APPROVAL.md). Existing business databases require separate migration authorization; development validation uses isolated databases and private file storage.

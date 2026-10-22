@@ -256,3 +256,9 @@ P01-P05 구현은 기존 O의 생성/작성/내용검토/승인요청과 지정 
 ## W1 승인된 구현 증분 — 2026-10-19 / Decision-006
 
 새 Role은 없다. COMPANY_EDITOR는 새 Company 등록 시 자기 Membership만 만들 수 있고 기존 타기업에 자체 가입할 수 없다. DATCO_ADMIN은 기존 계정에 명시적 Company Membership만 부여한다. 이 최소 물리 구현은 ADMIN의 Operator/기업 승인권한 상속을 의미하지 않는다. DATCO_OPERATOR의 조회·분석·Fact/Improvement Review는 해당 Company Membership이 필요하다. COMPANY_APPROVER는 Editor 권한을 상속하지 않는다. 파일 다운로드에서도 서버 인증·Company Scope·digest를 검사한다. Membership 회수·수명주기·복수 승인자 운영정책은 이번 구현에 추가하지 않는다.
+
+## PR14 v1.4 명시 승인된 제한 예외 (2026-10-22)
+
+이 절은 상단 COMPANY_EDITOR의 일반 Proposal 승인 불가 원칙에 대한 명시적·제한적 증분이다. [사용자 승인](reviews/PR14_V14_CONTRACT_APPROVAL.md) D에 따라 COMPANY_RECORDED_AUTHORIZATION 요청의 정확히 지정된 같은 기업 COMPANY_EDITOR만 그 ProposalVersion의 내부 승인 근거를 기록·전송할 수 있다. 일반 Membership만으로 승인자 권한을 주지 않으며 DIRECT_APPROVER 요청에는 기존 지정 COMPANY_APPROVER만 결정한다. DATCO_ADMIN/OPERATOR의 기업 승인 대행은 계속 금지한다. 승인권자와 시스템 기록자는 구분하며 후자의 근거 기록은 전자의 전자서명이 아니다.
+
+기업 공개 조회는 실제 발송된 같은 Company의 정확한 ProposalVersion/문서에 한한다. 미발송 Draft, 내부 Review/전체 Manifest/비공개 기업 Fact 원문을 공개하지 않는다. Editor 공개 조회와 승인 근거 기록 권한을 구분하며 지정되지 않은 Editor의 승인/수정요청은 차단한다. File 교체·취소는 같은 Company Editor의 현재 등록에만 적용하고, 원본/Evidence/과거 승인·제출 참조는 계속 보존한다. 보완 요청 발송·검증은 Scoped Operator, 응답은 같은 Company Editor다. 자동 Company Access 부여는 없다.

@@ -1,8 +1,8 @@
 import {test,expect,Page} from '@playwright/test';
 const data=()=>JSON.parse(process.env.DATCO_PORTAL_CONTEXT!);
 async function login(page:Page){const c=data();await page.goto('/login');await page.getByLabel('아이디',{exact:true}).fill(c.accounts.editor);await page.getByLabel('비밀번호',{exact:true}).fill(c.password);await page.getByRole('button',{name:'로그인',exact:true}).click();await expect(page.getByTestId('company-business-context')).toHaveAttribute('data-company-id',c.a.id);}
-const menus=['기업 홈','기업정보 등록 시작','추출정보 확인','기업 · 사업장 관리','재무 · 사업이력','개선요구 등록','첨부자료 관리','분석 결과 확인','보완 요청함','받은 제안서'];
-test('v04 all ten company screens have no shared banner and preserve actual context',async({page})=>{
+const menus=['기업 홈','기업정보 등록 시작','기업 · 사업장 관리','재무 · 사업이력','개선요구 등록','첨부자료 관리','보완 요청함','받은 제안서'];
+test('v04 all eight authenticated company screens have no shared banner and preserve actual context',async({page})=>{
  test.setTimeout(120000);const c=data();await login(page);
  for(const [index,name] of menus.entries()){
   await page.locator('aside').getByRole('button',{name,exact:true}).click();

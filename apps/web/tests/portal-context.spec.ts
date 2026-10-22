@@ -17,7 +17,7 @@ test('0b single company auto selection and exact historical version survives all
  await chooseA(page);await expect(page.getByLabel('업무 기업 선택')).toHaveCount(0);
  await chooseVersion(page,c.av1.id);await assertContext(page,c.a.id,c.a1.id,c.av1.improvement_id,c.av1.id);
  const selected=await(await page.request.get('/api/company/'+c.a.id+'/navigation?version_id='+c.av1.id)).json();expect(selected.selection.is_latest_version).toBe(false);
- for(const name of ['기업정보 등록 시작','추출정보 확인','기업 · 사업장 관리','재무 · 사업이력','개선요구 등록','첨부자료 관리','분석 결과 확인','보완 요청함','받은 제안서','기업 홈']){
+ for(const name of ['기업정보 등록 시작','기업 · 사업장 관리','재무 · 사업이력','개선요구 등록','첨부자료 관리','보완 요청함','받은 제안서','기업 홈']){
   await page.locator('aside').getByRole('button',{name,exact:true}).click();await assertContext(page,c.a.id,c.a1.id,c.av1.improvement_id,c.av1.id);
  }
  await page.reload();await assertContext(page,c.a.id,c.a1.id,c.av1.improvement_id,c.av1.id);

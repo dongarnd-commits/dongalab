@@ -1,5 +1,5 @@
 """Approved P01-P05 physical records; no new workflow states or Company master."""
-from sqlalchemy import Column,String,Integer,Text,Boolean,UniqueConstraint,CheckConstraint,ForeignKeyConstraint
+from sqlalchemy import Column,String,Integer,Text,Boolean,DateTime,UniqueConstraint,CheckConstraint,ForeignKeyConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from app.infrastructure.notice_schema import table,ref
 roots=table('proposals',Column('company_id',String(100),nullable=False),ref('match_review_id','capability_match_reviews'),Column('current_ordinal',Integer,nullable=False),CheckConstraint('current_ordinal>0'))
@@ -12,3 +12,9 @@ IMMUTABLE_TABLES=(versions,reviews,decisions,files)
 
 completions=table('match_review_completions',ref('review_id','capability_match_reviews'),Column('basis',JSONB,nullable=False),Column('items',JSONB,nullable=False),UniqueConstraint('review_id'))
 IMMUTABLE_TABLES=(*IMMUTABLE_TABLES,completions)
+
+# User-approved PR14 v1.4 D; designated system actor remains the decision FK.
+requests.append_column(Column('approval_mode',String(40),nullable=False,server_default='DIRECT_APPROVER'))
+requests.append_constraint(CheckConstraint("approval_mode IN ('DIRECT_APPROVER','COMPANY_RECORDED_AUTHORIZATION')",name='ck_proposal_approval_mode'))
+decisions.append_constraint(UniqueConstraint('id','request_id','version_id','actor_id',name='uq_proposal_decision_authorization_target'))
+authorizations=table('proposal_recorded_authorizations',ref('decision_id','proposal_approval_decisions'),ref('request_id','proposal_approval_requests'),ref('version_id','proposal_versions'),ref('recorder_id','local_actors'),ref('company_id','companies'),Column('actual_approver_name',String(200),nullable=False),Column('actual_approver_title',String(200),nullable=False),Column('approved_at',DateTime(timezone=True),nullable=False),Column('method',String(20),nullable=False),Column('context',Text,nullable=False),ref('file_id','company_files',True),UniqueConstraint('decision_id'),ForeignKeyConstraint(['decision_id','request_id','version_id','recorder_id'],['proposal_approval_decisions.id','proposal_approval_decisions.request_id','proposal_approval_decisions.version_id','proposal_approval_decisions.actor_id'],ondelete='RESTRICT'),ForeignKeyConstraint(['file_id','company_id'],['company_files.id','company_files.company_id'],ondelete='RESTRICT'),CheckConstraint("method IN ('ORAL','DOCUMENT')"),CheckConstraint("(method='ORAL' AND length(context)>0) OR (method='DOCUMENT' AND file_id IS NOT NULL)"))

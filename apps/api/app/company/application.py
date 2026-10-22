@@ -13,7 +13,11 @@ from app.notice.domain import Denied
 from app.company.documents import parse_document,DocumentError,MAX_UPLOAD
 from app.company.contracts import Profile,Site,FactInput,Improvement
 
-class CompanyApplication:
+from app.company.business_records import BusinessRecords
+
+from app.company.information_requests import InformationRequests
+
+class CompanyApplication(BusinessRecords,InformationRequests):
  def __init__(self,session,files):self.session=session;self.files=files
  def rows(self,t,**where):return [dict(r) for r in self.session.execute(select(t).where(*[t.c[k]==v for k,v in where.items()]).order_by(t.c.created_at,t.c.id)).mappings()]
  def get(self,t,key,lock=False):
@@ -66,6 +70,7 @@ class CompanyApplication:
    if not value:continue
    e=self.add(S.evidence,actor_id=who.id,company_id=cid,site_id=None,file_id=None,input_version_id=v['id'],parse_id=None,descriptor='Company input: '+field,text=value,mode='COMPANY_INPUT')
    self.add(S.candidates,company_id=cid,site_id=None,evidence_id=e['id'],field=field,value=value,period=period,unit=unit,currency=currency,valid_from=date.today().isoformat(),mode='COMPANY_INPUT',actor_id=who.id)
+  self.link_business_sources(who,cid,v,data)
   self.record(who,cid,'SAVE_COMPANY_INPUT',input_version_id=v['id']);return v
  def save_site(self,who,cid,data,site_id=None,expected=0):
   self.role(who,'COMPANY_EDITOR');self.scope(who,cid,True);data=Site.model_validate(data).model_dump()
@@ -103,8 +108,12 @@ class CompanyApplication:
   # approval-scoped sharing relation; approved Proposal documents use /proposal.
   self.role(who,'COMPANY_EDITOR','DATCO_OPERATOR')
   return f,self.files.read(f['storage_key'],f['digest'])
- def parse(self,who,file_id,registration=False,purpose=None):
+ def parse(self,who,file_id,registration=False,purpose=None,standard=False):
   f=self.get(S.files,file_id);self.scope(who,f['company_id'],True)
+  self.active_file(file_id)
+  if standard:
+   if purpose not in ('finance','history') or registration:raise Denied('INVALID_REQUEST',422)
+   return self.standard_business_parse(who,f,purpose)
   try:
    if purpose:
     from app.company.business_documents import parse_business
@@ -152,11 +161,13 @@ class CompanyApplication:
  def manual_evidence(self,who,cid,file_id,site_id,descriptor,transcription):
   self.scope(who,cid,True);f=self.get(S.files,file_id);self.site(cid,site_id)
   if f['company_id']!=cid or (f['site_id'] and f['site_id']!=site_id):raise Denied('OBJECT_NOT_FOUND',404)
+  self.active_file(file_id)
   self.files.read(f['storage_key'],f['digest'])
   return self.add(S.evidence,actor_id=who.id,company_id=cid,site_id=site_id,file_id=file_id,input_version_id=None,parse_id=None,descriptor=descriptor,text=transcription,mode='MANUAL_REVIEW')
  def new_candidate(self,who,cid,data):
   self.scope(who,cid,True);v=FactInput.model_validate(data).model_dump(mode='json');e=self.get(S.evidence,v['evidence_id']);self.site(cid,v['site_id'])
   if e['company_id']!=cid or (e['site_id'] and e['site_id']!=v['site_id']):raise Denied('OBJECT_NOT_FOUND',404)
+  if e['file_id']:self.active_file(e['file_id'])
   if v['value'] not in e['text']:raise Denied('EXTRACTED_VALUE_NOT_IN_EVIDENCE',422)
   c=self.add(S.candidates,company_id=cid,mode='MANUAL_REVIEW',actor_id=who.id,**v)
   self.record(who,cid,'CREATE_FACT_CANDIDATE',candidate_id=c['id']);return c
@@ -224,6 +235,11 @@ class CompanyApplication:
    'facts':[dict(f,versions=[dict(v,current_valid=self.current_fact(v['id'])[2],review=self.get(S.reviews,v['review_id'])) for v in self.rows(S.fact_versions,fact_id=f['id'])]) for f in facts],
    'improvements':[dict(i,versions=[dict(v,reviews=self.rows(S.improvement_reviews,version_id=v['id'])) for v in self.rows(S.improvement_versions,improvement_id=i['id'])]) for i in improvements], 'audit':self.rows(S.audit,company_id=cid) if who.role=='DATCO_OPERATOR' else []}
 
+  from app.infrastructure import company_business_schema as B
+  result['business_sources']=self.rows(B.sources,company_id=cid)
+  result['business_extractions']=self.rows(B.extractions,company_id=cid)
+  events=self.rows(B.file_events,company_id=cid)
+  for item in result['files']:item['lifecycle']=next((e for e in events if e['file_id']==item['id']),None)
   actor_ids=set()
   def collect(value):
    if isinstance(value,dict):
@@ -267,6 +283,7 @@ class CompanyApplication:
   for eid in data['evidence_ids']:
    e=self.get(S.evidence,eid)
    if e['company_id']!=cid or (e['site_id'] and e['site_id']!=data['site_id']):raise Denied('OBJECT_NOT_FOUND',404)
+   if e['file_id'] and (not key or eid not in previous['data']['evidence_ids']):self.active_file(e['file_id'])
    if not self.evidence_current(eid):raise Denied('STALE_INPUT_VERSION',409)
   v=self.add(S.improvement_versions,improvement_id=root['id'],ordinal=expected+1,data=data,actor_id=who.id,site_ordinal=self.get(S.sites,data['site_id'])['current_ordinal'])
   for fid in set(data['fact_version_ids']):self.add(S.improvement_facts,version_id=v['id'],fact_version_id=fid)
