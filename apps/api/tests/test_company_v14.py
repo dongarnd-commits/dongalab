@@ -73,3 +73,31 @@ def test_replacement_preserves_both_originals_and_rejects_foreign_target(env):
  call(env,'editor','/company/files/'+old['id']+'/parse',{},409)
  assert call(env,'editor','/company/files/'+new['id']+'/parse',{})['error'] is None
  call(env,'editor',path,dict(kind='CANCELLED',note='TEST cannot overwrite replacement event'),409)
+
+
+def test_editor_post_submit_revision_preserves_exact_original_and_scope(env):
+ c,site,_=fresh(env);cid=c['id'];f,raw=upload(env,cid,site['id'])
+ call(env,'editor','/company/files/'+f['id']+'/parse',{})
+ detail=call(env,'editor','/company/'+cid);evidence=next(e for e in detail['evidence'] if e['file_id']==f['id'])
+ data=dict(title='TEST submitted input',original_text='TEST original submitted input',as_is='TEST original problem',to_be='TEST original goal',site_id=site['id'],evidence_ids=[evidence['id']])
+ first=call(env,'editor','/company/'+cid+'/improvements',dict(data=data));path='/company/improvements/'+first['id']+'/actions'
+ sent=call(env,'editor',path,dict(action='SUBMIT',note='TEST first submit'))
+ baseline=next(v for i in call(env,'operator','/company/'+cid)['improvements'] if i['id']==first['improvement_id'] for v in i['versions'] if v['id']==first['id'])
+ call(env,'editor',path,dict(action='SUBMIT',note='TEST duplicate submit'),409)
+ revised=dict(data,original_text='TEST revised company input',as_is='TEST revised problem')
+ body=dict(data=revised,improvement_id=first['improvement_id'],expected_ordinal=1)
+ call(env,'other','/company/'+cid+'/improvements',body,404)
+ call(env,'approver','/company/'+cid+'/improvements',body,403)
+ second=call(env,'editor','/company/'+cid+'/improvements',body)
+ assert second['ordinal']==2 and second['id']!=first['id']
+ call(env,'editor',path,dict(action='SUBMIT',note='TEST obsolete submit'),409)
+ call(env,'editor','/company/'+cid+'/improvements',body,409)
+ call(env,'editor','/company/improvements/'+second['id']+'/actions',dict(action='SUBMIT',note='TEST resubmit'))
+ actual=call(env,'operator','/company/'+cid);root=next(i for i in actual['improvements'] if i['id']==first['improvement_id'])
+ assert root['state']=='SUBMITTED' and root['current_ordinal']==2
+ original=next(v for v in root['versions'] if v['id']==first['id']);latest=next(v for v in root['versions'] if v['id']==second['id'])
+ assert original==baseline and original['data']==first['data']
+ assert all(original['reviews'][0][key]==value for key,value in sent['review'].items())
+ assert latest['data']['as_is']=='TEST revised problem' and latest['data']['evidence_ids']==first['data']['evidence_ids']
+ assert latest['reviews'][0]['outcome']=='SUBMIT' and latest['reviews'][0]['actor_id']==env['people']['editor']['id']
+ assert env['clients']['editor'].get('/company/files/'+f['id']+'/download').content==raw

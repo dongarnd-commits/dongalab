@@ -1,3 +1,4 @@
+import {CompanyHomeSummary} from '../../portal/company-home-summary';
 import {CompanyBusinessScreen} from "../../portal/company-business";
 import {BusinessContextBar,CompanyContextStatus,ContextReadout,selectedContext,improvementStateLabel} from "../../portal/context";
 import type {PortalProps} from "../../portal/types";
@@ -325,7 +326,7 @@ export const DATCOV02 = ({session,onLogout,business,workflow}:PortalProps) => {
 
     {workflow&&['onboarding','company','finance','files','extraction','needs','review','requests','proposals'].includes(page)&&<CompanyBusinessScreen key={(workflow.cid??'new')+':'+page} screen={page} workflow={workflow} goto={target=>goto(target as Screen)}/>}
      {page === 'home' && <>
-     <Header eyebrow={authenticated?"":"COMPANY DASHBOARD"} title="기업 홈" sub="우리 기업의 업무 진행 현황과 다음 할 일을 확인하세요." />{workflow?.detail&&<p className="mb-4 text-sm text-slate-500">등록 사업장 {workflow.detail.sites.length}개 · 개선요구 {workflow.detail.improvements.length}건 · 제출 상태 {workflow.detail.improvements.filter(i=>i.state==='SUBMITTED').length}건</p>}
+     <Header eyebrow={authenticated?"":"COMPANY DASHBOARD"} title="기업 홈" sub="우리 기업의 업무 진행 현황과 다음 할 일을 확인하세요." />{workflow&&<CompanyHomeSummary key={workflow.cid} w={workflow}/>}
 
      <Card className="p-6"><div className="mb-4 flex items-center justify-between"><h3 className="text-[15px] font-bold">업무 진행 단계</h3><span className="text-[12px] font-semibold text-blue-600">{authenticated?'':progress.filter(Boolean).length+' / 5'}</span></div>{!authenticated&&<div className="mb-5 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-blue-600" style={{
                   width: progress.filter(Boolean).length * 20 + '%'
