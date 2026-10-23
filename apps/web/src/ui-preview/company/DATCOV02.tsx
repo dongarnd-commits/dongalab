@@ -1,3 +1,5 @@
+import {CompanyHomeSummary} from '../../portal/company-home-summary';
+import {CompanyBusinessScreen} from "../../portal/company-business";
 import {BusinessContextBar,CompanyContextStatus,ContextReadout,selectedContext,improvementStateLabel} from "../../portal/context";
 import type {PortalProps} from "../../portal/types";
 // UI reproduction from the user-provided MagicPath DATCOV02 v0.2. Development preview only.
@@ -53,6 +55,7 @@ const menu:Array<{head:string;items:Array<{id:Screen;name:string;icon:LucideIcon
  {head:'3. 관련자료',items:[{id:'files',name:'첨부자료 관리',icon:Paperclip}]},
  {head:'4. 분석·제출',items:[{id:'review',name:'분석 결과 확인',icon:Sparkles}]},
  {head:'5. 진행·제안',items:[{id:'requests',name:'보완 요청함',icon:MessageSquareText},{id:'proposals',name:'받은 제안서',icon:FileCheck2}]}];
+const companyMenu=menu.map(g=>({...g,items:g.items.filter(i=>i.id!=='extraction'&&i.id!=='review')})).filter(g=>g.items.length);
 const preset: FieldData = {
   company: '',
   reg: '',
@@ -103,7 +106,7 @@ function Header({
   sub: string;
   children?: React.ReactNode;
 }) {
-  return <div className="mb-6 flex flex-wrap items-end justify-between gap-4"><div><div className="mb-2 text-[10px] font-bold tracking-[.17em] text-blue-600">{eyebrow}</div><h1 className="text-[26px] font-extrabold tracking-[-.035em] text-slate-900 md:text-[30px]">{title}</h1><p className="mt-2 text-[13px] leading-6 text-slate-500">{sub}</p></div>{children}</div>;
+  return <div className="mb-6 flex flex-wrap items-end justify-between gap-4"><div>{eyebrow&&<div className="mb-2 text-[10px] font-bold tracking-[.17em] text-blue-600">{eyebrow}</div>}<h1 className="text-[26px] font-extrabold tracking-[-.035em] text-slate-900 md:text-[30px]">{title}</h1><p className="mt-2 text-[13px] leading-6 text-slate-500">{sub}</p></div>{children}</div>;
 }
 function Label({
   name,
@@ -143,13 +146,14 @@ function IntakeFiles({disabled=false,stage,documents,onFiles,onReference,onManag
   {documents.some(d=>d.usedIn.includes(stage))&&<ul className="space-y-1 text-[12px] text-slate-600">{documents.filter(d=>d.usedIn.includes(stage)).map(d=><li key={d.id}>{d.name} · {d.category} · 파싱 미연결</li>)}</ul>}
  </div>;
 }
-export const DATCOV02 = ({session,onLogout,business}:PortalProps) => {
-  const authenticated=!!session;
+export const DATCOV02 = ({session,onLogout,business,workflow}:PortalProps) => {
+  const authenticated=!!session;const screenChanged=workflow?.screenChanged;
   const [loggedIn, setLoggedIn] = useState(() => authenticated || new URLSearchParams(window.location.search).get('screen') !== null && new URLSearchParams(window.location.search).get('screen') !== 'login');
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [loginErr, setLoginErr] = useState('');
-  const [page, setPage] = useState<Screen>(() => {const p=new URLSearchParams(window.location.search).get('screen');return menu.flatMap(g=>g.items).some(x=>x.id===p)?p as Screen:'home';});
+  const [page, setPage] = useState<Screen>(() => {const raw=new URLSearchParams(window.location.search).get('screen');const p=authenticated&&raw==='extraction'?'company':authenticated&&raw==='review'?'finance':raw;return menu.flatMap(g=>g.items).some(x=>x.id===p)?p as Screen:'home';});
+  const companyUserLabel=session?(/^(?:TEST_|MANUAL_)/i.test(session.name)?'기업 사용자':session.name):'';
   const [mobileMenu, setMobileMenu] = useState(false);
   const [previewData, setData] = useState<FieldData>(preset);
   const [sites, setSites] = useState(authenticated?[]:[{id:1,name:preset.site,address:'',person:'',open:true}]);
@@ -192,7 +196,8 @@ export const DATCOV02 = ({session,onLogout,business}:PortalProps) => {
   const replace = useRef<HTMLInputElement>(null);
   const scroller = useRef<HTMLElement>(null);
   const notify = (s: string) => setToaster(s);
-  const goto = (p: Screen) => {
+  const goto = (target: Screen) => {
+    const p=authenticated&&target==='extraction'?'company':authenticated&&target==='review'?'finance':target;screenChanged?.(p);
     if(p==='files'){setFileReturn(null);setTypeFilter('');setStageFilter('');setFileQuery('');}
     setPage(p);
     const u=new URL(window.location.href);u.searchParams.set('screen',p);window.history.pushState({},'',u);
@@ -218,7 +223,7 @@ export const DATCOV02 = ({session,onLogout,business}:PortalProps) => {
     setPage('home');
     const u=new URL(window.location.href);u.searchParams.set('screen','login');window.history.pushState({},'',u);
   };
-  useEffect(()=>{const back=()=>{const p=new URLSearchParams(window.location.search).get('screen');setLoggedIn(authenticated||(!!p&&p!=='login'));if(menu.flatMap(g=>g.items).some(x=>x.id===p))setPage(p as Screen);setMobileMenu(false);};window.addEventListener('popstate',back);return()=>window.removeEventListener('popstate',back);},[authenticated]);
+  useEffect(()=>{const back=()=>{const p=new URLSearchParams(window.location.search).get('screen');setLoggedIn(authenticated||(!!p&&p!=='login'));if(menu.flatMap(g=>g.items).some(x=>x.id===p)){const next=authenticated&&p==='extraction'?'company':authenticated&&p==='review'?'finance':p as Screen;setPage(next);screenChanged?.(next);}setMobileMenu(false);};window.addEventListener('popstate',back);return()=>window.removeEventListener('popstate',back);},[authenticated,screenChanged]);
   const doLogin=(ev:React.FormEvent)=>{ev.preventDefault();setPassword('');setLoginErr('');setLoggedIn(true);goto('home');};
   const receive=async(fileList:FileList|File[]|null,toReplace:number|null=null,origin:UploadStage='files',category='기타')=>{
     if(authenticated){notify('자료 업로드 미연결: 실제 파일을 전송하지 않았습니다.');return;}
@@ -308,39 +313,40 @@ export const DATCOV02 = ({session,onLogout,business}:PortalProps) => {
   {mobileMenu && <div className="fixed inset-0 z-40 bg-slate-900/40 lg:hidden" onClick={() => setMobileMenu(false)} />}
   <aside className={'fixed inset-y-0 left-0 z-50 flex w-[254px] shrink-0 flex-col border-r border-slate-200 bg-white transition-transform lg:static lg:translate-x-0 ' + (mobileMenu ? 'translate-x-0' : '-translate-x-full')}>
    <div className="flex h-[75px] items-center gap-3 border-b border-slate-100 px-5"><div className="grid h-9 w-9 place-items-center rounded-xl bg-[#1767C7] text-white"><Layers3 size={19} /></div><div><b className="text-[17px] tracking-tight">DATCO <span className="text-[#1767C7]">ONE</span></b><p className="text-[10px] text-slate-400">정부지원사업 운영관리</p></div><button className="ml-auto lg:hidden" onClick={() => setMobileMenu(false)} aria-label="메뉴 닫기"><X size={20} /></button></div>
-   <div className="min-h-0 flex-1 overflow-y-auto px-3 py-5">{menu.map(g => <div key={g.head} className="mb-6"><p className="mb-2 px-3 text-[10px] font-bold tracking-[.12em] text-slate-400">{g.head}</p>{g.items.map(x => <button key={x.id} onClick={() => goto(x.id)} className={'my-0.5 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[12px] font-semibold transition-colors ' + (page === x.id ? 'bg-[#EAF3FF] text-[#1465BF]' : 'text-slate-600 hover:bg-slate-50')}><x.icon size={18} /><span className="flex-1">{x.name}</span>{page === x.id && <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />}{x.id === 'requests' && !authenticated && !requestSent && <span className="rounded-full bg-amber-100 px-2 text-[10px] text-amber-700">1</span>}</button>)}</div>)}</div>
-   <div className="m-3 rounded-xl border border-slate-100 bg-[#F7F9FC] p-4"><div className="flex items-center gap-2"><ShieldCheck className="text-[#1767C7]" size={17} /><span className="text-[12px] font-semibold">기업정보 보호</span></div><p className="mt-2 text-[11px] leading-6 text-slate-500">문서 추출 후보와 확정된 기업정보를 구분합니다.</p></div>
-   <div className="flex items-center gap-3 border-t border-slate-100 px-5 py-4"><div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-blue-50 text-blue-600"><UserRound size={18} /></div><div className="min-w-0 flex-1"><p title={session?.name} className="truncate text-[12px] font-bold">{session?.name??"수요기업 사용자"}</p><p className="truncate text-[11px] text-slate-400">{session?.role??"회사 담당자"}</p></div><button onClick={logout} className="rounded-lg p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-600" title="로그아웃" aria-label="로그아웃"><LogOut size={19} /></button></div>
+   <div className="min-h-0 flex-1 overflow-y-auto px-3 py-5">{(authenticated?companyMenu:menu).map(g => <div key={g.head} className="mb-6"><p className="mb-2 px-3 text-[10px] font-bold tracking-[.12em] text-slate-400">{g.head}</p>{g.items.map(x => <button key={x.id} onClick={() => goto(x.id)} className={'my-0.5 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[12px] font-semibold transition-colors ' + (page === x.id ? 'bg-[#EAF3FF] text-[#1465BF]' : 'text-slate-600 hover:bg-slate-50')}><x.icon size={18} /><span className="flex-1">{x.name}</span>{page === x.id && <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />}{x.id === 'requests' && !authenticated && !requestSent && <span className="rounded-full bg-amber-100 px-2 text-[10px] text-amber-700">1</span>}</button>)}</div>)}</div>
+   {!authenticated&&<><div className="m-3 rounded-xl border border-slate-100 bg-[#F7F9FC] p-4"><div className="flex items-center gap-2"><ShieldCheck className="text-[#1767C7]" size={17} /><span className="text-[12px] font-semibold">기업정보 보호</span></div><p className="mt-2 text-[11px] leading-6 text-slate-500">문서 추출 후보와 확정된 기업정보를 구분합니다.</p></div></>}
+   <div className="flex items-center gap-3 border-t border-slate-100 px-5 py-4"><div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-blue-50 text-blue-600"><UserRound size={18} /></div><div className="min-w-0 flex-1"><p title={companyUserLabel} className="truncate text-[12px] font-bold">{companyUserLabel||"수요기업 사용자"}</p><p className="truncate text-[11px] text-slate-400">{authenticated?"수요기업 담당자":"회사 담당자"}</p></div><button onClick={logout} className="rounded-lg p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-600" title="로그아웃" aria-label="로그아웃"><LogOut size={19} /></button></div>
   </aside>
   <div className="flex min-w-0 flex-1 flex-col">
-   <header className="flex h-[75px] shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-8"><div className="flex items-center gap-3"><button className="rounded-lg p-2 text-slate-500 lg:hidden" onClick={() => setMobileMenu(true)} aria-label="메뉴 열기"><Menu size={20} /></button><span className="hidden text-[12px] text-slate-400 sm:block">수요기업 포털</span><ChevronRight size={15} className="hidden text-slate-300 sm:block" /><span className="text-[13px] font-bold">{menu.flatMap(x => x.items).find(x => x.id === page)?.name}</span></div><div className="flex items-center gap-3"><Chip color="blue">{authenticated?<span className="block max-w-[160px] truncate" title={session.name}>{session.name}</span>:data.company || '기업정보 입력 중'}</Chip><div className="grid h-8 w-8 place-items-center rounded-full bg-[#EAF3FF] text-[12px] font-bold text-[#1767C7]">기</div><button onClick={logout} className={S + ' hidden sm:inline-flex'}><LogOut size={15} /> 로그아웃</button></div></header>
+   <header className="flex h-[75px] shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-8"><div className="flex items-center gap-3"><button className="rounded-lg p-2 text-slate-500 lg:hidden" onClick={() => setMobileMenu(true)} aria-label="메뉴 열기"><Menu size={20} /></button><span className="hidden text-[12px] text-slate-400 sm:block">수요기업 포털</span><ChevronRight size={15} className="hidden text-slate-300 sm:block" /><span className="text-[13px] font-bold">{menu.flatMap(x => x.items).find(x => x.id === page)?.name}</span></div><div className="flex items-center gap-3"><Chip color="blue">{authenticated?<span className="block max-w-[160px] truncate" title={companyUserLabel}>{companyUserLabel}</span>:data.company || '기업정보 입력 중'}</Chip><div className="grid h-8 w-8 place-items-center rounded-full bg-[#EAF3FF] text-[12px] font-bold text-[#1767C7]">기</div><button onClick={logout} className={S + ' hidden sm:inline-flex'}><LogOut size={15} /> 로그아웃</button></div></header>
    <main ref={scroller} className="min-h-0 flex-1 overflow-y-auto"><div className="mx-auto max-w-[1190px] px-4 pb-14 pt-7 md:px-8">
-    {business&&<CompanyContextStatus business={business}/>}
+    {business&&<CompanyContextStatus business={business} hideEmpty/>}
      {toaster && <div role="status" className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-[12px] text-blue-800"><div className="flex items-center gap-2"><Info size={16} /><span>{toaster}</span></div><button onClick={() => setToaster('')} aria-label="알림 닫기"><X size={16} /></button></div>}
 
 
-    {page === 'home' && <>
-     <Header eyebrow="COMPANY DASHBOARD" title="기업 홈" sub="우리 기업의 업무 진행 현황과 다음 할 일을 확인하세요." />
+    {workflow&&['onboarding','company','finance','files','extraction','needs','review','requests','proposals'].includes(page)&&<CompanyBusinessScreen key={(workflow.cid??'new')+':'+page} screen={page} workflow={workflow} goto={target=>goto(target as Screen)}/>}
+     {page === 'home' && <>
+     <Header eyebrow={authenticated?"":"COMPANY DASHBOARD"} title="기업 홈" sub="우리 기업의 업무 진행 현황과 다음 할 일을 확인하세요." />{workflow&&<CompanyHomeSummary key={workflow.cid} w={workflow}/>}
 
-     <Card className="p-6"><div className="mb-4 flex items-center justify-between"><h3 className="text-[15px] font-bold">업무 진행 단계</h3><span className="text-[12px] font-semibold text-blue-600">{authenticated?"—":progress.filter(Boolean).length+" / 5"}</span></div><div className="mb-5 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-blue-600" style={{
+     <Card className="p-6"><div className="mb-4 flex items-center justify-between"><h3 className="text-[15px] font-bold">업무 진행 단계</h3><span className="text-[12px] font-semibold text-blue-600">{authenticated?'':progress.filter(Boolean).length+' / 5'}</span></div>{!authenticated&&<div className="mb-5 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-blue-600" style={{
                   width: progress.filter(Boolean).length * 20 + '%'
-                }} /></div><div aria-label="5단계 업무 진행" className="grid gap-2 sm:grid-cols-5">{[{
+                }} /></div>}<div aria-label="5단계 업무 진행" className="grid gap-2 sm:grid-cols-5">{[{
                   t: '기업 등록',
                   s: 'onboarding'
                 }, {
                   t: '개선요구 작성',
                   s: 'needs'
                 }, {
-                  t: '관련자료 제출',
+                  t: authenticated?'첨부자료 확인':'관련자료 제출',
                   s: 'files'
                 }, {
-                  t: '분석·입력내용 확인',
-                  s: 'review'
+                  t: authenticated?'입력내용 확인':'분석·입력내용 확인',
+                  s: authenticated?'company':'review'
                 }, {
                   t: '결과·제안서 확인',
                   s: 'proposals'
                 }].map((x, i) => <button key={x.t} onClick={() => goto(x.s as Screen)} className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-4 text-left hover:bg-blue-50 sm:flex-col sm:items-start"><span className={'grid h-7 w-7 shrink-0 place-items-center rounded-full text-[11px] font-bold ' + (progress[i] ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-slate-500')}>{progress[i] ? <Check size={15} /> : i + 1}</span><span className="text-[11px] font-semibold">{x.t}</span></button>)}</div></Card>
-     <p className="mt-3 text-[11px] text-amber-700">{authenticated?"진행현황 조회는 아직 연결되지 않았습니다.":"진행 표시는 미리보기 세션 기준입니다. 실제 저장·분석·전송 완료를 의미하지 않습니다."}</p>
+     <p className="mt-3 text-[11px] text-amber-700">{!authenticated&&"진행 표시는 미리보기 세션 기준입니다. 실제 저장·분석·전송 완료를 의미하지 않습니다."}</p>
      <div className="mt-5 grid gap-4 lg:grid-cols-2"><Card className="p-6"><h3 className="mb-4 text-[15px] font-bold">자주 사용하는 업무</h3><div className="grid gap-3 sm:grid-cols-2">{[{
                     t: '기업정보 관리',
                     d: '기본정보·사업장·재무',
@@ -361,7 +367,7 @@ export const DATCOV02 = ({session,onLogout,business}:PortalProps) => {
                     d: '열람·수정 요청·확인',
                     i: FileCheck2,
                     s: 'proposals'
-                  }].map(x => <button key={x.s} onClick={() => goto(x.s as Screen)} className="flex gap-3 rounded-xl border border-slate-100 p-4 text-left hover:border-blue-200 hover:bg-blue-50/20"><div className="grid h-9 w-9 place-items-center rounded-lg bg-blue-50 text-blue-600"><x.i size={18} /></div><div><p className="text-[12px] font-bold">{x.t}</p><p className="mt-1 text-[11px] text-slate-400">{x.d}</p></div></button>)}</div></Card><Card className="p-6"><h3 className="mb-4 text-[15px] font-bold">확인할 업무</h3>{[{
+                  }].map(x => <button key={x.s} onClick={() => goto(x.s as Screen)} className="flex gap-3 rounded-xl border border-slate-100 p-4 text-left hover:border-blue-200 hover:bg-blue-50/20"><div className="grid h-9 w-9 place-items-center rounded-lg bg-blue-50 text-blue-600"><x.i size={18} /></div><div><p className="text-[12px] font-bold">{x.t}</p><p className="mt-1 text-[11px] text-slate-400">{authenticated&&x.s==='files'?'등록자료 조회·원본 다운로드':x.d}</p></div></button>)}</div></Card><Card className="p-6"><h3 className="mb-4 text-[15px] font-bold">확인할 업무</h3>{[{
                   t: '보완자료 요청 확인',
                   d: '추가 자료 제출 및 답변',
                   s: 'requests'
@@ -377,7 +383,7 @@ export const DATCOV02 = ({session,onLogout,business}:PortalProps) => {
     </>}
 
 
-    {page === 'onboarding' && <>
+    {!workflow&&page === 'onboarding' && <>
      {authenticated&&<p className="mb-3 text-xs text-slate-500">현재 조회만 가능합니다. 입력·저장·분석·제출은 아직 연결되지 않았습니다.</p>}
      <Header eyebrow="COMPANY ONBOARDING / 01" title="기업정보 등록" sub="보유 서류에서 정보를 가져오거나 필요한 정보를 직접 작성할 수 있습니다." />
      <div className="grid gap-5 lg:grid-cols-2"><Card className="p-6 md:p-8"><div className="grid h-12 w-12 place-items-center rounded-xl bg-blue-50 text-blue-600"><UploadCloud size={25} /></div><h2 className="mt-4 text-[18px] font-bold">서류로 기업정보 가져오기</h2><p className="mt-3 min-h-[65px] text-[13px] leading-7 text-slate-500">사업자등록증·사업자등록증명원 등 기업·사업장 기본정보 확인자료를 등록합니다. 현재 미리보기는 문서 내용을 추출하지 않습니다.</p><IntakeFiles disabled={authenticated} stage="onboarding" documents={documents} onFiles={(files,category)=>{void receive(files,null,'onboarding',category);}} onReference={id=>referenceFile(id,'onboarding')} onManage={()=>openFiles('onboarding')} onReview={()=>goto('extraction')}/></Card>
@@ -386,7 +392,7 @@ export const DATCOV02 = ({session,onLogout,business}:PortalProps) => {
     </>}
 
 
-    {page === 'extraction' && <>
+    {!workflow&&page === 'extraction' && <>
      {authenticated&&<p className="mb-3 text-xs text-slate-500">현재 조회만 가능합니다. 입력·저장·분석·제출은 아직 연결되지 않았습니다.</p>}
      <Header eyebrow="EXTRACTION / 02" title="추출된 기업정보 확인" sub="원본에서 가져온 정보의 값과 출처를 확인하고 기업정보 입력란에 반영하세요."><Chip color="blue">{candidates.length}개 후보</Chip></Header>
      <div className="grid gap-5 lg:grid-cols-[.85fr_1.55fr]"><Card className="p-6"><h3 className="text-[14px] font-bold">추출 원본</h3><div className="mt-4 flex gap-3 rounded-xl bg-slate-50 p-4"><FileIcon name={candidateSource || 'info.txt'} /><div><p className="break-all text-[12px] font-semibold">{candidateSource || '등록된 추출 원본이 없습니다.'}</p><p className="mt-1 text-[11px] text-slate-400">등록 자료 · 파싱 미연결</p></div></div><div className="mt-5 rounded-xl bg-amber-50 p-4 text-[12px] leading-6 text-amber-800">추출값을 적용해도 DATCO의 최종 Fact 확정이 자동으로 이루어지는 것은 아닙니다.</div><button onClick={() => goto('onboarding')} className={S + ' mt-5 w-full'}><ChevronLeft size={15} /> 다른 서류 선택</button></Card>
@@ -400,7 +406,7 @@ export const DATCOV02 = ({session,onLogout,business}:PortalProps) => {
     </>}
 
 
-    {page === 'company' && <>
+    {!workflow&&page === 'company' && <>
      {authenticated&&<p className="mb-3 text-xs text-slate-500">현재 조회만 가능합니다. 입력·저장·분석·제출은 아직 연결되지 않았습니다.</p>}
      <Header eyebrow="COMPANY / 03" title="기업 · 사업장 관리" sub="문서에서 가져온 값을 수정하거나 직접 정보를 작성할 수 있습니다."><Chip color={saved ? 'green' : 'amber'}>{business?'읽기 전용':saved ? '미리보기 보관 · 서버 미저장' : '확인·저장 필요'}</Chip></Header>
      <Card className="mb-5 flex flex-wrap items-center justify-between gap-3 p-4"><div className="flex items-center gap-2 text-[12px] text-slate-600"><Info size={18} className="text-blue-600" />서류에서 추출한 입력 후보를 가져올 수 있습니다.</div><button className={S} onClick={() => goto('onboarding')}><UploadCloud size={15} /> 문서에서 다시 가져오기</button></Card>
@@ -426,7 +432,7 @@ export const DATCOV02 = ({session,onLogout,business}:PortalProps) => {
 {business?<Card className="mt-5 p-6"><h3 className="mb-4 text-[16px] font-bold">사업장 목록 · 읽기 전용</h3>{business.state.value?.sites.map(site=>{const ordinal=site.id===business.state.value?.selection.site_id?business.state.value.selection.site_ordinal:site.current_ordinal;const version=site.versions.find(v=>v.ordinal===ordinal);return <section key={site.id} data-site-id={site.id} className="mb-4 rounded-xl border border-slate-200 p-4"><h4 className="mb-3 font-bold">{version?.data.name??site.name}</h4><div className="grid gap-4 sm:grid-cols-2">{(['address','industry','process'] as const).map((field,i)=><Label key={field} name={['소재지','업종','공정'][i]}><textarea disabled className={I} value={version?.data[field]??''} readOnly/></Label>)}</div></section>})}{business.state.status==='ready'&&business.state.value?.sites.length===0&&<p>등록된 사업장이 없습니다.</p>}<button className={S} onClick={()=>goto('needs')}>사업장별 개선요구 확인</button><p className="text-xs text-slate-500">사업장 등록·수정·삭제는 후속 단계에서 연결합니다.</p></Card>:<Card className="mt-5 p-6"><div className="flex flex-wrap items-center justify-between gap-3"><h3 className="text-[16px] font-bold">사업장 목록</h3><button disabled={authenticated} className={P} onClick={()=>setSites(a=>[...a,{id:Date.now(),name:'',address:'',person:'',open:true}])}><Plus size={15}/> 사업장 추가</button></div><p className="mt-3 text-[12px] text-slate-500">미리보기 입력 · 현재 화면 세션에서만 유지되며 실제 DB에 저장되지 않습니다.</p><div className="mt-5 space-y-4">{sites.map((site,i)=><section key={site.id} aria-label={'사업장 '+(i+1)} className="rounded-xl border border-slate-200 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><h4 className="text-[14px] font-bold">사업장 {i+1} — {site.name||'이름 입력 필요'}</h4><button disabled={authenticated} className={S} onClick={()=>removeSite(site.id)}><Trash2 size={15}/> 사업장 삭제</button><button disabled={authenticated} className={S} aria-expanded={site.open} onClick={()=>setSites(a=>a.map(x=>x.id===site.id?{...x,open:!x.open}:x))}>{site.open?'접기':'수정 · 펼치기'}</button></div>{site.open&&<div className="mt-4 grid gap-4 sm:grid-cols-2">{([{key:'name',label:'사업장명'},{key:'address',label:'사업장 소재지'},{key:'person',label:'사업장 담당자'}] as const).map(f=><Label key={f.key} name={f.label}><input disabled={authenticated} className={I} value={site[f.key]} onChange={e=>setSites(a=>a.map(x=>x.id===site.id?{...x,[f.key]:e.target.value}:x))}/></Label>)}</div>}</section>)}</div></Card>}    </>}
 
 
-    {page === 'finance' && <>
+    {!workflow&&page === 'finance' && <>
      {authenticated&&<p className="mb-3 text-xs text-slate-500">현재 조회만 가능합니다. 입력·저장·분석·제출은 아직 연결되지 않았습니다.</p>}
      <Header eyebrow="FINANCE / 04" title="재무 · 사업이력" sub="연도와 단위를 구분해 재무정보 및 기존 지원사업 수행이력을 관리합니다." />
      <div className="mb-5 grid gap-5 lg:grid-cols-2"><Card className="p-6"><h2 className="text-[18px] font-bold">재무·정부사업 자료로 가져오기</h2><IntakeFiles disabled={authenticated} stage="finance" documents={documents} onFiles={(files,category)=>{void receive(files,null,'finance',category);}} onReference={id=>referenceFile(id,'finance')} onManage={()=>openFiles('finance')} onReview={()=>setFinanceReview(true)}/></Card><Card className="p-6"><h2 className="text-[18px] font-bold">직접 입력</h2><p className="mt-3 text-[13px] leading-7 text-slate-500">자료가 없거나 파싱이 미연결된 항목은 아래 재무정보와 수행이력에 직접 입력하세요.</p><button disabled={authenticated} className={S+' mt-4'} onClick={()=>document.getElementById('finance-direct')?.scrollIntoView({block:'start'})}>직접 입력으로 이동</button></Card></div>
@@ -438,7 +444,7 @@ export const DATCOV02 = ({session,onLogout,business}:PortalProps) => {
     </>}
 
 
-    {page === 'needs' && <>
+    {!workflow&&page === 'needs' && <>
      {authenticated&&<p className="mb-3 text-xs text-slate-500">현재 조회만 가능합니다. 입력·저장·분석·제출은 아직 연결되지 않았습니다.</p>}
      <Header eyebrow="IMPROVEMENT / 05" title="개선요구 등록" sub="현재 문제와 희망하는 개선 방향을 자유롭게 작성하세요."><Chip color={needSaved ? 'green' : 'amber'}>{authenticated?(actual.improvement?improvementStateLabel(actual.improvement.state):'개선요구 미선택'):needSaved ? '요구사항 작성 완료' : '작성 중'}</Chip></Header>
      <div className="grid gap-5 lg:grid-cols-[1.6fr_.75fr]"><Card className="p-6">{business&&<><BusinessContextBar business={business} view="improvements" embedded/><ContextReadout value={business.state.value}/></>}<div className="space-y-5"><Label name="현재 문제 (As-Is)"><textarea disabled={authenticated} aria-label="현재 문제 (As-Is)" className={I + ' min-h-[150px] resize-y leading-6'} value={problem} onChange={e => {
@@ -454,7 +460,7 @@ export const DATCOV02 = ({session,onLogout,business}:PortalProps) => {
     </>}
 
 
-    {page === 'files' && <>
+    {!workflow&&page === 'files' && <>
      {authenticated&&<p className="mb-3 text-xs text-slate-500">현재 조회만 가능합니다. 입력·저장·분석·제출은 아직 연결되지 않았습니다.</p>}
      <Header eyebrow="DOCUMENTS / 06" title="첨부자료 관리" sub="자료 추가, 분류 변경, 파일 교체, 이력 확인을 한곳에서 관리합니다." />
      {fileReturn&&<Card className="mb-5 flex flex-wrap items-center justify-between gap-3 p-4"><p className="text-[12px]">전체 단계의 공통 자료함 · 입력은 원래 화면에 유지됩니다.</p><button className={S} onClick={()=>goto(fileReturn)}>{fileReturn==='needs'?'개선요구 등록':fileReturn==='finance'?'재무·사업이력':'기업정보 등록 시작'}으로 돌아가기</button></Card>}
@@ -480,7 +486,7 @@ export const DATCOV02 = ({session,onLogout,business}:PortalProps) => {
     </>}
 
 
-    {page === 'review' && <>
+    {!workflow&&page === 'review' && <>
      {authenticated&&<p className="mb-3 text-xs text-slate-500">현재 조회만 가능합니다. 입력·저장·분석·제출은 아직 연결되지 않았습니다.</p>}
      <Header eyebrow="ANALYSIS / 07" title="분석 결과 확인" sub="기업의 개선 요구를 항목별로 구조화하여 검토하고 입력값을 확인합니다."><Chip color="violet">{authenticated?"분석 미연결":"미리보기 예시 · 분석 미연결"}</Chip></Header>
      <Card className="p-6"><div className="mb-5 flex items-center gap-2"><Sparkles size={19} className="text-blue-600" /><h3 className="text-[15px] font-bold">개선요구 항목 정리</h3></div><p className="rounded-xl bg-slate-50 p-4 text-[12px] leading-7 text-slate-600"><b className="text-slate-900">입력 원문 · As-Is</b><br />{problem}</p><div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{problems.map((x, i) => <div className="rounded-xl border border-slate-100 bg-white p-4" key={x.title}><p className="text-[10px] font-bold text-blue-600">문제 {i + 1}</p><h4 className="mt-3 text-[13px] font-bold">{x.title}</h4><p className="mt-2 text-[11px] leading-6 text-slate-500">{x.desc}</p></div>)}</div><p className="mt-5 text-[12px] leading-7"><b>개선목표 · To-Be:</b> {goal}</p><p className="mt-2 text-[11px] leading-6 text-amber-700">{authenticated?"데이터 연결 후 표시됩니다. 실제 AI 분석은 수행하지 않았습니다.":"화면 디자인을 위한 고정 예시입니다. 입력 문장을 분석하지 않으며 실제 AI·사실확인 결과가 아닙니다."}</p><p className="mt-2 whitespace-pre-wrap text-[12px]">제약 및 확인 필요사항: {limits}</p><button className={S+' mt-5 mr-2'} onClick={()=>goto('needs')}>개선요구 수정</button><button disabled={authenticated} className={P + ' mt-5'} onClick={() => {
@@ -489,7 +495,7 @@ export const DATCOV02 = ({session,onLogout,business}:PortalProps) => {
     </>}
 
 
-    {page === 'requests' && <>
+    {!authenticated && page === 'requests' && <>
      {authenticated&&<p className="mb-3 text-xs text-slate-500">현재 조회만 가능합니다. 입력·저장·분석·제출은 아직 연결되지 않았습니다.</p>}
      <Header eyebrow="REQUESTS / 08" title="보완 요청함" sub="추가로 필요한 자료와 담당자 요청사항을 확인하고 보완할 수 있습니다." />
      {authenticated?<Card className="p-6">데이터 연결 후 표시됩니다.</Card>:<>
@@ -500,7 +506,7 @@ export const DATCOV02 = ({session,onLogout,business}:PortalProps) => {
     </>}
 
 
-    {page === 'proposals' && <>
+    {!authenticated && page === 'proposals' && <>
      {authenticated&&<p className="mb-3 text-xs text-slate-500">현재 조회만 가능합니다. 입력·저장·분석·제출은 아직 연결되지 않았습니다.</p>}
      <Header eyebrow="PROPOSALS / 09" title={proposalOpen ? '제안서 상세 · 확인' : '받은 제안서'} sub="서비스 개선 방향, 정부지원사업 후보와 제안 범위를 확인하세요."><Chip color={decision === '확인' ? 'green' : 'amber'}>{authenticated?'데이터 미연결':decision === '미확인' ? '검토 대기' : decision}</Chip></Header>
      {authenticated?<Card className="p-6">데이터 연결 후 표시됩니다.</Card>:<>
@@ -529,8 +535,8 @@ export const DATCOV02 = ({session,onLogout,business}:PortalProps) => {
     </>}
 
 
-    <nav aria-label="미리보기 화면 이동" className="mt-6 flex flex-wrap items-center gap-3"><button className={S} onClick={()=>window.history.back()}>이전 화면</button><button className={S} onClick={()=>goto('home')}>홈으로</button><button className={P} onClick={()=>{const list=menu.flatMap(g=>g.items);goto(list[(list.findIndex(x=>x.id===page)+1)%list.length].id);}}>다음 화면</button><span className="text-[11px] text-amber-700">미리보기 데이터 · 실제 업무 처리 없음</span></nav>
-    <footer className="mt-9 flex flex-wrap justify-between gap-3 border-t border-slate-200 pt-5 text-[10px] leading-5 text-slate-400"><span>DATCO ONE · 수요기업 포털</span><span>화면 체험 환경의 입력값은 서버에 저장되지 않습니다. 실제 SSO·AI·DMP 연동은 별도 구축 대상입니다.</span></footer>
+    {!authenticated&&<><nav aria-label={authenticated?"업무 화면 이동":"미리보기 화면 이동"} className="mt-6 flex flex-wrap items-center gap-3"><button className={S} onClick={()=>window.history.back()}>이전 화면</button><button className={S} onClick={()=>goto('home')}>홈으로</button><button className={P} onClick={()=>{const list=menu.flatMap(g=>g.items);goto(list[(list.findIndex(x=>x.id===page)+1)%list.length].id);}}>다음 화면</button>{!authenticated&&<span className="text-[11px] text-amber-700">{authenticated?'실제 서버 조회 · 연결된 기능만 처리':'미리보기 데이터 · 실제 업무 처리 없음'}</span>}</nav></>}
+    <footer className="mt-9 flex flex-wrap justify-between gap-3 border-t border-slate-200 pt-5 text-[10px] leading-5 text-slate-400"><span>DATCO ONE · 수요기업 포털</span>{!authenticated&&<span>{workflow?'저장·제출 버튼이 연결된 기능은 실제 서버에 기록됩니다. 외부 AI·DMP와 최종 검토는 미연결입니다.':'화면 체험 환경의 입력값은 서버에 저장되지 않습니다. 실제 SSO·AI·DMP 연동은 별도 구축 대상입니다.'}</span>}</footer>
    </div></main>
   </div>
   {confirm && <div className="fixed inset-0 z-[80] grid place-items-center bg-slate-900/50 p-4"><div className="w-full max-w-[420px] rounded-3xl bg-white p-7 shadow-2xl" role="dialog" aria-modal="true" aria-label="제안서 확인"><div className="mb-3 grid h-12 w-12 place-items-center rounded-xl bg-blue-50 text-blue-600"><FileCheck2 size={25} /></div><h2 className="text-[19px] font-bold">제안서 v1.0을 확인하시겠습니까?</h2><p className="mt-3 text-[12px] leading-7 text-slate-500">이 동작은 화면의 확인 상태만 변경하며 DATCO 운영자에게 전송하거나 실제 승인 처리하지 않습니다.</p><div className="mt-6 flex justify-end gap-2"><button disabled={authenticated} className={S} onClick={() => setConfirm(false)}>취소</button><button disabled={authenticated} className={P} onClick={() => {

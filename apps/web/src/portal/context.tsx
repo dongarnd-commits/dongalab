@@ -42,11 +42,11 @@ export function useBusinessContext(session:PortalIdentity){
    setState({status:'error',companies,value:null,error});}
  },[session]);
  useEffect(()=>{const initial=window.setTimeout(()=>void load(),0);const changed=()=>{setState({status:'loading',companies:[],value:null,error:''});void load();};const verified=()=>void load(true);window.addEventListener('popstate',changed);window.addEventListener('datco-session-verified',verified);return()=>{controller.current?.abort();clearTimeout(initial);window.removeEventListener('popstate',changed);window.removeEventListener('datco-session-verified',verified);};},[load]);
- const choose=(changes:Record<string,string|null>)=>{setState({status:'loading',companies:[],value:null,error:''});editQuery({...changes,context_actor:session.id});void load();};
+ const choose=(changes:Record<string,string|null>)=>{setState({status:'loading',companies:[],value:null,error:''});editQuery({...changes,context_actor:session.id});return load();};
  return {state,refresh:()=>void load(),choose};
 }
 export type BusinessContext=ReturnType<typeof useBusinessContext>;
-export function CompanyContextStatus({business}:{business:BusinessContext}){const {state,choose}=business;if(state.status==='ready')return null;return <p role={state.status==='error'?'alert':'status'}>{state.status==='error'?state.error:state.status==='empty'?'접근 가능한 기업이 없습니다.':'조회 중입니다.'}{state.status==='error'&&<button type="button" onClick={()=>choose({company:null,site:null,site_version:null,improvement:null,version:null})}>선택 초기화</button>}</p>;}
+export function CompanyContextStatus({business,hideEmpty=false}:{business:BusinessContext;hideEmpty?:boolean}){const {state,choose}=business;if(state.status==='ready'||hideEmpty&&state.status==='empty')return null;return <p role={state.status==='error'?'alert':'status'}>{state.status==='error'?state.error:state.status==='empty'?'접근 가능한 기업이 없습니다.':'조회 중입니다.'}{state.status==='error'&&<button type="button" onClick={()=>choose({company:null,site:null,site_version:null,improvement:null,version:null})}>선택 초기화</button>}</p>;}
 export function BusinessContextBar({business,view='operator',onNavigate,embedded=false}:{business:BusinessContext;embedded?:boolean;view?:'summary'|'sites'|'improvements'|'operator';onNavigate?:(page:'company'|'needs')=>void}){
  const {state,choose,refresh}=business,value=state.value,selected=selectedContext(value);
  const sites=view==='sites'||view==='improvements'||view==='operator',needs=view==='improvements'||view==='operator';

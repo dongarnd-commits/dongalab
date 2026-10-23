@@ -28,7 +28,11 @@ class Review(Command):
  idempotency_key:str=Field(min_length=1,max_length=100)
 class Key(Command):
  idempotency_key:str=Field(min_length=1,max_length=100)
+class Approval(Key):
+ approval_mode:Literal['DIRECT_APPROVER','COMPANY_RECORDED_AUTHORIZATION']='DIRECT_APPROVER'
+ recorder_id:str|None=None
 class Decision(Key):
+ authorization:dict|None=None
  outcome:Literal['APPROVE','REVISION_REQUEST','REJECT']
  reason:str=Field(min_length=1,max_length=5000)
 class Export(Key):
@@ -54,11 +58,11 @@ def version(version_id:str,session:Annotated[Session,Depends(get_session)],who=D
 def review(version_id:str,body:Review,session:Annotated[Session,Depends(get_session)],who=Depends(actor)):
  result=application(session).review(who,version_id,body.confirmed,body.note,body.idempotency_key);session.commit();return result
 @router.post('/versions/{version_id}/approval',response_model=dict,dependencies=[Depends(trusted_origin)],responses=errors(401,403,404,409,422,503))
-def request_approval(version_id:str,body:Key,session:Annotated[Session,Depends(get_session)],who=Depends(actor)):
- result=application(session).request(who,version_id,body.idempotency_key);session.commit();return result
+def request_approval(version_id:str,body:Approval,session:Annotated[Session,Depends(get_session)],who=Depends(actor)):
+ result=application(session).request(who,version_id,body.idempotency_key,body.approval_mode,body.recorder_id);session.commit();return result
 @router.post('/approvals/{request_id}/decision',response_model=dict,dependencies=[Depends(trusted_origin)],responses=errors(401,403,404,409,422,503))
 def decide(request_id:str,body:Decision,session:Annotated[Session,Depends(get_session)],who=Depends(actor)):
- result=application(session).decide(who,request_id,body.outcome,body.reason,body.idempotency_key);session.commit();return result
+ result=application(session).decide(who,request_id,body.outcome,body.reason,body.idempotency_key,body.authorization);session.commit();return result
 @router.post('/versions/{version_id}/export',response_model=dict,dependencies=[Depends(trusted_origin)],responses=errors(401,403,404,409,422,503))
 def export(version_id:str,body:Export,session:Annotated[Session,Depends(get_session)],who=Depends(actor)):
  result=application(session).export(who,version_id,body.kind,body.idempotency_key);session.commit();return result
@@ -67,6 +71,9 @@ def download(file_id:str,session:Annotated[Session,Depends(get_session)],who=Dep
  f,data=application(session).download(who,file_id);session.commit()
  media='application/pdf' if f['kind']=='PDF' else 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
  return Response(data,media_type=media,headers={'Content-Disposition':'attachment; filename="proposal-'+f['version_id']+'.'+f['kind'].lower()+'"','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'})
+@router.get('/inbox/{company_id}',response_model=list[dict],responses=errors(401,403,404,503))
+def company_inbox(company_id:str,session:Annotated[Session,Depends(get_session)],who=Depends(actor)):
+ return application(session).company_inbox(who,company_id)
 @router.get('/{proposal_id}',response_model=dict,responses=errors(401,403,404,503))
 def detail(proposal_id:str,session:Annotated[Session,Depends(get_session)],who=Depends(actor)):return application(session).detail(who,proposal_id)
 @router.post('/{proposal_id}/versions',response_model=dict,dependencies=[Depends(trusted_origin)],responses=errors(401,403,404,409,422,503))

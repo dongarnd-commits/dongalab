@@ -1,0 +1,11 @@
+import './business-ui.css';
+import React,{useState} from 'react';
+import type {CompanyWorkflow} from './workflow';
+export const input='business-input w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 disabled:bg-slate-50';
+export const primary='business-primary inline-flex items-center justify-center rounded-xl bg-[#1767C7] px-5 py-3 text-sm font-semibold text-white disabled:opacity-40';
+export const secondary='business-secondary inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 disabled:opacity-40';
+export function BusinessCard({children,title}:{children:React.ReactNode;title?:string}){return <section className="business-card mb-5 rounded-2xl border border-slate-200 bg-white p-6">{title&&<h3 className="mb-5 text-base font-bold">{title}</h3>}{children}</section>;}
+export function BusinessField({label,children}:{label:string;children:React.ReactNode}){return <label className="business-field mb-4 block text-sm font-semibold text-slate-600">{label}<span className="mt-2 block font-normal">{children}</span></label>;}
+export function BusinessHeading({title,description}:{title:string;description:string}){return <header className="business-heading mb-7"><h1 className="mb-3 text-3xl font-extrabold text-slate-900">{title}</h1><p className="text-sm text-slate-500">{description}</p></header>;}
+export function useBusinessDraft<T>(workflow:CompanyWorkflow,key:string,initial:()=>T){const cacheKey=(workflow.cid??'new')+':'+key;const [value,setValue]=useState<T>(()=>workflow.drafts.has(cacheKey)?workflow.drafts.get(cacheKey) as T:initial());const change=(next:React.SetStateAction<T>)=>setValue(previous=>{const result=typeof next==='function'?(next as (v:T)=>T)(previous):next;workflow.drafts.set(cacheKey,result);return result;});return [value,change] as const;}
+export function BusinessMessages({workflow:w}:{workflow:CompanyWorkflow}){return <>{w.error&&<p role="alert" className="mb-4 rounded-xl bg-rose-50 p-4 text-sm text-rose-800">{w.error}</p>}{w.message&&<p role="status" className="mb-4 rounded-xl bg-blue-50 p-4 text-sm text-blue-800">{w.message}</p>}{w.busy&&<p role="status" className="mb-4 text-sm text-slate-500">서버에서 처리 중입니다. 결과를 기다려 주세요.</p>}</>;}

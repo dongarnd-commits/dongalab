@@ -68,10 +68,13 @@ class ProposalApplication:
   v=self.s.get(P.versions,key);root,_,b=self.root(actor,v['proposal_id'])
   if actor.role!='DATCO_OPERATOR':
    requests=self.s.rows(P.requests,version_id=key)
-   if actor.role!='COMPANY_APPROVER' or not any(r['intended_approver']==actor.id for r in requests) or b.approver_id!=actor.id:raise Denied('OBJECT_NOT_FOUND',404)
+   allowed=any(r['intended_approver']==actor.id and ((actor.role=='COMPANY_APPROVER' and r.get('approval_mode','DIRECT_APPROVER')=='DIRECT_APPROVER' and b.approver_id==actor.id) or (actor.role=='COMPANY_EDITOR' and r.get('approval_mode')=='COMPANY_RECORDED_AUTHORIZATION')) for r in requests)
+   if not allowed:raise Denied('OBJECT_NOT_FOUND',404)
+   if actor.role=='COMPANY_EDITOR':return dict(id=v['id'],proposal_id=v['proposal_id'],ordinal=v['ordinal'],title=v['title'],sections=[dict(heading=section['heading'],body=section['body']) for section in v['sections']],content_digest=v['content_digest'],created_at=v['created_at'])
    return dict(id=v['id'],proposal_id=v['proposal_id'],ordinal=v['ordinal'],title=v['title'],sections=v['sections'],content_digest=v['content_digest'],manifest={'refs':v['manifest']['refs']},created_at=v['created_at'])
   return v
  def detail(self,actor,key):
+  if actor.role=='COMPANY_EDITOR':raise Denied('OBJECT_NOT_FOUND',404)
   root,versions,b=self.root(actor,key)
   visible=[]
   for v in sorted(versions,key=lambda x:x['ordinal']):
@@ -81,7 +84,32 @@ class ProposalApplication:
   if not visible:raise Denied('OBJECT_NOT_FOUND',404)
   ids={v['id'] for v in visible}
   requests=[r for v in visible for r in self.s.rows(P.requests,version_id=v['id'])]
-  return dict(root=root,versions=visible,content_reviews=[r for v in visible for r in sorted(self.s.rows(P.reviews,version_id=v['id']),key=lambda r:(r['created_at'],r['id']))] if actor.role=='DATCO_OPERATOR' else [],requests=requests,decisions=[d for v in visible for d in self.s.rows(P.decisions,version_id=v['id'])],files=[{k:x for k,x in f.items() if k not in ('storage_key',)} for v in visible for f in self.s.rows(P.files,version_id=v['id'])],approver_id=b.approver_id,current_version_visible=any(v['ordinal']==root['current_ordinal'] for v in visible))
+  result=dict(root=root,versions=visible,content_reviews=[r for v in visible for r in sorted(self.s.rows(P.reviews,version_id=v['id']),key=lambda r:(r['created_at'],r['id']))] if actor.role=='DATCO_OPERATOR' else [],requests=requests,decisions=[d for v in visible for d in self.s.rows(P.decisions,version_id=v['id'])],files=[{k:x for k,x in f.items() if k not in ('storage_key',)} for v in visible for f in self.s.rows(P.files,version_id=v['id'])],approver_id=b.approver_id,current_version_visible=any(v['ordinal']==root['current_ordinal'] for v in visible))
+  if actor.role=='DATCO_OPERATOR':
+   result['recorded_authorizations']=[dict(decision_id=d['id'],version_id=d['version_id'],**proof) for v in visible for d in self.s.rows(P.decisions,version_id=v['id']) if (proof:=self._recorded_authorization(d['id'])) is not None]
+  return result
+ def _recorded_authorization(self,decision_id):
+  rows=self.s.rows(P.authorizations,decision_id=decision_id)
+  if not rows:return None
+  row=rows[0]
+  return dict(actual_approver_name=row['actual_approver_name'],actual_approver_title=row['actual_approver_title'],approved_at=row['approved_at'],method=row['method'],context=row['context'],file_id=row['file_id'],recorded_at=row['created_at'],recorder_name=self.s.get(N.actors,row['recorder_id'])['username'])
+ def company_inbox(self,actor,company_id):
+  # Explicit sent-version whitelist; never return detail(), root, internal
+  # reviews, manifest or source references to the company Inbox.
+  from app.company.application import CompanyApplication
+  app=CompanyApplication(self.s.session,self.s.files);app.role(actor,'COMPANY_EDITOR','COMPANY_APPROVER');app.scope(actor,company_id)
+  result=[]
+  for request in self.s.rows(P.requests,intended_approver=actor.id):
+   mode=request.get('approval_mode','DIRECT_APPROVER')
+   if not ((actor.role=='COMPANY_EDITOR' and mode=='COMPANY_RECORDED_AUTHORIZATION') or (actor.role=='COMPANY_APPROVER' and mode=='DIRECT_APPROVER')):continue
+   raw=self.s.get(P.versions,request['version_id']);root=self.s.get(P.roots,raw['proposal_id'])
+   if root['company_id']!=company_id:continue
+   try:visible=self.version(actor,raw['id'])
+   except Denied as error:
+    if error.status==404:continue
+    raise
+   result.append(dict(version_id=visible['id'],ordinal=visible['ordinal'],title=visible['title'],created_at=visible['created_at'],sections=[dict(heading=section['heading'],body=section['body']) for section in visible['sections']],approval=dict(id=request['id'],mode=mode,state=request['state'],closure_reason=request['closure_reason']),files=[dict(id=f['id'],kind=f['kind']) for f in self.s.rows(P.files,version_id=visible['id'])],decisions=[dict(outcome=d['outcome'],reason=d['reason'],created_at=d['created_at'],authorization=self._recorded_authorization(d['id'])) for d in self.s.rows(P.decisions,request_id=request['id'])]))
+  return result
  def listing(self,actor,company_id,improvement_version_id):
   basis(self.s,actor,company_id,improvement_version_id)
   return [dict(id=r['id'],company_id=r['company_id'],current_ordinal=r['current_ordinal']) for r in self.s.rows(P.roots,company_id=company_id)] if actor.role=='DATCO_OPERATOR' else [dict(id=r['id'],company_id=r['company_id']) for r in self.s.rows(P.roots,company_id=company_id) if any(q['intended_approver']==actor.id for v in self.s.rows(P.versions,proposal_id=r['id']) for q in self.s.rows(P.requests,version_id=v['id']))]
@@ -105,27 +133,46 @@ class ProposalApplication:
   r=max(reviews,key=lambda x:(x['created_at'],x['id']))
   if not r['confirmed']:raise Denied('PROPOSAL_CONTENT_NOT_REVIEWED')
   return r
- def request(self,actor,version_id,key):
+ def request(self,actor,version_id,key,approval_mode="DIRECT_APPROVER",recorder_id=None):
   self.operator(actor);self.version(actor,version_id)
   def execute():
    v=self.current(actor,version_id);self.confirmed_review(version_id);_,_,b=self.root(actor,v['proposal_id'])
-   if not b.approver_id:raise Denied('REQUIRED_APPROVER_NOT_CONFIGURED')
-   if self.s.get(N.actors,b.approver_id)['role']!='COMPANY_APPROVER':raise Denied('ACTION_NOT_AUTHORIZED',403)
+   target=b.approver_id
+   if approval_mode=='COMPANY_RECORDED_AUTHORIZATION':
+    from app.infrastructure import company_schema as C
+    target=recorder_id
+    if not target or self.s.get(N.actors,target)['role']!='COMPANY_EDITOR' or not self.s.rows(C.memberships,company_id=b.company_id,actor_id=target):raise Denied('REQUIRED_RECORDER_NOT_CONFIGURED',422)
+   elif approval_mode=='DIRECT_APPROVER':
+    if recorder_id is not None:raise Denied('INVALID_REQUEST',422)
+    if not target:raise Denied('REQUIRED_APPROVER_NOT_CONFIGURED')
+    if self.s.get(N.actors,target)['role']!='COMPANY_APPROVER':raise Denied('ACTION_NOT_AUTHORIZED',403)
+   else:raise Denied('INVALID_REQUEST',422)
    if self.s.rows(P.requests,version_id=version_id):raise Denied('APPROVAL_REQUEST_ALREADY_EXISTS')
-   r=self.s.add(P.requests,version_id=version_id,intended_approver=b.approver_id,requested_by=actor.id,state='OPEN',closure_reason=None);self.s.record(actor,'REQUEST_APPROVAL',request_id=r['id'],version_id=version_id);return dict(id=r['id'],version_id=version_id)
-  return self.s.command(actor,key,['REQUEST_APPROVAL',version_id],execute)
- def decide(self,actor,request_id,outcome,reason,key):
-  if actor.role!='COMPANY_APPROVER':raise Denied('ACTION_NOT_AUTHORIZED',403)
+   r=self.s.add(P.requests,version_id=version_id,intended_approver=target,approval_mode=approval_mode,requested_by=actor.id,state='OPEN',closure_reason=None);self.s.record(actor,'REQUEST_APPROVAL',request_id=r['id'],version_id=version_id);return dict(id=r['id'],version_id=version_id)
+  scope=['REQUEST_APPROVAL',version_id] if approval_mode=='DIRECT_APPROVER' and recorder_id is None else ['REQUEST_APPROVAL',version_id,approval_mode,recorder_id]
+  return self.s.command(actor,key,scope,execute)
+ def decide(self,actor,request_id,outcome,reason,key,authorization=None):
+  if actor.role not in ('COMPANY_APPROVER','COMPANY_EDITOR'):raise Denied('ACTION_NOT_AUTHORIZED',403)
   r=self.s.get(P.requests,request_id);v=self.version(actor,r['version_id'])
   def execute():
    root,_,b=self.root(actor,v['proposal_id'],True);current=self.s.get(P.requests,request_id,True)
-   if current['intended_approver']!=actor.id or b.approver_id!=actor.id:raise Denied('OBJECT_NOT_FOUND',404)
+   if current['intended_approver']!=actor.id or (current.get('approval_mode','DIRECT_APPROVER')=='DIRECT_APPROVER' and (actor.role!='COMPANY_APPROVER' or b.approver_id!=actor.id)) or (current.get('approval_mode')=='COMPANY_RECORDED_AUTHORIZATION' and actor.role!='COMPANY_EDITOR'):raise Denied('OBJECT_NOT_FOUND',404)
    if current['state']!='OPEN' or root['current_ordinal']!=v['ordinal']:raise Denied('APPROVAL_VERSION_MISMATCH')
    self.confirmed_review(v['id'])
    self.fresh_inputs(actor,self.s.get(P.versions,v['id']))
    if outcome not in ('APPROVE','REVISION_REQUEST','REJECT') or not reason.strip():raise Denied('INVALID_REQUEST',422)
-   d=self.s.add(P.decisions,request_id=request_id,version_id=v['id'],actor_id=actor.id,outcome=outcome,reason=reason);self.s.session.execute(update(P.requests).where(P.requests.c.id==request_id).values(state='CLOSED',closure_reason='DECIDED'));self.s.record(actor,'DECIDE_PROPOSAL',decision_id=d['id'],version_id=v['id']);return dict(id=d['id'],outcome=outcome)
-  return self.s.command(actor,key,['DECIDE_PROPOSAL',request_id,outcome,reason],execute)
+   recorded=current.get('approval_mode')=='COMPANY_RECORDED_AUTHORIZATION'
+   if recorded and outcome=='REJECT':raise Denied('ACTION_NOT_AUTHORIZED',403)
+   proof=None
+   if recorded and outcome=='APPROVE':
+    from app.proposal.recorded_authorization import validate_authorization
+    proof=validate_authorization(self.s,actor,b.company_id,authorization,v["created_at"])
+   elif authorization is not None:raise Denied('INVALID_REQUEST',422)
+   d=self.s.add(P.decisions,request_id=request_id,version_id=v['id'],actor_id=actor.id,outcome=outcome,reason=reason)
+   if proof:self.s.add(P.authorizations,decision_id=d['id'],request_id=request_id,version_id=v['id'],recorder_id=actor.id,company_id=b.company_id,**proof)
+   self.s.session.execute(update(P.requests).where(P.requests.c.id==request_id).values(state='CLOSED',closure_reason='DECIDED'));self.s.record(actor,'DECIDE_PROPOSAL',decision_id=d['id'],version_id=v['id']);return dict(id=d['id'],outcome=outcome)
+  scope=['DECIDE_PROPOSAL',request_id,outcome,reason] if authorization is None else ['DECIDE_PROPOSAL',request_id,outcome,reason,authorization]
+  return self.s.command(actor,key,scope,execute)
  def fresh_inputs(self,actor,v):
   from app.proposal.policy import verified_completion
   snap=self.s.get(S.match_snapshots,v['match_snapshot_id']);cv=self.s.get(S.composition_versions,snap['composition_version_id']);self.s.get(S.compositions,cv['composition_id'],True)

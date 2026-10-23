@@ -1,3 +1,4 @@
+from app.infrastructure import company_business_schema
 from alembic import context
 from app.infrastructure.database import Base, get_engine
 from app.infrastructure import notice_schema, collector_schema, capability_schema, proposal_schema, company_schema

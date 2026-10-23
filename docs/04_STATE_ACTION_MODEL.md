@@ -649,3 +649,9 @@ Action은 03의 기존 Entity와 Attribute/검토 Record 의미를 사용한다.
 ## W1 승인된 구현 증분 — 2026-10-19 / Decision-006
 
 기존 DRAFT/SUBMITTED/REVIEW_REQUIRED/CONFIRMED/REVISION_REQUIRED를 사용한다. E 초안 저장→제출→O 수동 구조화 새 Version→E exact Version 사실확인→O 근거검토 확정 순서다. 필수 구조화 내용·현재 Evidence·현재 Fact·기업 확인이 없으면 확정하지 않는다. 기업 원문과 Site identity를 O가 변경할 수 없다. 새 Version은 과거 확인을 자동 승계하지 않는다. Fact 확정은 E 사실확인과 O의 기존 Review outcome을 별도 기록한다. 제안서 승인이 아니다.
+
+## PR14 v1.4 승인된 적용 범위 (2026-10-22)
+
+[승인안](reviews/PR14_V14_CONTRACT_APPROVAL.md)에 따라 InformationRequest는 기존 DRAFT/WAITING_RESPONSE/REVIEW_REQUIRED/REVISION_REQUESTED/VERIFIED 전이를 사용한다. 발송은 Scoped Operator, 응답 초안·제출은 Company Editor, 검증·재보완은 Scoped Operator다. 응답 제출/재제출은 새 불변 Version과 첨부·감사로 남기고 이전 제출본을 변경하지 않는다.
+
+Proposal은 독립 승인 State를 추가하지 않는다. DIRECT_APPROVER는 기존 지정 Approver의 직접 결정이며 COMPANY_RECORDED_AUTHORIZATION에만 요청에 지정된 Editor가 실제 내부 승인권자의 근거를 기록해 전송한다. 두 모드 모두 OPEN/현재 ProposalVersion/최신 입력·기존 내용 검토 Guard를 유지한다. 이전 승인으로 새 Version을 승인하지 않는다. Editor 기록 모드의 APPROVE에는 실제 승인권자/방식/시각/근거/최종 확인이 필수다. 파일 취소/교체는 승인·제출/재무 내용 자동 변경이 아니며 원본 보존 이벤트다.

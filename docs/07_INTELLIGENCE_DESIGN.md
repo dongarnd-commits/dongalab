@@ -314,3 +314,12 @@ Decision-004의 R-07 승인은 상세설계만이다. 기존 IN/NOT_IN Comparato
 기존 로컬 파서를 재사용해 PDF 페이지/DOCX 문단/XLSX 셀/TXT 줄의 원문을 보존한다. 명시된 기업명/업종/소재지/대표자/사업자번호 라벨에서만 RULE_BASED_EXTRACTION 후보를 생성한다. 재무 연도·수치·단위·기간 및 비정형 의미를 추정하지 않는다. 나머지는 실제 원문 근거에 사람이 후보를 작성하고 검토한다. 스캔·이미지는 원본 저장과 수동 전사 근거를 제공하며 OCR/이미지 의미분석 완료로 표시하지 않는다.
 
 공통 COMPANY_FACT_EXTRACTION 계보 증분은 사용자 명시 승인 범위다. 승인 기록은 reviews/W1_COMMON_LINEAGE_APPROVAL_REQUEST.md. Company Provider는 현재 확정 FactVersion/Review/Evidence와 exact ImprovementVersion/Site ordinal을 읽는다. 기존 Capability/Matching/Proposal 소비에 연결하지만 Guard를 우회하지 않는다. 기간·단위가 필요한 재무/인원/이력은 기존 문자열 IN/NOT_IN 비교에 자동 전달하지 않는다. 범용 공고 조건 해석·추천 엔진은 미구현이며 조건 미확인은 UNKNOWN으로 남긴다. 외부 AI 전송 승인 없음: W1_AI_SEMANTIC_ANALYSIS=BLOCKED_BY_POLICY.
+
+
+## PR14 최초 기업등록·로컬 한글 OCR 승인 증분 — 2026-10-21
+
+사용자는 PR14의 C02/C03 서류 우선 최초 등록, 직접 입력, 실제 한글 OCR, 사용자 확인/수정, 사업자번호 정규화·체크디지트 및 기존 Company 등록/원본/Evidence 보존을 명시 지시했다. 과거 W1의 OCR 미승인 기록은 당시 범위로 보존하며, 이번 증분은 로컬 Tesseract/PDFium Adapter에 한정한다. 외부 OCR/AI 전송은 승인하지 않았다. 상세 영향은 reviews/PR14_INITIAL_REGISTRATION_OCR.md.
+
+등록 전에는 기존 COMPANY_EDITOR 등록 권한으로 원문을 메모리 분석하며 Company/영속 File/공유 토큰을 만들지 않는다. 최종 사용자 확인 후 기존 Company/Membership Guard와 Private 파일/불변 Evidence를 재사용한다. 여러 서버 명령의 부분 실패는 회사 생성/문서 보존/추출 완료를 분리해 표시한다. 기업 ACK와 최종 Fact 확정은 계속 분리한다. DB Schema/Migration/Role/업무 State/Approval Guard/Assignment는 변경하지 않는다. 기존 저장 사업자번호나 과거 Version을 소급 수정하지 않는다. 실사용 인수는 PENDING이다.
+
+PR14 사용자 검수 v1.2에서는 후보별 선택 UI를 단일 수정폼으로 바꾸고 기업정보 등록 클릭을 기업의 최종 입력 확인으로 기록한다. 기존 Fact 확정 권한은 유지한다. 업태/종목 라벨별 값을 기존 industry 문자열에 구분 보존하며, 표 보완 OCR은 동일 로컬 Adapter의 제한된 보조 읽기로 원문/근거를 추가한다. 원문과 불명확한 필드를 임의 확정하지 않는다. 세부 저장/실패/미지원 항목은 reviews/PR14_INITIAL_REGISTRATION_OCR.md의 v1.2 증분을 따른다.

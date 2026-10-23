@@ -146,3 +146,24 @@ W2 자동 추천/W3 신규 Proposal 연계, R07 범용 조건 엔진, OCR·외�
 기존 인증에 서버 로그아웃이 없음을 확인하여 해당 세션의 expires_at 만료/동일 Cookie 삭제/LOGOUT Audit만 추가한다. 인증 방식·8시간 수명·Role/Permission/Schema/업무 State/승인 Guard는 변경하지 않는다. 홈·이름 선택용 GET /workspace는 실제 Membership 및 기존 Projection에서 허용된 요약만 읽는 최소 API이며 권한 확대나 새 업무 결정을 만들지 않는다.
 
 미구현 자동 추천·D~F·관리 전용 기능은 준비 중으로 구분한다. 기존 Capability/Matching/Proposal과 W1 데이터를 삭제·재작성하지 않는다. 사용자 실사용 수용은 PENDING이고 전체 Phase1 완료·SYSTEM ACCEPTANCE를 주장하지 않는다. 공용 DB Migration/업무 데이터 변경·새 Worktree·main Commit/Push/Merge·force 작업은 포함하지 않는다.
+
+
+## Decision-008 — PR14 최초 기업등록·로컬 한글 OCR 승인 증분 — 2026-10-21
+
+사용자는 PR14의 C02/C03 서류 우선 최초 등록, 직접 입력, 실제 한글 OCR, 사용자 확인/수정, 사업자번호 정규화·체크디지트 및 기존 Company 등록/원본/Evidence 보존을 명시 지시했다. 과거 W1의 OCR 미승인 기록은 당시 범위로 보존하며, 이번 증분은 로컬 Tesseract/PDFium Adapter에 한정한다. 외부 OCR/AI 전송은 승인하지 않았다. 상세 영향은 reviews/PR14_INITIAL_REGISTRATION_OCR.md.
+
+등록 전에는 기존 COMPANY_EDITOR 등록 권한으로 원문을 메모리 분석하며 Company/영속 File/공유 토큰을 만들지 않는다. 최종 사용자 확인 후 기존 Company/Membership Guard와 Private 파일/불변 Evidence를 재사용한다. 여러 서버 명령의 부분 실패는 회사 생성/문서 보존/추출 완료를 분리해 표시한다. 기업 ACK와 최종 Fact 확정은 계속 분리한다. DB Schema/Migration/Role/업무 State/Approval Guard/Assignment는 변경하지 않는다. 기존 저장 사업자번호나 과거 Version을 소급 수정하지 않는다. 실사용 인수는 PENDING이다.
+
+## Decision — PR14 v1.4 기업 실사용 저장·보완·승인 근거 (2026-10-22)
+
+Status: ACCEPTED. 사용자가 PR14_V14_CONTRACT_APPROVAL.md의 A~C 증분과 D 별도 승인 모드를 각각 명시 승인했다. 기존 상세 계약을 전면 재설계하지 않고 03/04/05/08/10의 해당 증분을 적용한다. 신규 Role enum·외부 AI·Matching 엔진·과거 원본 삭제는 포함하지 않는다. 기존 COMPANY_APPROVER 직접 승인 경로와 새로운 정확한 지정 Editor의 기업 내부 승인 근거 기록 경로를 구분하고, 실제 승인권자/기록자를 분리한다. Migration은 새 격리 검증 환경에서 수행하며 기존 사용자 자료가 있는 업무/체험 DB의 Migration은 별도 승인 대상이다. 범위·안전 정책·검증은 [승인안](reviews/PR14_V14_CONTRACT_APPROVAL.md)을 참조한다.
+
+## Decision — PR14 v1.4.2 파일 재등록 최소 DB 증분 A (2026-10-23)
+
+Status: ACCEPTED (LIMITED). 사용자가 동일 PDF 재등록의 새 유효 File ID/독립 이력, 기존 UNIQUE 최소 변경, 새 Migration 및 Backend·격리 회귀를 명시 승인했다. 활성 Company/digest 중복은 DB Guard와 기존 Company 잠금으로 제한하고 취소·교체 이력과 공유 원본·Evidence·Version·Snapshot은 유지한다. 새 State/Role/Permission은 없다. 기존 업무·사용자 검수 DB Migration, 운영 배포, 영구 삭제, 백업 파기, Next.js 업그레이드 및 PR Merge/Draft 해제는 제외한다. 물리 삭제는 POLICY_BLOCKED이며 별도 정책 승인이 필요하다. [상세 승인 범위 및 DDL](reviews/PR14_V142_FILE_REGISTRATION_APPROVAL.md).
+
+## Decision — PR14 v1.4.3 단일 작성 중 첨부의 교체 (2026-10-23)
+
+Status: ACCEPTED (LIMITED). 사용자 직접 검수 요청은 C07 교체와 단일 DRAFT 개선요구의 현재 첨부를 일치시키는 보완이다. 기존 계약의 불변 행 재연결 금지는 유지하고, 명시적 교체 확인 후 MANUAL_REVIEW 첨부 Evidence와 기존 save_improvement의 새 Version을 같은 트랜잭션으로 생성한다. 업무 내용·DRAFT·과거 제출 참조는 보존하며 자동 Fact 확인·Analysis 근거 전환·새 상태/권한·Schema 변경은 없다. 공유 업무나 분석 근거의 일괄 변경은 차단한다. 현재 SUBMITTED의 Version/State는 교체로 변경하지 않는다.
+
+사용자가 지정한 격리 DB의 정확한 단일 불일치 테스트 건만 기존 replacement lineage와 Version Guard로 복구하고 기존 테스트 Editor의 실제 제출을 검증한다. 광범위한 backfill, 업무 DB Migration, 원본 삭제, 운영자 화면 신규 개발, main Merge/Draft 해제는 포함하지 않는다. 상세 계약은 `reviews/PR14_V14_CONTRACT_APPROVAL.md`의 v1.4.3 절, 검증은 `10_TEST_ACCEPTANCE.md`를 따른다.
