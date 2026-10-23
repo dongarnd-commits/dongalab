@@ -432,3 +432,7 @@ W0는 실제 로그인/역할별 홈→기업 입력/저장/재조회→개선�
 [승인 범위](reviews/PR14_V14_CONTRACT_APPROVAL.md)의 실제 DB/File/HTTP/Browser 검증을 수행한다. 상세 재무의 표별 코드·다중 페이지·발급일/결산연도·단위·정밀도·합계 불일치·분모0·수정·원본 관계를 검증한다. 결과보고서의 사업연도/수행기간·프로그램/과제·기관 후보·도입/공급기업을 구분한다. 실제 PDF는 Private 로컬 검증, CI는 합성 PDF만 사용한다.
 
 파일 교체/취소 후 과거 원본·Evidence·제출/승인 참조 유지, 타기업 차단 및 실제 이벤트 영속성을 검증한다. InformationRequest의 초안/발송/응답 Version/첨부/재보완/검증과 Company/State/Version Guard를 실제 DB로 확인한다. 기존 직접 Approver와 지정 Editor 기록 모드 각각의 허용/거부·실제 승인권자와 기록자 분리·근거 누락 차단·과거 Version/재승인 및 공개 Projection/PDF를 검증한다. 성공 실행과 사용자 인수를 구분하며 USER_ACCEPTANCE는 별도다. 이 기준의 추가만으로 실행 PASS를 선언하지 않는다.
+
+## PR14 v1.4.2 제한 승인 A 검증
+
+새 격리 PostgreSQL·Private Storage에서 PDF 업로드→취소→동일 PDF 재등록의 새 유효 File ID, 활성 중복 거부, 동시 재등록 1건 제한, C06/C07 일치, 첨부 해제 저장·새로고침, 과거 제출/Evidence/Version 보존 및 타기업 직접 접근 차단을 확인한다. 기존 데이터 호환 Migration/빈 DB Rollback/이력 존재 시 안전한 Down 거부/실패 복구를 검증한다. 기존 업무·사용자 검수 DB Migration과 물리 삭제는 실행하지 않는다.

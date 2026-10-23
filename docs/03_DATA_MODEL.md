@@ -700,3 +700,7 @@ Company 입력·Site·파일·파싱 위치·Fact 후보/기업 사실확인/운
 승인 원문과 구체 범위: [PR14_V14_CONTRACT_APPROVAL](reviews/PR14_V14_CONTRACT_APPROVAL.md) A~D. 기존 CompanyInputVersion JSON에 상세 재무 후보/기업 입력과 출처 선택을 호환 증분으로 저장한다. 금액은 정확한 원 단위 정수 문자열, 누락은 미확인으로 구분한다. File/Parse/Evidence 및 불변 입력 Version/행을 typed 관계로 연결해 원문 값과 사용자 수정값을 구분한다. 원본 교체·현재 자료 등록 취소는 append-only 관계/이벤트로 남기며 과거 File/Evidence/제출본을 삭제·재연결하지 않는다. InformationRequest의 기존 논리 State를 물리 요청·불변 응답 Version·첨부·Review로 구현한다.
 
 ApprovalRequest는 기존 DIRECT_APPROVER 모드와, 명시적으로 지정된 같은 기업 Editor가 내부 승인 근거를 기록하는 COMPANY_RECORDED_AUTHORIZATION 모드를 구분한다. 실제 승인권자 성명·직책·승인 시각/방식·구두 경위 또는 결재 파일과 시스템 기록자·전송 시각은 별도 불변 기록이다. 시스템 Actor를 실제 승인권자 본인으로 조작하거나 전자서명으로 해석하지 않는다. 정확한 ProposalVersion/요청/지정 행위자/Scope 관계 및 과거 직접 승인 호환을 유지한다.
+
+## PR14 v1.4.2 제한 승인 A — 파일 등록과 내용의 분리
+
+동일 Company/digest의 활성 등록은 최대 1개다. 취소·교체된 불변 File은 과거 등록으로 보존하며, 동일 원본 재등록은 새 File ID/등록자/시각/Audit를 생성한다. SHA-256 Storage 객체는 공유 가능하나 Company·Site·Evidence 권한은 File ID 관계로 검증한다. 과거 Evidence/Version을 새 ID로 치환하지 않는다. 기존 데이터 삭제 없는 증분이며 기존 업무·사용자 검수 DB 적용과 영구 삭제는 승인되지 않았다.

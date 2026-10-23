@@ -8,6 +8,7 @@ import warnings
 from PIL import Image
 from sqlalchemy import select,insert,update,text
 from app.infrastructure import company_schema as S
+from app.infrastructure import company_business_schema as B
 from app.infrastructure.notice_schema import actors,identity
 from app.notice.domain import Denied
 from app.company.documents import parse_document,DocumentError,MAX_UPLOAD
@@ -97,7 +98,7 @@ class CompanyApplication(BusinessRecords,InformationRequests):
      with Image.open(BytesIO(raw)) as image:image.load()
    except (OSError,ValueError,Image.DecompressionBombError,Image.DecompressionBombWarning):raise Denied('INVALID_IMAGE_CONTENT',422) from None
   digest=sha256(raw).hexdigest();old=self.rows(S.files,company_id=cid,digest=digest)
-  if old:raise Denied('DUPLICATE_COMPANY_FILE',409)
+  if any(not self.rows(B.file_events,file_id=f['id']) for f in old):raise Denied('DUPLICATE_COMPANY_FILE',409)
   key,digest=self.files.put(raw)
   mime={'pdf':'application/pdf','docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','txt':'text/plain','png':'image/png','jpg':'image/jpeg','jpeg':'image/jpeg'}[parsed.format]
   f=self.add(S.files,company_id=cid,site_id=site_id,name=name,media_type=mime,storage_key=key,digest=digest,size=len(raw),actor_id=who.id)
@@ -298,6 +299,9 @@ class CompanyApplication(BusinessRecords,InformationRequests):
   if action=='SUBMIT':
    self.role(who,'COMPANY_EDITOR')
    if state!='DRAFT':raise Denied('TRANSITION_NOT_ALLOWED',409)
+   for eid in v['data']['evidence_ids']:
+    evidence=self.get(S.evidence,eid)
+    if evidence['file_id']:self.active_file(evidence['file_id'])
    new='SUBMITTED'
   elif action=='ACKNOWLEDGE':
    self.role(who,'COMPANY_EDITOR')

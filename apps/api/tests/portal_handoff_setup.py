@@ -13,7 +13,7 @@ def prepare():
  cohort=secrets.token_hex(4);password=secrets.token_urlsafe(24);accounts={}
  with get_session_factory().begin() as session:
   store=SqlNoticeStore(session)
-  for label,role in [('editor','COMPANY_EDITOR'),('stage_a','COMPANY_EDITOR'),('other','COMPANY_EDITOR'),('negative','COMPANY_EDITOR'),('registration','COMPANY_EDITOR'),('registration_direct','COMPANY_EDITOR'),('registration_conflict','COMPANY_EDITOR'),('registration_retry','COMPANY_EDITOR'),('ux_v13','COMPANY_EDITOR'),('operator','DATCO_OPERATOR'),('admin','DATCO_ADMIN')]:
+  for label,role in [('editor','COMPANY_EDITOR'),('stage_a','COMPANY_EDITOR'),('other','COMPANY_EDITOR'),('negative','COMPANY_EDITOR'),('registration','COMPANY_EDITOR'),('registration_direct','COMPANY_EDITOR'),('registration_conflict','COMPANY_EDITOR'),('registration_retry','COMPANY_EDITOR'),('ux_v13','COMPANY_EDITOR'),('files_v142','COMPANY_EDITOR'),('operator','DATCO_OPERATOR'),('admin','DATCO_ADMIN')]:
    name='TEST_HANDOFF_'+label+'_'+cohort;store.add('actors',username=name,role=role,password_hash=hash_password(password));accounts[label]=name
  context=dict(accounts=accounts,password=password,nonce=cohort,business_number=synthetic_business_number(),negative_number=synthetic_business_number(),stage_a_number=synthetic_business_number())
  from company_browser_setup import document_first_sources
@@ -26,6 +26,7 @@ def prepare():
   path=docs/(label+'.pdf');path.write_bytes(scan(context['registration_number'],company,certificate=label=='proof'));context['registration_documents'].append(str(path))
  retry=docs/'retry.pdf';retry.write_bytes(scan(context['retry_number']));context['retry_document']=str(retry)
  conflict=docs/'conflict.pdf';conflict.write_bytes(scan(context['registration_number'][:3]+'-'+context['registration_number'][3:5]+'-'+context['registration_number'][5:],'다른합성기업',certificate=True));context['conflict_document']=str(conflict)
+ context['files_v142_number']=synthetic_business_number()
  context['ux_v13_number']=synthetic_business_number()
  ux=docs/'TEST-ux-registration.pdf';ux.write_bytes(scan(context['ux_v13_number']));context['ux_v13_registration']=str(ux)
  from business_sources import portal_sources

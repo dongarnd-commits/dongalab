@@ -157,3 +157,7 @@ W2 자동 추천/W3 신규 Proposal 연계, R07 범용 조건 엔진, OCR·외�
 ## Decision — PR14 v1.4 기업 실사용 저장·보완·승인 근거 (2026-10-22)
 
 Status: ACCEPTED. 사용자가 PR14_V14_CONTRACT_APPROVAL.md의 A~C 증분과 D 별도 승인 모드를 각각 명시 승인했다. 기존 상세 계약을 전면 재설계하지 않고 03/04/05/08/10의 해당 증분을 적용한다. 신규 Role enum·외부 AI·Matching 엔진·과거 원본 삭제는 포함하지 않는다. 기존 COMPANY_APPROVER 직접 승인 경로와 새로운 정확한 지정 Editor의 기업 내부 승인 근거 기록 경로를 구분하고, 실제 승인권자/기록자를 분리한다. Migration은 새 격리 검증 환경에서 수행하며 기존 사용자 자료가 있는 업무/체험 DB의 Migration은 별도 승인 대상이다. 범위·안전 정책·검증은 [승인안](reviews/PR14_V14_CONTRACT_APPROVAL.md)을 참조한다.
+
+## Decision — PR14 v1.4.2 파일 재등록 최소 DB 증분 A (2026-10-23)
+
+Status: ACCEPTED (LIMITED). 사용자가 동일 PDF 재등록의 새 유효 File ID/독립 이력, 기존 UNIQUE 최소 변경, 새 Migration 및 Backend·격리 회귀를 명시 승인했다. 활성 Company/digest 중복은 DB Guard와 기존 Company 잠금으로 제한하고 취소·교체 이력과 공유 원본·Evidence·Version·Snapshot은 유지한다. 새 State/Role/Permission은 없다. 기존 업무·사용자 검수 DB Migration, 운영 배포, 영구 삭제, 백업 파기, Next.js 업그레이드 및 PR Merge/Draft 해제는 제외한다. 물리 삭제는 POLICY_BLOCKED이며 별도 정책 승인이 필요하다. [상세 승인 범위 및 DDL](reviews/PR14_V142_FILE_REGISTRATION_APPROVAL.md).

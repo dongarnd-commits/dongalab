@@ -61,3 +61,33 @@ def test_partial_ddl_failure_rolls_back_then_retry_succeeds(migration,monkeypatc
     patch.setattr(m.op,'execute',fail);m.upgrade()
  assert 'companies' not in inspect(c).get_table_names(schema=schema)
  m.upgrade();assert_model(c,schema)
+
+
+def test_registration_increment_rollback_and_retry(migration):
+ c,m,schema=migration;m.upgrade()
+ increment=load('fd18e0012026_company_file_reregistration.py')
+ increment.downgrade()
+ assert any(x['column_names']==['company_id','digest'] for x in inspect(c).get_unique_constraints('company_files',schema=schema))
+ increment.upgrade()
+ assert not any(x['column_names']==['company_id','digest'] for x in inspect(c).get_unique_constraints('company_files',schema=schema))
+ assert any(x['name']=='ix_company_files_company_digest' for x in inspect(c).get_indexes('company_files',schema=schema))
+
+
+def test_registration_increment_existing_data_compatibility_and_safe_down(migration,tmp_path):
+ c,m,schema=migration;m.upgrade();increment=load('fd18e0012026_company_file_reregistration.py');increment.downgrade()
+ session=Session(c,join_transaction_mode='create_savepoint');store=SqlNoticeStore(session)
+ actor=store.add('actors',username='TEST_'+uuid4().hex,role='COMPANY_EDITOR',password_hash='TEST_NOT_LOGIN')
+ who=Actor(actor['id'],'COMPANY_EDITOR');app=CompanyApplication(session,LocalPrivateFiles(tmp_path))
+ company=app.register(who,dict(name='TEST compatibility',business_number=synthetic_business_number()))
+ old=app.upload(who,company['id'],'TEST.txt',b'TEST retained original')
+ session.flush();before=c.execute(text('SELECT * FROM company_files WHERE id=:id'),{'id':old['id']}).mappings().one()
+ increment.upgrade()
+ assert dict(c.execute(text('SELECT * FROM company_files WHERE id=:id'),{'id':old['id']}).mappings().one())==dict(before)
+ increment.downgrade();increment.upgrade()
+ app.file_event(who,old['id'],'CANCELLED','TEST retained history')
+ new=app.upload(who,company['id'],'TEST.txt',b'TEST retained original');session.flush()
+ assert old['id']!=new['id']
+ with pytest.raises(RuntimeError,match='COMPANY_FILE_REGISTRATION_HISTORY_EXISTS'):increment.downgrade()
+ assert c.scalar(text('SELECT count(*) FROM company_files'))==2
+ assert app.files.read(old['storage_key'],old['digest'])==b'TEST retained original'
+ session.close()

@@ -12,7 +12,8 @@ def scoped(name,*columns):
   ForeignKeyConstraint(['site_id','company_id'],['company_sites.id','company_sites.company_id'],ondelete='RESTRICT'),UniqueConstraint('id','company_id'))
 inputs=scoped('company_input_versions',Column('ordinal',Integer,nullable=False),Column('data',JSONB,nullable=False),ref('actor_id','local_actors'))
 site_versions=table('company_site_versions',ref('site_id','company_sites'),Column('ordinal',Integer,nullable=False),Column('data',JSONB,nullable=False),ref('actor_id','local_actors'),UniqueConstraint('site_id','ordinal'))
-files=scoped('company_files',Column('name',String(200),nullable=False),Column('media_type',String(100),nullable=False),Column('storage_key',String(64),nullable=False),Column('digest',String(64),nullable=False),Column('size',Integer,nullable=False),ref('actor_id','local_actors'),UniqueConstraint('company_id','digest'),CheckConstraint('size>0'))
+files=scoped('company_files',Column('name',String(200),nullable=False),Column('media_type',String(100),nullable=False),Column('storage_key',String(64),nullable=False),Column('digest',String(64),nullable=False),Column('size',Integer,nullable=False),ref('actor_id','local_actors'),CheckConstraint('size>0'))
+Index('ix_company_files_company_digest',files.c.company_id,files.c.digest)
 parses=table('company_document_parses',ref('file_id','company_files'),ref('actor_id','local_actors'),Column('parser_version',String(80),nullable=False),Column('error',String(100)),Column('limitations',JSONB,nullable=False))
 evidence=scoped('company_evidence',ref('file_id','company_files',True),ref('input_version_id','company_input_versions',True),ref('parse_id','company_document_parses',True),Column('descriptor',Text,nullable=False),Column('page',Integer),Column('text',Text,nullable=False),Column('mode',String(40),nullable=False),
  CheckConstraint('(file_id IS NOT NULL) <> (input_version_id IS NOT NULL)'),
