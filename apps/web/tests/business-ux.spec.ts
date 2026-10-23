@@ -3,6 +3,40 @@ import {readFile} from 'node:fs/promises';import path from 'node:path';import {c
 const fixture=()=>JSON.parse(process.env.DATCO_HANDOFF_CONTEXT!);
 async function login(page:Page,role:string){const c=fixture();await page.goto('/login');await expect(page.getByRole('navigation',{name:'전체 업무 메뉴'})).toHaveCount(0);await page.getByLabel('아이디',{exact:true}).fill(c.accounts[role]);await page.getByLabel('비밀번호',{exact:true}).fill(c.password);await page.getByRole('button',{name:'로그인',exact:true}).click();await expect(page).toHaveURL(/\/portal\/(company|operator)/,{timeout:15000});}
 async function menu(page:Page,name:string){await page.locator('aside').getByRole('button',{name,exact:true}).click();}
+
+test('v143 C07 replacement revises the actual draft, survives retry reload relogin and submits B',async({page,playwright})=>{
+ test.setTimeout(240000);const c=fixture(),headers={Origin:process.env.DATCO_E2E_BASE_URL!};await login(page,'files_v143');
+ const created=await page.request.post('/api/company',{headers,data:{name:'TEST v143 '+c.nonce,business_number:c.files_v143_number,industry:'TEST manufacturing',financials:[],history:[]}});expect(created.ok()).toBe(true);const cid=(await created.json()).id;
+ expect((await page.request.post('/api/company/'+cid+'/sites',{headers,data:{data:{name:'TEST replacement site',address:'TEST synthetic address'},expected_ordinal:0}})).ok()).toBe(true);
+ const a=await readFile(c.business_documents.financial),b=await readFile(c.business_documents.history);
+ await page.reload();await menu(page,'개선요구 등록');await page.getByRole('button',{name:'새 개선요구 작성',exact:true}).click();
+ await page.getByLabel('현재 문제점 (As-Is)',{exact:true}).fill('TEST v143 unchanged problem');await page.getByLabel('희망 개선목표 (To-Be)',{exact:true}).fill('TEST v143 unchanged goal');
+ await page.getByLabel('개선요구 관련파일 선택',{exact:true}).setInputFiles({name:'TEST-v143-A.pdf',mimeType:'application/pdf',buffer:a});await page.getByRole('button',{name:'초안 저장',exact:true}).click();await expect(page.getByRole('button',{name:'새 개선요구 작성',exact:true})).toBeEnabled({timeout:30000});await expect(page.getByRole('status').filter({hasText:'개선요구 초안을 저장했습니다.'})).toBeVisible();
+ let detail=await(await page.request.get('/api/company/'+cid)).json();const original=detail.improvements[0],old=detail.files[0],proof=detail.evidence.find((e:{file_id:string})=>e.file_id===old.id);
+ // Multiple current roots are blocked. Detach the second via a new Version;
+ // its historical reference must remain unchanged by the later replacement.
+ const shared=await page.request.post('/api/company/'+cid+'/improvements',{headers,data:{data:{...original.versions[0].data,title:'TEST shared attachment'},expected_ordinal:0}});expect(shared.ok()).toBe(true);const second=await shared.json();
+ await menu(page,'첨부자료 관리');await page.reload();await expect(page.getByText('등록한 자료를 확인하고 관리할 수 있습니다.',{exact:true})).toBeVisible();await expect(page.getByText('현재 등록된 자료만 표시합니다.',{exact:false})).toHaveCount(0);
+ const oldCard=page.locator('article[data-file-id="'+old.id+'"]'),replacement={name:'TEST-v143-B.pdf',mimeType:'application/pdf',buffer:b};
+ page.once('dialog',dialog=>dialog.accept());await oldCard.getByLabel(old.name+' 교체 파일',{exact:true}).setInputFiles(replacement);await expect(page.getByRole('alert')).toContainText('여러 업무에 연결된 파일');
+ detail=await(await page.request.get('/api/company/'+cid)).json();expect(detail.files).toHaveLength(1);expect(detail.improvements.find((i:{id:string})=>i.id===original.id)).toEqual(original);
+ expect((await page.request.post('/api/company/'+cid+'/improvements',{headers,data:{data:{...second.data,evidence_ids:[]},improvement_id:second.improvement_id,expected_ordinal:second.ordinal}})).ok()).toBe(true);
+ await page.reload();const before=await(await page.request.get('/api/company/'+cid)).json();
+ // An uploaded B remains available if relation storage fails; retry reuses B.
+ const lifecycle='**/api/company/files/'+old.id+'/lifecycle';await page.route(lifecycle,route=>route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({reason:'TEST_LINK_SAVE_UNAVAILABLE'})}));
+ page.once('dialog',dialog=>dialog.accept());await oldCard.getByLabel(old.name+' 교체 파일',{exact:true}).setInputFiles(replacement);await expect(page.getByRole('alert')).toBeVisible();
+ detail=await(await page.request.get('/api/company/'+cid)).json();expect(detail.improvements).toEqual(before.improvements);expect(detail.files.find((f:{id:string})=>f.id===old.id).lifecycle).toBeNull();const uploaded=detail.files.find((f:{id:string})=>f.id!==old.id);expect(uploaded).toBeTruthy();await page.unroute(lifecycle);
+ // The retry commits but loses its response. Exact persisted lineage recovers it.
+ await page.route(lifecycle,async route=>{const response=await route.fetch();expect(response.ok()).toBe(true);await route.abort('failed');});
+ page.once('dialog',dialog=>dialog.accept());await oldCard.getByLabel(old.name+' 교체 파일',{exact:true}).setInputFiles(replacement);await expect(page.getByRole('status').filter({hasText:'새 파일을 등록하고 기존 원본의 교체 이력을 저장했습니다.'})).toBeVisible();await page.unroute(lifecycle);
+ await expect(oldCard).toHaveCount(0);const card=page.locator('article[data-file-id="'+uploaded.id+'"]');await expect(card).toBeVisible();await expect(card).toContainText('연결 업무: 개선요구');expect((await(await page.request.get('/api/company/files/'+uploaded.id+'/download')).body()).equals(b)).toBe(true);
+ await page.reload();await logout(page);await login(page,'files_v143');await menu(page,'개선요구 등록');const row=page.locator('article[data-root-id="'+original.id+'"]');await row.getByRole('button',{name:'상세보기',exact:true}).click();const view=page.locator('article[data-improvement-id="'+original.id+'"]');
+ await expect(view).toContainText('TEST v143 unchanged problem');await expect(view).toContainText('TEST v143 unchanged goal');await expect(view.getByRole('link',{name:'TEST-v143-B.pdf 원본 다운로드',exact:true})).toBeVisible();await expect(view.getByRole('link',{name:'TEST-v143-A.pdf 원본 다운로드',exact:true})).toHaveCount(0);await expect(view).not.toContainText('현재 사용 불가');await expect(view.getByRole('button',{name:'DATCO에 제출',exact:true})).toBeEnabled();
+ await view.getByRole('button',{name:'DATCO에 제출',exact:true}).click();await expect(page.getByRole('status').filter({hasText:'DATCO에 제출했습니다.'})).toBeVisible();await page.reload();
+ detail=await(await page.request.get('/api/company/'+cid)).json();const saved=detail.improvements.find((i:{id:string})=>i.id===original.id);expect(saved.state).toBe('SUBMITTED');expect(saved.current_ordinal).toBe(2);expect(saved.versions[0]).toEqual(original.versions[0]);expect(detail.evidence.find((e:{id:string})=>e.id===proof.id)).toEqual(proof);expect(detail.improvements.find((i:{id:string})=>i.id===second.improvement_id)).toEqual(before.improvements.find((i:{id:string})=>i.id===second.improvement_id));
+ expect(detail.evidence.find((e:{id:string})=>e.id===saved.versions.at(-1).data.evidence_ids[0]).file_id).toBe(uploaded.id);expect((await(await page.request.get('/api/company/files/'+old.id+'/download')).body()).equals(a)).toBe(true);
+ const denied=await playwright.request.newContext({baseURL:process.env.DATCO_E2E_BASE_URL,extraHTTPHeaders:headers});await denied.post('/api/notice/session',{data:{username:c.accounts.other,password:c.password}});expect((await denied.get('/api/company/files/'+uploaded.id+'/download')).status()).toBe(404);await denied.dispose();await page.screenshot({path:test.info().outputPath('v143-replacement-submitted.png'),fullPage:true});
+});
 async function logout(page:Page){await page.getByRole('button',{name:'로그아웃',exact:true}).first().click();const dialog=page.getByRole('dialog',{name:'로그아웃 확인',exact:true});if(await dialog.isVisible())await dialog.getByRole('button',{name:'로그아웃',exact:true}).click();await expect(page).toHaveURL(/\/login$/);}
 
 test('v13 actual company finance history inline improvement evidence library and operator handoff',async({page,playwright})=>{

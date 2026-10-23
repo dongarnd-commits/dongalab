@@ -216,3 +216,117 @@ def test_direct_sql_concurrent_registration_and_cross_company_content(env):
  r=env['clients']['editor'].post('/company/'+other['id']+'/files',params={'site_id':other_site['id']},content=raw,headers={'Origin':get_settings().web_origin,'X-Upload-Name':'TEST.txt'})
  assert r.status_code==200 and r.json()['digest']==old['digest'] and r.json()['id']!=old['id']
  assert env['clients']['other'].get('/company/files/'+r.json()['id']+'/download').status_code==404
+
+
+def replacement_draft(env,*,parsed=False):
+ from io import BytesIO
+ from reportlab.pdfgen import canvas
+ c,site,_=fresh(env);cid=c['id'];files=[]
+ for name in ('A','B'):
+  buf=BytesIO();pdf=canvas.Canvas(buf);pdf.drawString(40,700,'TEST v143 attachment '+name);pdf.save();raw=buf.getvalue()
+  response=env['clients']['editor'].post('/company/'+cid+'/files',params={'site_id':site['id']},content=raw,headers={'Origin':get_settings().web_origin,'X-Upload-Name':'TEST-v143-'+name+'.pdf'})
+  assert response.status_code==200;files.append((response.json(),raw))
+ old,new=files[0][0],files[1][0]
+ if parsed:
+  call(env,'editor','/company/files/'+old['id']+'/parse',{})
+  proof=next(e for e in call(env,'editor','/company/'+cid)['evidence'] if e['file_id']==old['id'])
+ else:
+  proof=call(env,'editor','/company/'+cid+'/evidence',dict(file_id=old['id'],site_id=site['id'],descriptor='개선요구 첨부자료',transcription='TEST original attachment'))
+ data=dict(title='TEST original problem',original_text='TEST original wording',as_is='TEST original problem',to_be='TEST original goal',site_id=site['id'],evidence_ids=[proof['id']])
+ version=call(env,'editor','/company/'+cid+'/improvements',dict(data=data))
+ return cid,site,files,proof,version
+
+
+@pytest.mark.parametrize('submitted_history',[False,True])
+def test_replacement_appends_draft_evidence_version_then_actual_submit(env,submitted_history):
+ cid,site,files,proof,version=replacement_draft(env);old,new=files[0][0],files[1][0]
+ if submitted_history:
+  call(env,'editor','/company/improvements/'+version['id']+'/actions',dict(action='SUBMIT',note='TEST preserve exact submitted original'))
+  version=call(env,'editor','/company/'+cid+'/improvements',dict(data=version['data'],improvement_id=version['improvement_id'],expected_ordinal=version['ordinal']))
+ before=call(env,'editor','/company/'+cid);root_before=before['improvements'][0]
+ event=call(env,'editor','/company/files/'+old['id']+'/lifecycle',dict(kind='REPLACED',replacement_id=new['id'],note='TEST confirmed draft attachment replacement'))
+ after=call(env,'editor','/company/'+cid);root=after['improvements'][0];current=root['versions'][-1]
+ assert root['state']=='DRAFT' and root['current_ordinal']==version['ordinal']+1
+ assert root['versions'][:-1]==root_before['versions']
+ assert {k:v for k,v in current['data'].items() if k!='evidence_ids'}=={k:v for k,v in version['data'].items() if k!='evidence_ids'}
+ evidence=next(e for e in after['evidence'] if e['id']==current['data']['evidence_ids'][0])
+ assert evidence['id']!=proof['id'] and evidence['file_id']==new['id'] and evidence['mode']=='MANUAL_REVIEW'
+ assert next(e for e in after['evidence'] if e['id']==proof['id'])==next(e for e in before['evidence'] if e['id']==proof['id'])
+ assert next(f for f in after['files'] if f['id']==old['id'])['lifecycle']['id']==event['id']
+ assert not next(f for f in after['files'] if f['id']==new['id'])['lifecycle']
+ call(env,'editor','/company/improvements/'+version['id']+'/actions',dict(action='SUBMIT',note='TEST obsolete version cannot submit'),409)
+ call(env,'editor','/company/improvements/'+current['id']+'/actions',dict(action='SUBMIT',note='TEST submit replacement'))
+ saved=call(env,'editor','/company/'+cid)['improvements'][0]
+ assert saved['state']=='SUBMITTED' and saved['versions'][:-1]==root_before['versions']
+ for file,raw in files:
+  assert env['clients']['editor'].get('/company/files/'+file['id']+'/download').content==raw
+  assert env['clients']['other'].get('/company/files/'+file['id']+'/download').status_code==404
+
+
+def test_replacement_leaves_submitted_current_version_unchanged(env):
+ cid,site,files,proof,version=replacement_draft(env)
+ call(env,'editor','/company/improvements/'+version['id']+'/actions',dict(action='SUBMIT',note='TEST immutable current submission'))
+ before=call(env,'editor','/company/'+cid)
+ call(env,'editor','/company/files/'+files[0][0]['id']+'/lifecycle',dict(kind='REPLACED',replacement_id=files[1][0]['id'],note='TEST only replace registration'))
+ after=call(env,'editor','/company/'+cid)
+ assert after['improvements']==before['improvements'] and after['evidence']==before['evidence']
+
+
+@pytest.mark.parametrize('shared',['improvement','request','parsed'])
+def test_replacement_blocks_ambiguous_or_interpreted_evidence_without_rewriting(env,shared):
+ cid,site,files,proof,version=replacement_draft(env,parsed=shared=='parsed');old,new=files[0][0],files[1][0]
+ if shared=='improvement':call(env,'editor','/company/'+cid+'/improvements',dict(data=dict(version['data'],title='TEST shared root')))
+ if shared=='request':
+  request=call(env,'operator','/company/'+cid+'/information-requests',dict(title='TEST other workflow',message='TEST request attachment'))
+  call(env,'operator','/company/information-requests/'+request['id']+'/send',{})
+  call(env,'editor','/company/information-requests/'+request['id']+'/responses',dict(message='TEST shared source',file_ids=[old['id']],expected_ordinal=0,submit=True))
+ before=call(env,'editor','/company/'+cid)
+ result=call(env,'editor','/company/files/'+old['id']+'/lifecycle',dict(kind='REPLACED',replacement_id=new['id'],note='TEST ambiguous replacement'),409)
+ assert result['reason']==('FILE_REPLACEMENT_EVIDENCE_REVIEW_REQUIRED' if shared=='parsed' else 'FILE_REPLACEMENT_SHARED_BUSINESS')
+ assert call(env,'editor','/company/'+cid)==before
+
+
+@pytest.mark.parametrize('failure',['storage','save','database'])
+def test_replacement_failure_rolls_back_evidence_pointer_and_event_then_retry(env,monkeypatch,failure):
+ from app.company.application import CompanyApplication
+ from app.infrastructure import company_schema as S
+ from app.notice.domain import Actor
+ from sqlalchemy import text
+ cid,site,files,proof,version=replacement_draft(env);old,new=files[0][0],files[1][0]
+ who=Actor(env['people']['editor']['id'],'COMPANY_EDITOR');before=call(env,'editor','/company/'+cid)
+ with monkeypatch.context() as patch:
+  if failure=='storage':
+   read=env['files'].read
+   def unavailable(key,digest):
+    if digest==new['digest']:raise OSError('TEST replacement storage failure')
+    return read(key,digest)
+   patch.setattr(env['files'],'read',unavailable)
+  elif failure=='save':
+   save=CompanyApplication.save_improvement
+   def fail_after_save(self,*args,**kwargs):
+    save(self,*args,**kwargs);raise RuntimeError('TEST replacement save failure')
+   patch.setattr(CompanyApplication,'save_improvement',fail_after_save)
+  else:
+   add=CompanyApplication.add
+   def fail_event(self,table,**kwargs):
+    if table is B.file_events:self.session.execute(text('SELECT 1/0'))
+    return add(self,table,**kwargs)
+   patch.setattr(CompanyApplication,'add',fail_event)
+  with pytest.raises((OSError,RuntimeError,DBAPIError)):
+   with env['factory'].begin() as session:CompanyApplication(session,env['files']).file_event(who,old['id'],'REPLACED','TEST atomic failure',new['id'])
+ assert call(env,'editor','/company/'+cid)==before
+ call(env,'editor','/company/files/'+old['id']+'/lifecycle',dict(kind='REPLACED',replacement_id=new['id'],note='TEST retry existing uploaded File ID'))
+ after=call(env,'editor','/company/'+cid)
+ assert after['improvements'][0]['current_ordinal']==version['ordinal']+1
+ assert len(after['evidence'])==len(before['evidence'])+1
+
+
+def test_replacement_draft_rejects_other_site_and_other_actor(env):
+ cid,site,files,proof,version=replacement_draft(env)
+ new_site=call(env,'editor','/company/'+cid+'/sites',dict(data=dict(name='TEST other site',address='TEST other address')))['site']
+ other_file,_=upload(env,cid,new_site['id'])
+ before=call(env,'editor','/company/'+cid);path='/company/files/'+files[0][0]['id']+'/lifecycle'
+ body=dict(kind='REPLACED',replacement_id=other_file['id'],note='TEST incorrect site')
+ assert call(env,'editor',path,body,409)['reason']=='FILE_REPLACEMENT_SITE_MISMATCH'
+ call(env,'other',path,body,404);call(env,'operator',path,body,403)
+ assert call(env,'editor','/company/'+cid)==before

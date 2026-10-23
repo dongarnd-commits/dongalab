@@ -436,3 +436,11 @@ W0는 실제 로그인/역할별 홈→기업 입력/저장/재조회→개선�
 ## PR14 v1.4.2 제한 승인 A 검증
 
 새 격리 PostgreSQL·Private Storage에서 PDF 업로드→취소→동일 PDF 재등록의 새 유효 File ID, 활성 중복 거부, 동시 재등록 1건 제한, C06/C07 일치, 첨부 해제 저장·새로고침, 과거 제출/Evidence/Version 보존 및 타기업 직접 접근 차단을 확인한다. 기존 데이터 호환 Migration/빈 DB Rollback/이력 존재 시 안전한 Down 거부/실패 복구를 검증한다. 기존 업무·사용자 검수 DB Migration과 물리 삭제는 실행하지 않는다.
+
+## PR14 v1.4.3 파일 교체와 작성 중 첨부 연결
+
+C07에서 PDF A→B 교체를 확인하면 단일 DRAFT의 일반 첨부에만 새 Evidence/ImprovementVersion을 생성한다. C07 업무 분류, C06의 B 표시·A 제외, As-Is/To-Be·원문 유지, B 다운로드, F5·재로그인과 실제 SUBMIT 영속성을 실제 DB/File/Browser에서 검증한다. 제출 이력이 있는 같은 Root의 현재 DRAFT에도 적용하되 이전 Version·Review·Evidence·Snapshot을 보존한다. 현재 SUBMITTED Version을 새 DRAFT로 자동 전환하지 않는다.
+
+여러 현재 개선요구/다른 업무의 공유, 분석 근거, 다른 Site/Company·권한을 검사한다. Storage 읽기·Version 저장·DB 이벤트 저장 실패는 첨부/Version pointer/Evidence/이벤트를 함께 Rollback하고, 이미 업로드된 B는 같은 ID로 재시도한다. 저장 성공 후 응답 유실은 정확한 replacement lineage로 재조회하며 중복 Version을 만들지 않는다. 기존 취소·재등록·첨부 해제·전체 Backend/PostgreSQL/Playwright·OCR·재무·수행이력·C09/C10·역할 Preview·CI 회귀를 유지한다.
+
+지정된 기존 격리 테스트 건의 복구는 old→new 이벤트와 단일 DRAFT를 읽기 전용으로 확인·기록한 후 새 Evidence/Version API로 수행하며 같은 테스트 Editor의 실제 제출까지 검증한다. 기존 행 보정·삭제·Migration은 하지 않는다. 물리 삭제는 POLICY_BLOCKED, USER_ACCEPTANCE는 PENDING이다.

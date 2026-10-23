@@ -12,6 +12,14 @@ Status: ACCEPTED — 2026-10-22. 사용자가 A~C 증분 구현과 D 별도 승�
 
 원본 File/Storage/Evidence/과거 제출·제안서 참조는 모두 유지한다. 새 append-only file_event 테이블로 REPLACED(old→new File ID) 및 CANCELLED를 감사 기록한다. 같은 회사 Editor만, 정확한 현재 파일 상태를 검사한다. 교체는 검증된 새 원본 생성 후 관계 기록, 기업/재무/이력/개선요구를 자동 덮어쓰거나 기존 근거를 재연결하지 않는다. 이미 참조된 자료의 취소도 원본 영구삭제가 아니라 현재 자료함의 비활성 등록이며 관련 업무의 과거 원본 다운로드는 권한 범위에서 유지한다. 새 업무 연결/재분석에는 비활성 자료를 사용할 수 없게 한다. 취소 자료는 별도 조회 가능하며 오류/미반영을 성공으로 표시하지 않는다. 이벤트와 Audit를 같은 트랜잭션으로 저장한다. 새 Migration은 격리 테스트 DB에서 검증하며 업무 DB에는 승인 없는 Migration을 적용하지 않는다.
 
+### v1.4.3 파일 교체 보완 범위 (2026-10-23)
+
+사용자 직접 검수 요청에 따라 C07의 명시적 교체 확인은 단일 DRAFT 개선요구의 일반 첨부 변경도 포함한다. 기존 Evidence·Version을 재연결하거나 덮어쓰지 않고, 새 File에 대한 MANUAL_REVIEW 첨부 Evidence와 기존 저장 절차의 새 ImprovementVersion을 생성한다. As-Is·To-Be·원문·다른 첨부·Fact 참조를 유지하고 DRAFT 상태를 유지한다. 과거 제출 이력은 같은 Root에서도 그대로 보존한다. 제출 상태의 현재 Version을 교체로 새 DRAFT로 바꾸지 않는다.
+
+여러 현재 개선요구 또는 다른 업무와 공유되거나, 추출/Fact 등의 근거를 바꿔야 하는 경우에는 자동 승계하지 않고 이유를 표시해 차단한다. 이벤트·새 첨부 Evidence·새 Version·Audit은 같은 Backend 트랜잭션으로 저장한다. 새 파일 업로드가 이미 성공하고 연결 저장만 실패한 경우 두 원본을 유지하며 같은 새 File ID로 재시도할 수 있다. 새 Schema·State·Role·Permission·외부 API 계약은 추가하지 않는다.
+
+이미 발생한 불일치는 사용자 지정 격리 검수 DB의 정확한 old→new 교체 관계와 단일 DRAFT를 확인한 뒤 같은 새 Evidence/Version 저장 절차로만 복구한다. 기존 File/Event/Evidence/Version/제출 기록을 수정하지 않는다. 복구 후 기존 테스트 Editor 계정으로 실제 제출 검증을 수행하는 범위는 이번 사용자 요청에 포함된다.
+
 ## C. 보완 요청 물리 구현
 
 실제 InformationRequest/Response 저장은 현재 없다. 03/04에 이미 정의된 DRAFT→WAITING_RESPONSE→REVIEW_REQUIRED→VERIFIED 또는 REVISION_REQUESTED→REVIEW_REQUIRED만 사용한다. 새 물리 테이블은 Company 및 개선요구 Version/기업 입력 Version/파일 중 실제 대상 FK, 고정 요청 내용/요청자/기한·시각, 불변 응답 Version·첨부 Evidence·제출자, 불변 운영자 Review를 저장한다. 요청 발송은 Scoped Operator, 응답 초안·제출은 같은 Company Editor, 검증/재보완은 Scoped Operator만 가능하다. 새 응답 Version은 이전 제출본을 변경하지 않으며 서버 State/Version/Scope를 검사한다. 자료 수정은 기존 Profile/Improvement API를 사용하고 원본 요청/과거 입력을 보존한다. 목록·정보조회·응답/검토 API 및 최소 운영자 요청/검토 UI가 필요하다. 관리자 자동 운영권한·자동 Membership은 추가하지 않는다.

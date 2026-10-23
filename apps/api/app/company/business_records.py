@@ -17,6 +17,8 @@ class BusinessRecords:
    if replacement['company_id']!=f['company_id']:raise Denied('OBJECT_NOT_FOUND',404)
    self.active_file(replacement_id)
    if replacement_id==file_id:raise Denied('INVALID_REPLACEMENT',422)
+   from app.company.file_replacement import replace_draft_attachment
+   replace_draft_attachment(self,who,f,replacement)
   elif replacement_id is not None:raise Denied('INVALID_REPLACEMENT',422)
   event=self.add(B.file_events,company_id=f['company_id'],file_id=file_id,replacement_id=replacement_id,actor_id=who.id,kind=kind,note=note.strip())
   self.record(who,f['company_id'],'COMPANY_FILE_'+kind,file_id=file_id)
