@@ -340,3 +340,9 @@ C05는 즉시 PDF 업로드/직접 입력, 분석 후 확인·수정, 연도별 
 접수 Projection GET /company/operator/intake 및 /company/operator/intake/{company_id}?version_id= 는 정확한 SUBMIT Review가 있는 ImprovementVersion만 반환한다. 현재 DRAFT의 새 내용으로 과거 제출본을 대체하지 않는다. 제출 Version의 site_ordinal로 당시 사업장을 읽는다. 현재 기업 입력은 별도 표기하며 존재하지 않는 기업정보 Snapshot을 생성하지 않는다. 미인증 401, 다른 Role 403, 타기업·미제출 Version·틀린 부모 404. 기존 상세/navigation API 및 Role/State/DB 계약은 유지한다.
 
 대시보드는 조회 가능한 기업, 제출 이력이 있는 개선요구 Root, 제출 기록 수를 분리한다. 미구현 분석·추천·제안서 지표에 가짜 0을 넣지 않는다. 검색/선택/제출기록/메뉴/F5의 Company·정확한 Version 맥락은 URL로 유지하고 서버에서 매번 재검사한다. 기존 보완 요청 Panel/API는 재사용하며 자동 분석은 이번 범위가 아니다.
+
+### PR #15 Slice 1 사용자 검수 보완 v1.2
+
+기존 운영자 로고·아이콘·선택 메뉴·상단바·버튼·색상 토큰을 실제 Intake 화면에서 재사용한다. 홍보 배너와 Preview fixture는 연결하지 않는다. 대시보드 중복 메뉴 제목을 제거하고 후속 단계는 준비 중으로 표시한다. 모바일 메뉴를 열고 닫아도 Company·제출 Version 선택을 유지한다. 접수 목록은 검토 필요 상태를 우선하고 최신 제출 순서로 표시한다.
+
+재무 금액은 문자열 정밀도와 원천 단위를 유지해 천 단위 쉼표를 표시한다. 명시된 KRW 단위만 한국어로 표기하고 알 수 없는 단위는 그대로 보존한다. 연도와 기간이 같으면 한 번만 표시한다. 등록되지 않은 항목을 0으로 만들지 않는다. 현재 기업 저장값·추출 후보·별도 검토 완료 Fact를 구분하고, 수행이력/근거/Fact의 실제 파일 연결만 제공한다. 전체 Evidence는 펼치기에서 보존하며 원본·Version·Review를 변경하지 않는다. SUBMIT 기록은 제출 이력으로 표시한다.
