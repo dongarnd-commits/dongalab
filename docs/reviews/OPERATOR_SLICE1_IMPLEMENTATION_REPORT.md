@@ -33,7 +33,7 @@
 | lint/typecheck/build/API Type | PASS | 최종 Production build, 세 역할 Preview의 lint/typecheck, API_TYPES_MATCH |
 | 전체 Playwright | PASS | 최종 47 passed (11.9m), 수요기업·Notice·Capability/Proposal·세션/Scope·접수/원본 E2E |
 | 3개 역할 Preview | PASS | 운영자/수요기업/관리자 각각 실제 Preview 테스트·lint/typecheck/build 및 Production Preview 404 |
-| GitHub CI | NOT_TESTED | Commit/Push·Draft PR 후 최신 HEAD로 확인 |
+| GitHub CI | PASS | 구현 `e01d1bb`: [DATCO CI 4개 Job 성공](https://github.com/dongarnd-commits/dongalab/actions/runs/40257610859), 세 역할 Preview 모두 성공 |
 
 Private 실행 증거: `storage/private/runtime/operator-slice1/`. 새 사용자 검수 DB: `datco_test_da53a042a07f`, Migration head `fd18e0012026`. 새 DB에만 기존 승인 Migration 적용. 기존 업무·기존 사용자 검수 DB Migration은 실행하지 않았다.
 
@@ -49,7 +49,15 @@ Private 실행 증거: `storage/private/runtime/operator-slice1/`. 새 사용자
 
 ## E. Git 및 보호
 
-시작 HEAD/main: `9a9c6eef3b0765894dd2d739d9fffaacdcc8d2f4`. 최종 Commit·Push·Draft PR·CI·Working Tree는 최종 검증 후 아래에 기록한다. 기존 브랜치·Stash·백업·Private Storage는 보존한다. main Merge, Draft 해제, 운영 배포·업무 DB Migration·물리 삭제·Next 업그레이드는 실행하지 않는다.
+시작 HEAD/main: `9a9c6eef3b0765894dd2d739d9fffaacdcc8d2f4` (변경 없음).
+
+- 구현·검증 HEAD: `e01d1bb9d16105772b6578c788bbd583719f07a9`. 위 로컬 전체 검증과 GitHub CI가 이 구현을 검증했다.
+- Branch/Push: `feat/datco-operator-real-workflows` → `origin/feat/datco-operator-real-workflows`. 로컬 추적 설정 정상, 원격 구현 HEAD 일치 확인.
+- Draft PR: https://github.com/dongarnd-commits/dongalab/pull/15 (Draft 유지).
+- CI: [DATCO CI](https://github.com/dongarnd-commits/dongalab/actions/runs/40257610859)의 Backend Unit·PostgreSQL Integration·Frontend Quality·Playwright Public E2E 4/4 성공. 운영자·수요기업·관리자 Preview도 모두 성공.
+- 이 보고서의 CI/Git 결과 갱신은 별도 문서 Commit이다. 보고서 Commit을 포함한 최종 HEAD/최신 CI/Working Tree는 최종 응답과 PR Checks에서 확인한다. 소스 구현 변경 없이 같은 브랜치에 Push한다.
+- Commit 전 승인된 19개 파일만 Stage하고 검수 비밀번호/DB 비밀값 미포함을 검사했다. Private Runtime은 Git 제외다. 문서 갱신 전 Working Tree는 깨끗했다.
+ 기존 브랜치·Stash·백업·Private Storage는 보존한다. main Merge, Draft 해제, 운영 배포·업무 DB Migration·물리 삭제·Next 업그레이드는 실행하지 않는다.
 
 ## F. 사용자 검수
 
@@ -69,7 +77,7 @@ OPERATOR_SLICE1_FUNCTIONAL: PASS
 
 OPERATOR_SLICE1_E2E: PASS
 
-OPERATOR_SLICE1_CI: NOT_TESTED
+OPERATOR_SLICE1_CI: PASS
 
 OPERATOR_USER_ACCEPTANCE: PENDING
 
