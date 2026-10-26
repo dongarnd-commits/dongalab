@@ -51,9 +51,9 @@ test('operator receipt projection keeps company scope and excludes unsubmitted v
 test('0b tampered Company Site Root Version URL is rejected by HTTP and clears old display',async({page})=>{
  test.setTimeout(120000);const c=fixture();await login(page);await chooseA(page);
  for(const query of ['site_id='+c.fs.id,'version_id='+c.fv.id,'improvement_id='+c.fv.improvement_id,'version_id='+c.av1.id+'&site_id='+c.a2.id,'version_id='+crypto.randomUUID()])expect((await page.request.get('/api/company/'+c.a.id+'/navigation?'+query)).status()).toBe(404);
- await page.goto('/portal/company?company='+c.foreign.id+'&site='+c.fs.id+'&version='+c.fv.id);await expect(bar(page).getByRole('alert')).toContainText('없거나 접근할 수 없습니다');await expect(bar(page)).toHaveAttribute('data-company-id','');await expect(page.getByText(c.foreign.name,{exact:true})).toHaveCount(0);await expect(page.getByText(c.a.name,{exact:true})).toHaveCount(0);
+ await page.goto('/portal/company?company='+c.foreign.id+'&site='+c.fs.id+'&version='+c.fv.id);await expect(bar(page).getByRole('alert').filter({hasText:'선택 항목이 없거나 접근할 수 없습니다.'})).toContainText('없거나 접근할 수 없습니다');await expect(bar(page)).toHaveAttribute('data-company-id','');await expect(page.getByText(c.foreign.name,{exact:true})).toHaveCount(0);await expect(page.getByText(c.a.name,{exact:true})).toHaveCount(0);
  await bar(page).getByRole('button',{name:'선택 초기화'}).click();await chooseA(page);
- await page.goto('/portal/company?company='+c.a.id+'&site='+c.a1.id+'&version='+c.fv.id);await expect(bar(page).getByRole('alert')).toBeVisible();await expect(bar(page)).toHaveAttribute('data-version-id','');
+ await page.goto('/portal/company?company='+c.a.id+'&site='+c.a1.id+'&version='+c.fv.id);await expect(bar(page).getByRole('alert').filter({hasText:'선택 항목이 없거나 접근할 수 없습니다.'})).toBeVisible();await expect(bar(page)).toHaveAttribute('data-version-id','');
 });
 
 test('0b new backend version does not silently replace pinned historical version',async({page,playwright})=>{

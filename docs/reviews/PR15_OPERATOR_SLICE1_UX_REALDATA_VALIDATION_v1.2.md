@@ -8,7 +8,7 @@
 - 시작 HEAD: `70d0857c92ecda8674f337159277ad56a8e0e4f4`
 - 기준 main: `9a9c6eef3b0765894dd2d739d9fffaacdcc8d2f4`
 - 기존 Draft PR: https://github.com/dongarnd-commits/dongalab/pull/15
-- 로컬 기술 검증 완료. 이 구현 Commit을 Push한 뒤 CI 결과를 추가 기록한다.
+- 구현 Commit: `76b1c7d72ae686f838e47aaa9947a9e2979ed3ad`, 일반 Push 완료. CI 선택자 보완 Commit의 최종 CI 결과는 추가 확인한다.
 - 기존 개발 브랜치·Stash 보존 확인, 백업·Private Storage 삭제 없음. 기존 업무/사용자 검수 DB Migration 및 운영 배포 미실행.
 - 새로운 Branch/Worktree, Reset, Force Push, main Merge, Draft 해제는 수행하지 않는다.
 
@@ -19,6 +19,7 @@
 | `apps/web/src/portal/operator-intake.tsx` | 실제 Intake/API 연결을 유지한 로고·아이콘·메뉴·상단바 복원, 접수 정렬, 제출 이력과 검토 근거 표시 |
 | `apps/web/src/portal/operator-intake.css` | 기존 운영자 토큰/버튼 재사용, 검색·카드·긴 기업명·모바일 메뉴·금액 표시 |
 | `apps/web/src/portal/operator-intake-records.tsx` | 원래 금액 정밀도·단위를 보존한 재무/수행이력/출처별 근거 표시 |
+| `apps/web/tests/portal-context.spec.ts` | Context 권한 오류와 상세 조회 오류가 함께 나타나도 의도한 안내를 정확히 검증, 404/선택 초기화/비노출 검사 유지 |
 | `apps/web/tests/operator-intake.spec.ts` | 기존 실제 제출/PDF/Scope 검증에 긴 기업명·30자리 금액·근거 표시·모바일 선택 보존 추가 |
 | `docs/08_SCREEN_ACTION_SPEC.md` | 승인된 화면 표시 기준 동기화 |
 | `docs/10_TEST_ACCEPTANCE.md` | 합성 회귀와 실제 자료 읽기 전용 검증 기준 구분 |
@@ -53,7 +54,7 @@ Backend/API/생성 API 타입/Schema/Migration/Auth/Role/Permission/State는 이
 | --- | --- |
 | Backend Unit | PASS — 137건 |
 | 전체 Backend/PostgreSQL | PASS — 372 PASS / 기존 opt-in 1 SKIP |
-| 실제 PostgreSQL·Private Storage Playwright 전체 | PASS — 47건 |
+| 실제 PostgreSQL·Private Storage Playwright 전체 | PASS — 전체 47건, CI 선택자 보완 후 관련 12건 추가 PASS |
 | lint/typecheck/production build/API 타입 | 모두 PASS, API_TYPES_MATCH |
 | 운영자·수요기업·관리자 Preview | 모두 최종 PASS (관리자 build 알림 재실행 포함) |
 | 기존 합성 사용자 검수환경 | 실제 로그인·조회·F5·원본 해시·모바일 폭·타기업 직접 URL/API 차단 PASS |
@@ -63,6 +64,8 @@ Backend/API/생성 API 타입/Schema/Migration/Auth/Role/Permission/State는 이
 초기 집중 E2E는 수행이력 이름이 숨겨진 근거에도 존재하여 텍스트 선택자가 중복된 실패를 기록했다. 수행이력 제목을 정확히 선택하도록 수정한 후 전체 회귀 47건을 다시 수행해 모두 통과했다. 실제 자료 첫 브라우저 시도는 초기 렌더 대기시간 부족으로 실패했고 충분한 대기시간을 적용한 재검증은 PASS다. 집중 E2E 실패 로그와 실제 자료 브라우저 시도 상태를 Private에 보존했다.
 
 기존 SKIP은 저장된 한국어 Live 원문 검증의 opt-in(`DATCO_TEST_STORED_KO=1`) 항목이며 이번 변경으로 추가한 SKIP은 없다. 관리자 Preview는 브라우저·lint·typecheck 통과 후 Next 버전 알림이 build를 두 번 종료시켰다. 동일 shadow/동일 build 명령의 세 번째 실행은 0으로 완료됐고 production의 모든 Preview/fixture 경로 404도 통과했다. 처음 실패한 report와 최종 report-final.json을 모두 보존했으며 Next/package 버전이나 제품 코드를 변경해 우회하지 않았다.
+
+GitHub 첫 구현 Commit `76b1c7d72ae686f838e47aaa9947a9e2979ed3ad`의 [CI 40272473070](https://github.com/dongarnd-commits/dongalab/actions/runs/40272473070)는 Backend/DB/Frontend와 세 Preview가 성공했으나 Public E2E는 46 PASS / 1 FAIL이었다. 기존 수요기업 Context 권한 오류와 상세 조회 오류가 동시에 나타나 `portal-context.spec.ts`의 넓은 alert 선택자가 중복됐다. 권한 API의 404는 이미 통과했다. 테스트가 의도한 Context 오류 안내를 구체적으로 선택하도록 보완했으며 API 404·Company/Version 선택 초기화·타기업/기존 기업 정보 비노출 검사는 유지했다. 제품 권한/상태/업무 로직은 수정하지 않았다. 보완 후 실제 격리 DB의 관련 E2E 12건이 모두 PASS다. 새 Commit의 전체 GitHub CI를 다시 확인한다.
 
 ## D. 동아테크놀로지 실제 자료
 
