@@ -13,7 +13,7 @@ def prepare():
  cohort=secrets.token_hex(4);password=secrets.token_urlsafe(24);accounts={}
  with get_session_factory().begin() as session:
   store=SqlNoticeStore(session)
-  for label,role in [('editor','COMPANY_EDITOR'),('stage_a','COMPANY_EDITOR'),('other','COMPANY_EDITOR'),('negative','COMPANY_EDITOR'),('registration','COMPANY_EDITOR'),('registration_direct','COMPANY_EDITOR'),('registration_conflict','COMPANY_EDITOR'),('registration_retry','COMPANY_EDITOR'),('ux_v13','COMPANY_EDITOR'),('files_v142','COMPANY_EDITOR'),('files_v143','COMPANY_EDITOR'),('operator','DATCO_OPERATOR'),('admin','DATCO_ADMIN')]:
+  for label,role in [('slice1_editor','COMPANY_EDITOR'),('slice1_operator','DATCO_OPERATOR'),('slice1_admin','DATCO_ADMIN'),('editor','COMPANY_EDITOR'),('stage_a','COMPANY_EDITOR'),('other','COMPANY_EDITOR'),('negative','COMPANY_EDITOR'),('registration','COMPANY_EDITOR'),('registration_direct','COMPANY_EDITOR'),('registration_conflict','COMPANY_EDITOR'),('registration_retry','COMPANY_EDITOR'),('ux_v13','COMPANY_EDITOR'),('files_v142','COMPANY_EDITOR'),('files_v143','COMPANY_EDITOR'),('operator','DATCO_OPERATOR'),('admin','DATCO_ADMIN')]:
    name='TEST_HANDOFF_'+label+'_'+cohort;store.add('actors',username=name,role=role,password_hash=hash_password(password));accounts[label]=name
  context=dict(accounts=accounts,password=password,nonce=cohort,business_number=synthetic_business_number(),negative_number=synthetic_business_number(),stage_a_number=synthetic_business_number())
  from company_browser_setup import document_first_sources

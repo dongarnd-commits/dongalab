@@ -1,0 +1,33 @@
+import {test,expect,Page} from '@playwright/test';
+import {readFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+const fixture=()=>{const c=JSON.parse(process.env.DATCO_HANDOFF_CONTEXT!);return {...c,accounts:{...c.accounts,editor:c.accounts.slice1_editor,operator:c.accounts.slice1_operator,admin:c.accounts.slice1_admin}};};
+async function login(page:Page,username:string,password:string,role='operator'){await page.goto('/login');await page.getByLabel('아이디',{exact:true}).fill(username);await page.getByLabel('비밀번호',{exact:true}).fill(password);await page.getByRole('button',{name:'로그인',exact:true}).click();await expect(page).toHaveURL(new RegExp('/portal/'+(role==='editor'?'company':'operator')));}
+test('operator Slice1 real receipt excludes drafts and preserves submitted PDF/version after edits and F5',async({page,playwright})=>{
+ test.setTimeout(180000);const c=fixture(),origin=process.env.DATCO_E2E_BASE_URL!,tag=Date.now().toString();
+ await login(page,c.accounts.editor,c.password,'editor');
+ const post=async(path:string,data:unknown)=>{const r=await page.request.post('/api/company'+path,{headers:{Origin:origin},data});expect(r.ok(),await r.text()).toBe(true);return r.json();};
+ const digits=String(Math.floor(100000000+Math.random()*899999999)).split('').map(Number),weights=[1,3,7,1,3,7,1,3,5],total=digits.reduce((n,d,i)=>n+d*weights[i],0)+Math.floor(digits[8]*5/10),number=digits.join('')+String((10-total%10)%10);
+ const company=await post('',{name:'TEST Slice1 receipt '+tag,business_number:number,representative:'TEST synthetic person',contact:'TEST no real contact',financials:[2023,2024,2025].map(year=>({year,revenue:'100',unit:'million',currency:'KRW',period:String(year)})),history:[{name:'TEST completed synthetic project',period:'2024',agency:'TEST agency',role:'TEST recipient'}]});
+ const cid=company.id,site=(await post('/'+cid+'/sites',{data:{name:'TEST receipt site '+tag,address:'TEST synthetic address'}})).site;
+ const raw=await readFile(c.documents.find((p:string)=>p.endsWith('.pdf'))),up=await page.request.post('/api/company/'+cid+'/files?site_id='+site.id,{headers:{Origin:origin,'X-Upload-Name':'TEST-receipt.pdf'},data:raw});expect(up.ok()).toBe(true);const file=await up.json();
+ const evidence=await post('/'+cid+'/evidence',{file_id:file.id,site_id:site.id,descriptor:'TEST receipt attachment',transcription:'TEST synthetic evidence'});
+ const data={title:'TEST submitted receipt '+tag,original_text:'TEST company original',as_is:'TEST As-Is '+tag,to_be:'TEST To-Be '+tag,site_id:site.id,evidence_ids:[evidence.id]};
+ const v1=await post('/'+cid+'/improvements',{data});
+ const admin=await playwright.request.newContext({baseURL:origin,extraHTTPHeaders:{Origin:origin}});expect((await admin.post('/api/notice/session',{data:{username:c.accounts.admin,password:c.password}})).ok()).toBe(true);expect((await admin.post('/api/company/'+cid+'/access',{data:{username:c.accounts.operator}})).ok()).toBe(true);await admin.dispose();
+ const op=await playwright.request.newContext({baseURL:origin,extraHTTPHeaders:{Origin:origin}});await op.post('/api/notice/session',{data:{username:c.accounts.operator,password:c.password}});
+ const overview=await(await op.get('/api/company/operator/intake')).json();expect(overview.companies.find((i:{company:{id:string}})=>i.company.id===cid).receipts).toEqual([]);
+ await page.goto('/portal/company?company='+cid);await page.locator('aside').getByRole('button',{name:'개선요구 등록',exact:true}).click();await page.locator('article[data-root-id="'+v1.improvement_id+'"]').getByRole('button',{name:'상세보기',exact:true}).click();await page.getByRole('button',{name:'DATCO에 제출',exact:true}).click();await expect(page.getByRole('status').filter({hasText:'DATCO에 제출했습니다.'})).toBeVisible();
+ const v2=await post('/'+cid+'/improvements',{data:{...data,title:'TEST unsubmitted draft '+tag,to_be:'TEST unsubmitted change'},improvement_id:v1.improvement_id,expected_ordinal:1});
+ await post('/'+cid+'/sites',{data:{name:'TEST changed site '+tag,address:'TEST later address'},site_id:site.id,expected_ordinal:1});
+ await login(page,c.accounts.operator,c.password);await expect(page.getByRole('heading',{name:'조회 가능한 수요기업',exact:true})).toBeVisible();await expect(page.getByText('TEST unsubmitted draft '+tag,{exact:true})).toHaveCount(0);
+ await page.locator('aside').getByRole('button',{name:'수요기업 목록',exact:true}).click();await page.getByRole('row').filter({hasText:company.name}).getByRole('button',{name:'기업 자료 조회',exact:true}).click();
+ const body=page.locator('article[data-improvement-id="'+v1.improvement_id+'"]');await expect(body).toHaveAttribute('data-version-id',v1.id);await expect(body).toContainText(data.as_is);await expect(body).toContainText(data.to_be);await expect(body).toContainText('TEST receipt site '+tag);await expect(body).not.toContainText('TEST changed site '+tag);await expect(page.getByText('TEST completed synthetic project',{exact:true})).toBeVisible();
+ const waitDownload=page.waitForEvent('download');await body.getByRole('link',{name:'TEST-receipt.pdf',exact:true}).click();const download=await waitDownload;expect(createHash('sha256').update(await readFile((await download.path())!)).digest('hex')).toBe(file.digest);
+ expect((await page.request.get('/api/company/operator/intake/'+cid+'?version_id='+v2.id)).status()).toBe(404);
+ await page.reload();await expect(page.locator('article[data-improvement-id="'+v1.improvement_id+'"]')).toHaveAttribute('data-version-id',v1.id);
+ await page.screenshot({path:test.info().outputPath('operator-slice1-submitted-snapshot.png'),fullPage:true});
+ const blocked=JSON.parse(process.env.DATCO_PORTAL_CONTEXT!);await login(page,blocked.accounts.blocked_operator,blocked.password);for(const path of ['/api/company/operator/intake/'+cid,'/api/company/files/'+file.id+'/download'])expect((await page.request.get(path)).status()).toBe(404);
+ await page.goto('/portal/operator?screen=workspace&company='+cid+'&version='+v1.id);await expect(page.getByRole('alert')).toBeVisible();await expect(page.getByText(data.as_is,{exact:true})).toHaveCount(0);
+ await login(page,c.accounts.operator,c.password);await page.goto('/portal/operator?screen=workspace&company='+cid+'&version='+v1.id);await expect(page.locator('article[data-improvement-id="'+v1.improvement_id+'"]')).toHaveAttribute('data-version-id',v1.id);await op.dispose();
+});
