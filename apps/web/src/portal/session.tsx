@@ -10,7 +10,7 @@ export function mountPortal(render:(identity:PortalIdentity,logout:()=>void)=>Re
   useEffect(()=>{if(error)document.getElementById('root')!.style.visibility='visible';},[error]);
   useEffect(()=>{
    let live=true,sequence=0,pending=false,cacheHidden=false,request:AbortController|null=null;const channel=new BroadcastChannel('datco-session');
-   const exit=()=>{live=false;++sequence;request?.abort();setReady(false);sessionStorage.clear();window.location.replace('/login');};
+   const exit=()=>{live=false;++sequence;request?.abort();setReady(false);sessionStorage.clear();window.location.replace(identity.role==='DATCO_OPERATOR'&&window.location.pathname==='/portal/operator'&&new URLSearchParams(window.location.search).has('company')&&new URLSearchParams(window.location.search).has('version')?'/login?returnTo='+encodeURIComponent(window.location.pathname+window.location.search):'/login');};
    const check=async(fresh=false)=>{if(!live||ending.current||pending&&!fresh)return;const epoch=++sequence;request?.abort();request=new AbortController();pending=true;try{
     const r=await fetch('/api/notice/session',{cache:'no-store',credentials:'same-origin',signal:AbortSignal.any([request.signal,AbortSignal.timeout(10000)])});
     if(!live||ending.current||epoch!==sequence)return;
@@ -32,7 +32,7 @@ export function mountPortal(render:(identity:PortalIdentity,logout:()=>void)=>Re
   },[]);
   const logout=async()=>{ending.current=true;setReady(false);setError('로그아웃 중입니다.');try{
    const r=await fetch('/api/notice/session/logout',{method:'POST',cache:'no-store',signal:AbortSignal.timeout(10000)});
-   if(!r.ok)throw Error();sessionStorage.clear();const ch=new BroadcastChannel('datco-session');ch.postMessage('account-change');ch.close();window.location.replace('/login');
+   if(!r.ok)throw Error();sessionStorage.clear();const ch=new BroadcastChannel('datco-session');ch.postMessage('account-change');ch.close();window.location.replace(identity.role==='DATCO_OPERATOR'&&window.location.pathname==='/portal/operator'&&new URLSearchParams(window.location.search).has('company')&&new URLSearchParams(window.location.search).has('version')?'/login?returnTo='+encodeURIComponent(window.location.pathname+window.location.search):'/login');
   }catch{setError('로그아웃을 확인하지 못했습니다. 다시 시도해 주세요.');}};
   if(!ready)return <main role="status" style={{padding:32,fontFamily:'sans-serif'}}>{error||'세션 확인 중입니다.'}{error&&<><button onClick={()=>void logout()}>로그아웃 재시도</button><a href="/login">로그인으로 이동</a></>}</main>;
   return <>{render(identity,()=>void logout())}</>;
