@@ -43,3 +43,9 @@ Migration `ff30u0012026` (parent `fe29s0022026`)은 **새 테이블 한 개와 �
 실제 로컬 실행 결과: Rule Unit **21 PASS**, 격리 PostgreSQL **27 PASS** (새 이력·동시 ENSURE·타 운영자 공유·실패 재시도·기존 Slice 2·Migration), 실제 API/Worker 브라우저 집중 **4 PASS**, lint/typecheck/production build 및 API 타입 일치 **PASS**. 최초 집중 실행에서는 테스트가 남긴 미완료 Job 간섭, 초안 화면 중복 React key를 발견했고 각각 테스트 격리와 제품 key를 수정한 뒤 재검증했다. 최종 전체 회귀 근거는 최신 HEAD GitHub CI이며 결과는 완료 보고에 별도 기록한다. 문서나 빌드 성공만으로 업무 인수를 주장하지 않는다.
 
 실제 HTTPS 서비스·실사용 DB·기업자료·계정·원본 PDF는 변경하지 않았다. 운영 인수는 PENDING이며 이번 코드의 HTTPS 배포와 Migration 적용은 별도 승인이다. 목록 페이지 분할은 Frontend에서 수행하며 Backend 검색 인프라는 재설계하지 않았다. 분석은 제한된 Rule 후보이며 범용 AI 의미분석이 아니다.
+
+### 최초 전체 CI에서 확인한 보완
+
+`01afbef`의 전체 CI는 Unit/Frontend/PostgreSQL이 통과하고 E2E는 49 PASS/2 FAIL이었다. 빈 권한 범위의 명시적 안내를 복구하고, 제거된 통합 업무 메뉴에 따라 운영자 메뉴 수만 12→11로 수정했다(관리자 12 유지). 권한 검증 기대값은 유지한다. 역할·Context 집중 실행은 기존 Editor 테스트의 선행 기업 등록이 필요하므로 해당 W1 시나리오 2건도 포함한다. 이 과정에서 기본 대시보드에 Context query를 붙이는 로그인 URL 경쟁을 발견해, 기업·Version 선택이 없는 대시보드 URL은 정규 경로를 유지하도록 수정했다. 정확한 상세 Context와 잘못된 returnTo 차단은 유지한다. 최종 판정은 후속 Commit의 전체 CI와 완료 보고를 따른다.
+
+보완 후 선행 W1 2건을 포함한 역할·Context 집중 E2E **19 PASS**. 이 실행은 전체 E2E 재실행 대신 변경 관련 시나리오만 선택하며, 전체 CI의 테스트 목록·보안 Guard·Skip 조건은 변경하지 않는다.
