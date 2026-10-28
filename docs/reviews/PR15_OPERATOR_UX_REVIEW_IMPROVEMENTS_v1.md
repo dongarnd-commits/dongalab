@@ -108,3 +108,36 @@ business-ux는 발송 전 확인 절차를 실제로 거치며 기업 응답·�
 
 - 보완 후 개발 모드 운영자 관련 E2E: 2 PASS / 0 FAIL (46초). Production 전체 E2E: 49 PASS / 0 FAIL / 0 SKIP (8.1분), production build·lint·typecheck PASS.
 - 보완 후 로그: Private runtime의 pr15-final-ux-dev-fixed/review.log, pr15-final-ux-full4/review.log. 앞선 실패 로그는 pr15-final-ux-dev-repro/review.log에 유지한다. 검증용 임시 DB·역할은 실행기가 정리했으며 실사용 DB·PDF·계정·권한·HTTPS 프로세스는 변경하지 않았다.
+
+## 2026-10-28 사용자 최종 인수 검수 결과
+
+### 사용자 화면 검수 및 승인
+
+아래 결과는 사용자가 제공한 최종 인수·Merge 지시문에 따른 사용자와 GPT의 화면 검수 결과다. Codex의 HTTPS 검증 및 합성 자동 테스트와 구분한다.
+
+| 검수 항목 | 결과 |
+| --- | --- |
+| 업무 대시보드 | PASS |
+| 개선요구 검토 | PASS |
+| 기업 통합 업무 및 As-Is·To-Be | PASS |
+| 재무정보 2024→2023→2022 정렬 | PASS |
+| 기업 공통자료 6건 및 PDF 다운로드·열람 | PASS |
+| 보완 요청 최종 확인·발송 취소 | PASS |
+
+- 검수 환경: 기존 사내망 HTTPS 운영자 포털.
+- 검수 대상: 실제 제출된 개선요구 Version 1.
+- 실제 보완 요청 발송은 수행하지 않았다. 발송 취소 후 화면에 보완 요청 이력이 없음을 확인했다.
+- 인수 범위: PR #15 Slice 1 기능 및 승인된 UX 보완.
+- 자동 분석·부족정보 추천·DATCO 서비스 추천·3자 매칭은 이번 인수 범위에서 제외한다.
+- USER_ACCEPTANCE: PASS.
+- 사용자는 본 최종 인수·Merge 지시문의 실행 요청을 통해 PR #15의 사용자 인수와 조건 충족 시 main Merge를 승인했다. 최신 문서 Commit의 CI, 충돌 여부, 필수 Check·Review 및 저장소 정책을 확인한 후에만 Draft 해제·정식 PR Merge를 진행한다.
+- 기존 USER_ACCEPTANCE: PENDING 및 실패·재검증 기록은 과거 시점의 이력으로 그대로 보존한다.
+
+### Codex HTTPS 검증과 자동 회귀 근거
+
+- 적용·검수 기준 Commit: `0edb3f2156f7e721a37b52908484fd5537958e6a`.
+- 앞서 별도로 수행한 Codex 실제 HTTPS 비파괴 검증: 운영자 로그인, 기업·개선요구·제출 기록 각 1건, 접수 검색·정확한 제출본 이동, As-Is·To-Be, 재무 최신 연도순 표시, PDF 6건 다운로드 SHA-256 대조, 보완 요청 대상 Context, 확인창 열기·취소, F5·재로그인, 연구원 계정 조회·세션 독립성 PASS.
+- 해당 검증에서 발송 취소 시 업무 쓰기 0건 및 요청 이력 불변을 확인했다. DB 업무내용·파일·계정·권한은 전후 해시가 일치했다. 연구원 계정 검증은 서버 PC의 별도 브라우저 세션이며 연구원 PC의 직접 검증과 구분한다.
+- 합성 자동 회귀: 기준 Commit의 [DATCO CI Run 40609680526](https://github.com/dongarnd-commits/dongalab/actions/runs/40609680526)에서 Backend Unit·PostgreSQL Integration·Frontend Quality·Playwright Public E2E 4개 Job PASS, 전체 E2E 49 PASS. 수요기업·운영자·관리자 Preview도 PASS.
+- 이번 인수 기록 Commit은 문서만 변경한다. 새 HEAD의 CI와 Merge 후 main 검증은 별도로 확인하고 최종 완료 보고에 실제 결과를 기재한다. 기존 CI 결과를 새 HEAD의 결과로 간주하지 않는다.
+- 이번 종료 작업은 기존 HTTPS 서비스의 재시작·재배포, DB·PDF·Private Storage·계정·권한 변경 및 Slice 2 개발을 포함하지 않는다.
