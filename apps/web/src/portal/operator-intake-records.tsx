@@ -10,7 +10,7 @@ const sourceLabel=(e:CompanyData['evidence'][number])=>e.mode==='COMPANY_INPUT'?
 function FileLink({id,name}:{id:string;name:string}){return <a className="op-btn op-btn-outline op-btn-small" href={'/api/company/files/'+id+'/download'}>{name}</a>;}
 export function FinancialRecords({profile}:{profile:Profile|undefined}){
  if(!profile?.financials.length)return <p>등록된 재무정보가 없습니다.</p>;
- const records=profile.financials;
+ const records=profile.financials.map((record,index)=>({record,index})).sort((a,b)=>b.record.year-a.record.year||a.index-b.index).map(item=>item.record);
  const fields=Object.keys(financialLabels).filter(key=>records.some(f=>f[key as keyof typeof f]!=null));
  return <div className="intake-table intake-financial"><table><caption>현재 저장된 재무정보 · 기간·단위가 다른 기록은 별도 열로 표시하며 합산·환산하지 않습니다.</caption><thead><tr><th scope="col">항목</th>{records.map((f,i)=><th scope="col" key={i}>{f.year}년<br/>기간: {f.period}<br/>단위: {f.unit} · 통화: {f.currency}</th>)}</tr></thead><tbody>{fields.map(key=><tr key={key}><th scope="row">{financialLabels[key]}</th>{records.map((f,i)=><td className="intake-amount" key={i}>{formatAmount(f[key as keyof typeof f] as string|null)}</td>)}</tr>)}</tbody></table></div>;
 }

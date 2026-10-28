@@ -62,3 +62,41 @@ Commit/Push/Merge/Draft 변경 없음.
 
 검증 로그·합성 화면 캡처는 Git 제외 Private runtime의 pr15-operator-ux-review, pr15-operator-ux-review2/3/4에 보존했다.
 최종 화면은 review4의 operator-slice1-submitted-snapshot.png, operator-workspace-financial-comparison.png, operator-improvement-mobile.png, operator-120-receipts-desktop/mobile.png에서 확인한다.
+
+## 2026-10-28 최종 소규모 UX 보완 (기준 a0b2286)
+
+기존 구현·검증 기록은 위에 보존한다. 이번 추가 변경은 Slice 1의 화면·사용성 및 관련 회귀에 한정하며 Backend·Schema·Migration·권한·업무 State는 변경하지 않는다. 실사용 HTTPS 빌드에는 배포하거나 재시작하지 않는다.
+
+### 화면 변경
+- 대시보드: 기존 집계·접수 표·검색·정확한 SUBMIT 이동을 유지하고 하단 다음 업무 안내를 제거했다.
+- 기업 통합 업무: 자기 이동·선택 제출본 중복 버튼을 없애고 선택 제출본 검토 버튼을 한 곳으로 정리했다. 다른 개선요구 선택은 목록에서 유지한다. As-Is와 To-Be의 원문을 줄임 표시하고 상세에서 전체 내용을 보존한다.
+- 개선요구 검토·보완 요청: 현재 화면으로의 자기 이동을 제거했다. 제출본 v번호·제출일시를 우선 표시하고 UUID는 기술 상세정보로 접었다. API와 URL은 정확한 원본 ID를 계속 사용한다.
+- 재무: 원본 배열을 바꾸지 않고 연도 내림차순으로 표시한다. 동일 연도는 원본 순서를 유지하며 기간·단위별 열을 합치지 않는다. 긴 정수·소수·후행 0·기간·단위·통화를 유지한다.
+- 기업 공통자료: 파일 ID·digest·다운로드를 유지하고 행 간격과 현재/교체/취소 상태 표시를 정리했다. 일반 파일 목록의 확정 문서유형·기준연도를 추정하지 않고 기존 순서를 유지했다. 파일명이나 미확정 추출 후보로 문서 분류를 확정하지 않는다.
+- 요청 이력 없음 문구는 운영자에만 보완 요청 이력이 없습니다로 변경했다. 수요기업 안내는 유지한다.
+
+### 발송 확인과 안전한 오류 처리
+네이티브 dialog에서 대상 기업·개선요구·제출본·요청 제목·내용·기한을 최종 확인한다. 발송 취소·Escape는 쓰기 없이 닫고 포커스를 복귀시킨다. 최종 발송 전에는 생성·발송 POST를 호출하지 않는다.
+기존 workflow 잠금과 추가 전송 ref로 중복 클릭을 차단한다. 기업·계정·Version이 바뀌면 이전 확인은 무효이며, 비동기 후속 발송도 Context를 다시 확인한다.
+결과가 불확실하면 자동 재생성·재발송하지 않는다. ID를 확인한 초안은 상태 조회 후 같은 ID로 발송할 수 있고 이미 발송된 요청은 재생성하지 않는다. 생성 응답이 유실되어 ID를 모르면 이력 확인을 안내하고 현재 화면의 새 생성을 차단한다.
+이는 프론트엔드 클릭·실행 보호이며 새 Backend idempotency 계약이나 전역 exactly-once 보장은 추가하지 않았다. 기존 401/403/404 오류는 원래 workflow Guard로 전달한다.
+
+### 회귀 근거
+합성 자료·임시 PostgreSQL·별도 Production Web만 사용했다. 실제 기업자료를 테스트에 복사하거나 실제 보완 요청을 발송하지 않았다.
+기존 operator-intake 검증에 합성 PDF 6건, As-Is/To-Be, 자기 이동 제거, UUID 접기, 연도 내림차순과 동일 연도 안정 정렬, 확인 전 POST 0건, 취소·Escape·포커스, 중복 클릭, 생성 응답 유실, 발송 실패 후 같은 초안 상태 확인, Context 변경 차단을 추가했다. 기존 PDF 다운로드 SHA-256·과거 Version·권한·세션 검증은 제거하지 않았다.
+business-ux는 발송 전 확인 절차를 실제로 거치며 기업 응답·운영자 확인 흐름을 유지한다. portal-handoff는 현재 선택한 제출본 Context를 검증하고 단일 검토 버튼으로 이동한다.
+초기 격리 빌드는 Windows Turbopack 캐시 파일 공유 잠금(OS error 32)으로 실패했다. 설치된 Next.js가 지원하는 캐시 비활성화 옵션을 격리 검증 복사본에만 적용했으며 제품 설정은 변경하지 않았다.
+초기 전체 회귀에서는 제거한 중복 상세 버튼을 기다리는 기존 인계 테스트가 타임아웃되어, 기업·Version 검증을 강화한 실제 동선으로 수정했다. 실패 기록은 Private runtime에 보존했다.
+
+### 최종 로컬 검증 결과
+- 관련 Production E2E: 15 PASS.
+- 최종 전체 Production E2E: 49 PASS / 0 FAIL / 0 SKIP (최종 실행 7.9분).
+- Backend Unit: 108 PASS.
+- PostgreSQL Integration: 220 PASS / 기존 Live opt-in 1 SKIP. 신규 skip 없음.
+- Frontend production build·lint·typecheck 통과를 확인한다. 최종 로그는 Private runtime의 pr15-final-ux-full3/review.log에 보존한다.
+- 새 확인 창은 발송 전·취소 후 POST 0건, Escape·포커스 복귀, 중복 클릭의 단일 생성, 생성 응답 유실 시 재생성 차단을 검증했다.
+- 발송 실패 후 확인 창을 취소해도 기존 초안 ID를 보존하며, 상태 조회 후 같은 ID로 발송을 이어가는 것을 검증했다.
+- Context 변경 시 이전 확인 창을 무효화하고 타기업·타Version 연결 거부, 기존 응답·검토·F5·재로그인·역할 격리를 유지했다.
+- GitHub CI는 이 보고서가 포함된 Commit의 Actions 결과를 확인한다. 최종 Run URL은 완료 보고에 기재한다.
+- 파일 유형·연도 자동 분류, 서버 전체 검색·필터·페이지 조회, 분석·추천·매칭 및 후속 제안서 연결은 추가하지 않았다.
+- 실사용 HTTPS에는 이번 최종 UX를 자동 배포·재시작하지 않는다. 사용자·GPT 최종 검토 및 별도 적용 승인 대기다.
