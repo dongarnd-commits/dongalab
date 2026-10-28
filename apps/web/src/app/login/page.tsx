@@ -21,7 +21,10 @@ export default function Login() {
         const actor=await r.json();if(!roleLanding[actor.role])throw Error('허용된 역할을 확인할 수 없습니다.');
         setPassword('');sessionStorage.clear();
         const channel=new BroadcastChannel('datco-session');channel.postMessage('account-change');channel.close();
-        window.location.replace(roleLanding[actor.role]);
+        const target=new URLSearchParams(window.location.search).get('returnTo');
+        let destination=roleLanding[actor.role];
+        if(target&&actor.role==='DATCO_OPERATOR'){try{const next=new URL(target,window.location.origin);if(next.origin===window.location.origin&&next.pathname==='/portal/operator'&&next.searchParams.get('context_actor')===actor.id)destination=next.pathname+next.search;}catch{/* Invalid returnTo retains the authenticated role landing. */}}
+        window.location.replace(destination);
       } catch(e) {
         setError(e instanceof TypeError?'서버에 연결할 수 없습니다. 네트워크 연결을 확인하고 다시 시도해 주세요.':e instanceof Error?e.message:'로그인을 완료하지 못했습니다. 다시 시도해 주세요.');
         setBusy(false);

@@ -6,7 +6,7 @@ import psycopg
 from psycopg import sql
 from sqlalchemy.engine import make_url
 ROOT=Path(__file__).resolve().parents[3];API=ROOT/'apps/api';WEB=ROOT/'apps/web'
-TESTS=['test_notice_slice.py','test_notice_korean.py','test_bizinfo.py','test_confirmed_notice_reader.py','test_analysis_lineage.py','test_analysis_migration.py','test_capability_matching_comparison.py','test_matching_integrity.py','test_proposal_preparation.py','test_proposal_production.py','test_company_workflow.py','test_company_v14.py','test_registration_api.py','test_company_migration.py','test_workspace.py','test_portal_context.py']
+TESTS=['test_operator_intake.py','test_notice_slice.py','test_notice_korean.py','test_bizinfo.py','test_confirmed_notice_reader.py','test_analysis_lineage.py','test_analysis_migration.py','test_capability_matching_comparison.py','test_matching_integrity.py','test_proposal_preparation.py','test_proposal_production.py','test_company_workflow.py','test_company_v14.py','test_registration_api.py','test_company_migration.py','test_workspace.py','test_portal_context.py']
 def main():
  phase=sys.argv[1];assert phase in ('integration','proposal','e2e')
  # No fallback to DATABASE_URL or .env. CI admin only provisions this disposable service.
@@ -72,7 +72,7 @@ def main():
     time.sleep(.1)
    worker=json.loads((out/'worker-ready.json').read_text());assert worker['database']==db and worker['db_user']==role
    start('web',['npm','run','dev','--','--port',str(web_port)],WEB);wait(origin)
-   run(['npm','run','test:e2e','--','tests/smoke.spec.ts','tests/notice.spec.ts','tests/proposal.spec.ts','tests/company.spec.ts','tests/workspace.spec.ts','tests/company-document-first.spec.ts','tests/role-portals.spec.ts','tests/portal-context.spec.ts','tests/portal-stability.spec.ts','tests/portal-handoff.spec.ts','tests/registration.spec.ts','tests/business-ux.spec.ts','--workers=1','--reporter=line'],WEB)
+   run(['npm','run','test:e2e','--','tests/operator-intake.spec.ts','tests/smoke.spec.ts','tests/notice.spec.ts','tests/proposal.spec.ts','tests/company.spec.ts','tests/workspace.spec.ts','tests/company-document-first.spec.ts','tests/role-portals.spec.ts','tests/portal-context.spec.ts','tests/portal-stability.spec.ts','tests/portal-handoff.spec.ts','tests/registration.spec.ts','tests/business-ux.spec.ts','--workers=1','--reporter=line'],WEB)
  except Exception:
   for log in logs:log.flush()
   for name in ('api','worker','web'):

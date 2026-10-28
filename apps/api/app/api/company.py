@@ -75,6 +75,16 @@ async def registration_preview(request:Request,who=Depends(actor),upload_name:st
  except UnicodeDecodeError:raise Denied('INVALID_FILENAME',422) from None
  except DocumentError as e:raise Denied(str(e),422) from None
 
+@router.get('/operator/intake',response_model=dict,responses=errors(401,403))
+def operator_intake(session:DB,who=Depends(actor)):
+ from app.company.operator_intake import overview
+ return overview(application(session),who)
+
+@router.get('/operator/intake/{company_id}',response_model=dict,responses=errors(401,403,404))
+def operator_receipt(company_id:str,session:DB,who=Depends(actor),version_id:str|None=None):
+ from app.company.operator_intake import detail
+ return detail(application(session),who,company_id,version_id)
+
 @router.get('/{company_id}',response_model=dict,responses=errors(401,403,404))
 def detail(company_id:str,session:DB,who=Depends(actor)):
  return application(session).detail(who,company_id)

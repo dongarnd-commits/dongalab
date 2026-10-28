@@ -444,3 +444,11 @@ C07에서 PDF A→B 교체를 확인하면 단일 DRAFT의 일반 첨부에만 �
 여러 현재 개선요구/다른 업무의 공유, 분석 근거, 다른 Site/Company·권한을 검사한다. Storage 읽기·Version 저장·DB 이벤트 저장 실패는 첨부/Version pointer/Evidence/이벤트를 함께 Rollback하고, 이미 업로드된 B는 같은 ID로 재시도한다. 저장 성공 후 응답 유실은 정확한 replacement lineage로 재조회하며 중복 Version을 만들지 않는다. 기존 취소·재등록·첨부 해제·전체 Backend/PostgreSQL/Playwright·OCR·재무·수행이력·C09/C10·역할 Preview·CI 회귀를 유지한다.
 
 지정된 기존 격리 테스트 건의 복구는 old→new 이벤트와 단일 DRAFT를 읽기 전용으로 확인·기록한 후 새 Evidence/Version API로 수행하며 같은 테스트 Editor의 실제 제출까지 검증한다. 기존 행 보정·삭제·Migration은 하지 않는다. 물리 삭제는 POLICY_BLOCKED, USER_ACCEPTANCE는 PENDING이다.
+
+## 운영자 Slice 1 수용기준 — 2026-10-26
+
+격리 PostgreSQL·Private Storage·실제 Browser에서 Editor 초안→접수 목록 제외→실제 SUBMIT→Scoped Operator 접수/자료/재무/이력/As-Is/To-Be/원본 다운로드→F5/재로그인 보존을 검증한다. 제출 후 새 DRAFT와 Site 변경에도 과거 제출 Version/site_ordinal·첨부가 유지되고 미제출 Version 요청은 404여야 한다. 기업 수/Root 수/제출 기록 수 집계, 미인증·Role·타기업 URL/API/파일 접근 거부를 검증한다. 기존 Company/Notice/Capability/Matching/Proposal·세 역할 Preview·Backend·PostgreSQL·Playwright·lint/typecheck/build/API Type 검증을 유지한다. 전체 AI/추천/제안서 완료나 사용자 인수 PASS와 구분한다.
+
+### PR #15 Slice 1 UI·실제 자료 검증 v1.2
+
+합성 E2E에서 긴 기업명, 30자리 금액 정밀도, 원래 단위의 한국어 표시, 중복 연도 제거, 출처별 근거 펼치기, 검토 완료 기록 없음 안내, 모바일 메뉴·기업/Version 선택 보존 및 기존 PDF/Scope/F5를 검증한다. 실제 기업자료 대조는 기존 승인된 DATCO_OPERATOR/Membership에 한해 읽기 전용으로 수행하며 합성 회귀 PASS와 구분한다. 추가 복사·권한 부여·기존 DB Migration·실제 기업자료 쓰기는 별도 승인 전 실행하지 않는다. 원본 응답/PDF는 공개 fixture·Git·CI에 포함하지 않는다. 확인된 제출 기록 수 이상의 재제출 이력을 있다고 가정하지 않는다.

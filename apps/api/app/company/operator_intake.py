@@ -1,0 +1,42 @@
+"""Operator receipt projection from immutable SUBMIT records; no new state or writes."""
+from app.infrastructure import company_schema as S
+from app.notice.domain import Denied
+
+
+def receipts(a, who, cid):
+ a.role(who, 'DATCO_OPERATOR'); a.scope(who, cid)
+ result=[]
+ for root in a.rows(S.improvements, company_id=cid):
+  for version in a.rows(S.improvement_versions, improvement_id=root['id']):
+   submitted=a.rows(S.improvement_reviews, version_id=version['id'], outcome='SUBMIT')
+   if submitted:
+    result.append(dict(root_id=root['id'], version_id=version['id'], ordinal=version['ordinal'], site_id=root['site_id'], site_ordinal=version['site_ordinal'], title=version['data']['title'], submitted_at=submitted[0]['created_at'], current_state=root['state']))
+ return sorted(result, key=lambda r:(r['submitted_at'],r['version_id']), reverse=True)
+
+
+def overview(a, who):
+ a.role(who, 'DATCO_OPERATOR')
+ companies=a.listing(who,''); items=[]
+ for company in companies:
+  rows=receipts(a,who,company['id'])
+  items.append(dict(company=company,receipts=rows))
+ return dict(companies=items,company_count=len(items),submitted_count=sum(len(i['receipts']) for i in items),submitted_root_count=sum(len({r['root_id'] for r in i['receipts']}) for i in items))
+
+
+def detail(a, who, cid, version_id=None):
+ rows=receipts(a,who,cid)
+ chosen=next((r for r in rows if r['version_id']==version_id),None) if version_id else (rows[0] if rows else None)
+ if version_id and chosen is None:raise Denied('OBJECT_NOT_FOUND',404)
+ data=a.detail(who,cid)
+ # Keep current company input explicitly separate from exact submitted improvement/site.
+ # No historical company profile snapshot is invented: SUBMIT has no such FK.
+ submitted={r['version_id'] for r in rows}
+ data['improvements']=[dict(i,versions=[v for v in i['versions'] if v['id'] in submitted]) for i in data['improvements'] if any(v['id'] in submitted for v in i['versions'])]
+ for item in data['improvements']:
+  latest=max(item['versions'],key=lambda v:v['ordinal']);item['title']=latest['data']['title']
+ data['receipts']=rows; data['selection']=chosen
+ if chosen:
+  site=next(s for s in data['sites'] if s['id']==chosen['site_id'])
+  data['submitted_site']=next(v for v in site['versions'] if v['ordinal']==chosen['site_ordinal'])
+ else:data['submitted_site']=None
+ return data

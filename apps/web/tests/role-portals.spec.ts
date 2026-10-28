@@ -81,3 +81,33 @@ test('Slice0a server-expired session returns to login and removes authenticated 
  await page.evaluate(()=>window.dispatchEvent(new Event('focus')));await expect(page).toHaveURL(/\/login$/);
  await expect(page.getByText(context().accounts.editor,{exact:true})).toHaveCount(0);
 });
+
+test('operator returnTo rejects malformed external wrong-account and wrong-role destinations',async({page})=>{
+ test.setTimeout(120000);
+ const c=JSON.parse(process.env.DATCO_PORTAL_CONTEXT!);
+ async function signIn(role:string){
+  await page.getByLabel('아이디',{exact:true}).fill(c.accounts[role]);
+  await page.getByLabel('비밀번호',{exact:true}).fill(c.password);
+  const response=page.waitForResponse(r=>r.url().endsWith('/api/notice/session')&&r.request().method()==='POST');
+  await page.getByRole('button',{name:'로그인',exact:true}).click();
+  expect((await response).status()).toBe(200);
+ }
+ await page.goto('/login');await signIn('operator');await expect(page).toHaveURL(/\/portal\/operator$/);
+ const actor=await(await page.request.get('/api/notice/session')).json();
+ const valid='/portal/operator?screen=improvement&company='+c.a.id+'&version='+c.av1.id+'&context_actor='+actor.id;
+ const origin=process.env.DATCO_E2E_BASE_URL!;
+ for(const target of ['http://[','https://untrusted.invalid/portal/operator?context_actor='+actor.id,'/portal/admin?context_actor='+actor.id,valid.replace(actor.id,'different-actor')]){
+  expect((await page.request.post('/api/notice/session/logout',{headers:{Origin:origin}})).ok()).toBe(true);
+  expect((await page.request.get('/api/notice/session')).status()).toBe(401);
+  await page.goto('/login?returnTo='+encodeURIComponent(target));await signIn('operator');
+  await expect(page).toHaveURL(/\/portal\/operator$/);
+ }
+ await page.request.post('/api/notice/session/logout',{headers:{Origin:origin}});
+ await page.goto('/login?returnTo='+encodeURIComponent(valid));await signIn('blocked_operator');await expect(page).toHaveURL(/\/portal\/operator$/);
+ expect((await page.request.get('/api/company/operator/intake/'+c.a.id+'?version_id='+c.av1.id)).status()).toBe(404);
+ await page.request.post('/api/notice/session/logout',{headers:{Origin:origin}});
+ await page.goto('/login?returnTo='+encodeURIComponent(valid));await signIn('editor');
+ await expect(page).toHaveURL(u=>u.pathname==='/portal/company'&&u.searchParams.get('context_actor')!==actor.id);
+ const editor=await(await page.request.get('/api/notice/session')).json();expect(editor.role).toBe('COMPANY_EDITOR');
+ expect((await page.request.get('/api/company/operator/intake')).status()).toBe(403);
+});

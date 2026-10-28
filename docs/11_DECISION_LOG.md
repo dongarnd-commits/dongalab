@@ -167,3 +167,16 @@ Status: ACCEPTED (LIMITED). 사용자가 동일 PDF 재등록의 새 유효 File
 Status: ACCEPTED (LIMITED). 사용자 직접 검수 요청은 C07 교체와 단일 DRAFT 개선요구의 현재 첨부를 일치시키는 보완이다. 기존 계약의 불변 행 재연결 금지는 유지하고, 명시적 교체 확인 후 MANUAL_REVIEW 첨부 Evidence와 기존 save_improvement의 새 Version을 같은 트랜잭션으로 생성한다. 업무 내용·DRAFT·과거 제출 참조는 보존하며 자동 Fact 확인·Analysis 근거 전환·새 상태/권한·Schema 변경은 없다. 공유 업무나 분석 근거의 일괄 변경은 차단한다. 현재 SUBMITTED의 Version/State는 교체로 변경하지 않는다.
 
 사용자가 지정한 격리 DB의 정확한 단일 불일치 테스트 건만 기존 replacement lineage와 Version Guard로 복구하고 기존 테스트 Editor의 실제 제출을 검증한다. 광범위한 backfill, 업무 DB Migration, 원본 삭제, 운영자 화면 신규 개발, main Merge/Draft 해제는 포함하지 않는다. 상세 계약은 `reviews/PR14_V14_CONTRACT_APPROVAL.md`의 v1.4.3 절, 검증은 `10_TEST_ACCEPTANCE.md`를 따른다.
+
+## Decision — 운영자 실업무 Slice 1 (2026-10-26)
+
+Status: ACCEPTED (LIMITED). 사용자 명령 v1.0에 따라 최신 main에서 feat/datco-operator-real-workflows를 생성하고 Slice 0 감사 및 Slice 1 접수·자료 검토만 구현·검증·Commit/Push·Draft PR한다. 기존 State/Role/Permission/Assignment·DB Schema/Migration·Company 소비 Provider는 유지한다. 기존 SUBMIT Review의 불변 Version과 명시적 Site ordinal로 접수 읽기 Projection을 추가하며 현재 작성 중인 Root와 제출 당시 내용을 분리한다. CompanyInputVersion의 제출 Snapshot 참조는 기존에 없으므로 현재 기업정보로 명시하고 임의 Snapshot/backfill을 하지 않는다. 상세 영향은 reviews/OPERATOR_BACKEND_REUSE_AUDIT_v1.md.
+
+기존 보완 요청·파일·OCR·Version·Evidence·Capability·Notice·Matching·Proposal을 재사용한다. 운영자 의견의 새 저장 계약이나 AI 자동 분석을 만들지 않는다. 후속 Slice 2~5·외부 AI·새 정책·main Merge·Draft 해제·운영 DB Migration·배포·물리 삭제는 별도 승인 대상이다. USER_ACCEPTANCE는 PENDING이다.
+
+
+## Decision ? PR15 Next.js 16.4.3 ?? ??? HTTPS ?? ?? (2026-10-26)
+
+Status: ACCEPTED (LIMITED). ???? ?? PR #15 ????? Next.js 16.4.3 ? ??? ?? ??? ??, production build?Frontend?Backend/PostgreSQL?Playwright???? ??? ?? ????? ??? ?? ? Commit/Push? ????. npm/package-lock? ???? ?? UI?Backend ???Role/Permission/State??? ?? DB Schema? ????? ???? ???. ???? ?? ?? DB? ????.
+
+??? ?? ??? LAN ??? ?? CA?IT ??????? ?? ?? ????? ??? ?? ???. ??? TLS ??? ?? PC HTTPS ???? ???? ???. PR Draft ??, main Merge??? ????? ?? DB Migration?? ???? ??? ???? ???. ?? ??? reviews/PR15_NEXTJS_SECURITY_PATCH_16_4_3.md? ???.
