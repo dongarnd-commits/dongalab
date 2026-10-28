@@ -332,3 +332,10 @@ PR14 사용자 검수 v1.2에서는 후보별 선택 UI를 단일 수정폼으�
 PR #16 검토 보완: `improvement-rules-v2`는 Rule별 적용 근거와 발견 근거를 먼저 검증한다. 답변이 발견되면 미검사 파일과 무관하게 중복 질문을 만들지 않는다. 미확인 항목은 검사 범위·제외 사유를 동반한 부족정보 후보 또는 `PROCESSING_LIMITATION`의 `NEEDS_SOURCE_REVIEW` 분석 표시로 구분한다. 이는 업무 State 추가가 아니다. 관련성을 알 수 없는 미검사 자료는 보수적으로 불확실성에 남기며 파일명으로 주제를 추정하지 않는다. 운영자가 사유를 기록해 제외한 공통자료는 검사 범위 밖이며 일괄 차단·보완 질문 대상이 아니다. 직접 첨부자료는 제외해도 원문 미검사 불확실성을 유지한다.
 
 과거 Parse는 성공 여부만으로 재사용하지 않는다. 범용 `company-local-parser-v1`만 재사용 후보로 삼고 동일 File/digest 원문을 로컬 native reader로 다시 읽어 모든 위치·텍스트·제한사항을 대조한다. 불일치·용도 전용 Parse·OCR 미처리 페이지는 승인된 로컬 추출로 다시 처리한다. OCR/특수 Parser는 현재 재사용 allowlist에 없다. 새 검사에는 실제 Parse/Parser/digest, 추출 목적, 재사용 검증 결과와 위치·한계를 보존한다. COMPLETE는 추출 가능한 텍스트 범위이며 문서의 의미·표·도면 전체를 검사했다는 뜻이 아니다.
+
+
+## Slice 2 운영자 UX·제출본 검토 이력 — 2026-10-28
+
+submitted-review-v1 입력 정책: 공통자료는 기본 NOT_SELECTED, 직접 근거는 포함, 명시 제외는 이유 검증. NOT_SELECTED와 EXCLUDED를 구분하며 과거 Manifest를 덮어쓰지 않는다. 실제 운영자의 상세 진입에서 보호된 ENSURE POST로 동일 입력 Job/Run을 재사용하고 실패는 명시적 retry로 처리한다. GET/SUBMIT 쓰기 및 외부 AI는 없다. Rule R01~R08 범위는 유지한다.
+
+상세 계약·변경 영향·실행 검증 구분: [운영자 UX 구현 보고](reviews/SLICE2_OPERATOR_UX_REPORT.md).

@@ -709,3 +709,10 @@ ApprovalRequest는 기존 DIRECT_APPROVER 모드와, 명시적으로 지정된 �
 ## Slice 2 승인된 로컬 분석·영속 요청 초안 — 2026-10-28
 
 공통 AnalysisRun/Candidate/Review에 IMPROVEMENT_ANALYSIS typed 계보를 추가한다. 불변 Manifest는 SUBMIT Review·ImprovementVersion·SiteVersion·현재 CompanyInputVersion과 Fact/Evidence/File/Parse를 실제 FK로 연결한다. 자료별 검사 결과와 후보 상세는 해당 Run에 귀속한다. 후보 0건은 이 종류에만 허용하며 기존 Capability/Matching/Company 계보 조건은 유지한다. 별도 분석 기반 요청 초안 Root/Version/선택 Review/최종 Delivery를 보존한다. 기존 InformationRequest 본문·기한 불변 계약은 변경하지 않는다.
+
+
+## Slice 2 운영자 UX·제출본 검토 이력 — 2026-10-28
+
+새 테이블 `improvement_submission_reviews`는 Company·Root·정확한 SUBMIT Version·Run 또는 분석 한계·Job·Draft·Actor·판단·의견·시각·basis를 append-only로 연결한다. Version ordinal과 Actor idempotency key를 보호하고 전용 Trigger로 typed scope를 검사한다. Migration ff30u0012026은 기존 테이블·상태·이력을 변환하지 않는다.
+
+상세 계약·변경 영향·실행 검증 구분: [운영자 UX 구현 보고](reviews/SLICE2_OPERATOR_UX_REPORT.md).

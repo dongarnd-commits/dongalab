@@ -40,9 +40,9 @@ test('0b zero-company editor and operator have real empty scope with no default 
 
 test('operator receipt projection keeps company scope and excludes unsubmitted versions across menus',async({page})=>{
  test.setTimeout(120000);const c=fixture();await login(page,'operator');const listing=await(await page.request.get('/api/company')).json();expect(listing.map((x:{id:string})=>x.id).sort()).toEqual([c.a.id,c.b.id].sort());
- await chooseCompany(page,c.a.id);await expect(bar(page)).toHaveAttribute('data-company-id',c.a.id);await expect(page.getByText('아직 제출된 개선요구가 없습니다.',{exact:true})).toBeVisible();
+ await chooseCompany(page,c.a.id);await expect(bar(page)).toHaveAttribute('data-company-id',c.a.id);await expect(page.getByRole('heading',{name:'기업 기본증빙',exact:true})).toBeVisible();
  expect((await page.request.get('/api/company/operator/intake/'+c.a.id+'?version_id='+c.av1.id)).status()).toBe(404);
- const controls=page.getByRole('navigation',{name:'운영자 업무 메뉴'});for(const button of await controls.getByRole('button').all()){await button.click();await expect(bar(page)).toHaveAttribute('data-company-id',c.a.id);await expect(bar(page)).toHaveAttribute('data-version-id','');}
+ const controls=page.getByRole('navigation',{name:'운영자 업무 메뉴'});for(const button of await controls.getByRole('button').all()){await button.click();await expect(bar(page)).toHaveAttribute('data-company-id','');await expect(bar(page)).toHaveAttribute('data-version-id','');}
  // Existing compatibility navigation still preserves the old exact version contract.
  const url='/api/company/'+c.a.id+'/navigation?version_id='+c.av1.id;const operator=await(await page.request.get(url)).json();await login(page,'editor');expect(await(await page.request.get(url)).json()).toEqual(operator);
  await login(page,'operator');await chooseCompany(page,c.b.id);await page.reload();await expect(bar(page)).toHaveAttribute('data-company-id',c.b.id);await expect(bar(page)).toHaveAttribute('data-version-id','');await page.screenshot({path:test.info().outputPath('operator-real-context.png'),fullPage:true});

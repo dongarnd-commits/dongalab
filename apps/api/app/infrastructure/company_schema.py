@@ -63,3 +63,4 @@ IMMUTABLE=IMMUTABLE+(analysis_contexts.name,)
 evidence.append_column(ref('actor_id','local_actors'))
 
 from app.infrastructure import improvement_schema
+from app.infrastructure import submission_review_schema

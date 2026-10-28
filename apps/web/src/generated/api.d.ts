@@ -1217,6 +1217,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/company/improvements/{vid}/submission-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Submission Reviews */
+        get: operations["submission_reviews_company_improvements__vid__submission_reviews_get"];
+        put?: never;
+        /** Judge Submission */
+        post: operations["judge_submission_company_improvements__vid__submission_reviews_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/company/improvements/{vid}/analysis-inputs": {
         parameters: {
             query?: never;
@@ -2575,6 +2593,31 @@ export interface components {
             /** Provenance */
             provenance: string;
         };
+        /** SubmissionJudgement */
+        SubmissionJudgement: {
+            /** Idempotency Key */
+            idempotency_key: string;
+            /** Expected Ordinal */
+            expected_ordinal: number;
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "COMPLETED" | "NEEDS_CHECK" | "PREPARE_REQUEST";
+            /** Note */
+            note: string;
+            /** Run Id */
+            run_id?: string | null;
+            /** Job Id */
+            job_id?: string | null;
+            /** Draft Id */
+            draft_id?: string | null;
+            /**
+             * Analysis Limit
+             * @default
+             */
+            analysis_limit: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -2647,6 +2690,14 @@ export interface components {
             };
             /** Reason */
             reason: string;
+            /** Common File Ids */
+            common_file_ids?: string[];
+            /**
+             * Mode
+             * @default MANUAL
+             * @enum {string}
+             */
+            mode: "MANUAL" | "ENSURE";
         };
         /** Retry */
         app__api__improvement_analysis__Retry: {
@@ -7838,6 +7889,139 @@ export interface operations {
             };
             /** @description Service Unavailable */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    submission_reviews_company_improvements__vid__submission_reviews_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    judge_submission_company_improvements__vid__submission_reviews_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmissionJudgement"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

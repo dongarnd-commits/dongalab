@@ -1,0 +1,21 @@
+import {useState} from 'react';
+
+export type Work={status:string;label:string;next_action:string};
+export type Receipt={root_id:string;version_id:string;ordinal:number;site_id:string;site_ordinal:number;title:string;submitted_at:string;current_state:string;work?:Work};
+export type Overview={company_count:number;submitted_count:number;submitted_root_count:number;companies:{company:{id:string;name:string};receipts:Receipt[]}[]};
+export const workLabels:Record<string,string>={NEW_RECEIPT:'신규 접수·미검토',ANALYZING:'분석 중',NEEDS_REVIEW:'검토 필요',NEEDS_CHECK:'추가 확인 필요',COMPLETED:'검토 완료',PREPARING_REQUEST:'보완요청 준비 중',WAITING_RESPONSE:'보완요청 발송·답변 대기',RESPONSE_REVIEW:'기업 답변 검토 필요',REREVIEW:'재검토 필요'};
+function Paging({page,total,onPage}:{page:number;total:number;onPage:(n:number)=>void}){const last=Math.max(1,Math.ceil(total/20));return <nav className="intake-actions" aria-label="목록 페이지"><button className="op-btn op-btn-outline" disabled={page<=1} onClick={()=>onPage(page-1)}>이전 페이지</button><span>{page} / {last} 페이지 · {total}건</span><button className="op-btn op-btn-outline" disabled={page>=last} onClick={()=>onPage(page+1)}>다음 페이지</button></nav>;}
+
+export function ReviewList({overview,onChoose}:{overview:Overview;onChoose:(cid:string,vid:string)=>void}){
+ const [search,setSearch]=useState(''),[filter,setFilter]=useState(''),[page,setPage]=useState(1);
+ const rows=overview.companies.flatMap(item=>item.receipts.filter((r,i,all)=>all.findIndex(x=>x.root_id===r.root_id)===i).map(receipt=>({company:item.company,receipt})))
+  .filter(({company,receipt})=>(company.name+' '+receipt.title).toLocaleLowerCase().includes(search.toLocaleLowerCase())&&(!filter||(receipt.work?.status??'NEW_RECEIPT')===filter))
+  .sort((a,b)=>Number(a.receipt.work?.status==='COMPLETED')-Number(b.receipt.work?.status==='COMPLETED')||b.receipt.submitted_at.localeCompare(a.receipt.submitted_at));
+ const current=Math.min(page,Math.max(1,Math.ceil(rows.length/20)));
+ return <section className="intake-card"><h2>접수된 개선요구</h2><div className="intake-actions"><label>접수목록 검색<input aria-label="접수목록 검색" placeholder="기업명 또는 개선요구 제목" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/></label><label>업무 상태 필터<select aria-label="업무 상태 필터" value={filter} onChange={e=>{setFilter(e.target.value);setPage(1);}}><option value="">전체 상태</option>{Object.entries(workLabels).map(([key,label])=><option value={key} key={key}>{label}</option>)}</select></label></div><p>과제별 최근 제출본입니다. 한 과제의 검토 결과가 다른 과제를 완료하지 않습니다.</p><div className="intake-table intake-inbox"><table><thead><tr><th>기업명</th><th>개선요구·제출본</th><th>제출일</th><th>검토 업무</th><th>다음 행동</th></tr></thead><tbody>{rows.slice((current-1)*20,current*20).map(({company,receipt:r})=><tr key={r.version_id} data-company-id={company.id} data-version-id={r.version_id}><td>{company.name}</td><td>{r.title} · v{r.ordinal}</td><td>{new Date(r.submitted_at).toLocaleString('ko-KR')}</td><td>{r.work?.label??workLabels.NEW_RECEIPT}</td><td><button className="op-btn op-btn-primary" onClick={()=>onChoose(company.id,r.version_id)}>제출 내용 검토</button></td></tr>)}</tbody></table></div>{!rows.length&&<p>조건에 맞는 검토 대상이 없습니다.</p>}<Paging page={current} total={rows.length} onPage={setPage}/></section>;
+}
+
+export function CompanyList({overview,onChoose,requests=false}:{overview:Overview;onChoose:(cid:string)=>void;requests?:boolean}){
+ const [search,setSearch]=useState(''),[page,setPage]=useState(1);const rows=overview.companies.filter(i=>i.company.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()));const current=Math.min(page,Math.max(1,Math.ceil(rows.length/20)));
+ return <section className="intake-card"><h2>조회 가능한 수요기업</h2><label>기업명 검색<input aria-label="기업명 검색" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/></label><div className="intake-table"><table><thead><tr><th>기업명</th><th>개선과제</th><th>조회</th></tr></thead><tbody>{rows.slice((current-1)*20,current*20).map(i=><tr key={i.company.id}><td>{i.company.name}</td><td>{new Set(i.receipts.map(r=>r.root_id)).size}건</td><td><button className="op-btn op-btn-outline" onClick={()=>onChoose(i.company.id)}>{requests?'기업 공통정보 보완요청':'기업 자료 조회'}</button></td></tr>)}</tbody></table></div>{!rows.length&&<p>접근 가능한 기업이 없습니다.</p>}<Paging page={current} total={rows.length} onPage={setPage}/></section>;
+}

@@ -57,3 +57,11 @@ def test_goal_in_direct_evidence_prevents_duplicate_question():
     out,diag=analyze({'as_is':'TEST problem'},sources,coverage=[coverage('FAILED')])
     assert next(d for d in diag if d['rule']=='R03')['outcome']=='FOUND'
     assert not any(c['data'].get('question') for c in out)
+
+def test_unselected_reference_is_not_an_exclusion_or_missing_source_claim():
+    sources=[span('물류 업무 처리시간 개선')]
+    out,_=analyze({},sources,coverage=[coverage('NOT_SELECTED')])
+    c=next(c for c in out if c['data']['rule_id']=='R02')
+    assert c['category']=='MISSING_INFORMATION' and not c['data']['uninspected_ids']
+    assert c['data']['search_scope'][0]['status']=='NOT_SELECTED'
+    validate(c,sources)

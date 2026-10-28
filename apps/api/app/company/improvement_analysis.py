@@ -9,6 +9,7 @@ from app.notice.domain import Denied
 from app.company.improvement_rules import VERSION
 
 KIND='IMPROVEMENT_ANALYSIS'
+INPUT_POLICY='submitted-review-v1'
 def digest(value):return sha256(json.dumps(value,sort_keys=True,ensure_ascii=False,separators=(',',':'),default=str).encode()).hexdigest()
 
 class ImprovementAnalysis:
@@ -32,7 +33,7 @@ class ImprovementAnalysis:
             parses=[p for p in a.rows(C.parses,file_id=f['id']) if p['error'] is None and p['parser_version']=='company-local-parser-v1']
             supported=PurePath(f['name']).suffix.lower() in ('.pdf','.docx','.xlsx','.txt')
             files.append(dict(id=f['id'],name=f['name'],digest=f['digest'],direct=f['id'] in direct,inactive=inactive,
-                supported=supported,default_included=not inactive and supported,parse_id=parses[-1]['id'] if parses else None))
+                supported=supported,default_included=f['id'] in direct,parse_id=parses[-1]['id'] if parses else None))
         current=a.get(C.companies,r['company_id'])['current_ordinal']
         profile=next(p for p in a.rows(C.inputs,company_id=r['company_id']) if p['ordinal']==current)
         site=next(s for s in a.rows(C.site_versions,site_id=r['site_id']) if s['ordinal']==v['site_ordinal'])
@@ -46,11 +47,27 @@ class ImprovementAnalysis:
                     eid,rid=a.fact_evidence(fv)
                     facts.append(dict(id=fv['id'],review_id=rid,evidence_id=eid,current=current,direct=fv['id'] in linked))
         result=dict(company_id=r['company_id'],version_id=vid,submit_review_id=sub['id'],input_version_id=profile['id'],
-            site_version_id=site['id'],site_current_ordinal=a.get(C.sites,r['site_id'])['current_ordinal'],files=files,facts=facts,rule_version=VERSION)
+            site_version_id=site['id'],site_current_ordinal=a.get(C.sites,r['site_id'])['current_ordinal'],files=files,facts=facts,rule_version=VERSION,input_policy=INPUT_POLICY)
         return dict(result,selection_token=digest(result))
-    def request(self,who,vid,key,token,excluded,reason):
+    def plan(self,src,excluded,common):
+        byid={f['id']:f for f in src['files']}
+        if any(fid not in byid for fid in [*excluded,*common]):raise Denied('OBJECT_NOT_FOUND',404)
+        if len(set(common))!=len(common) or any(byid[fid]['direct'] or fid in excluded for fid in common):raise Denied('INVALID_REFERENCE_SELECTION',422)
+        if any(not isinstance(value,str) or len(value.strip())<3 or len(value)>1000 for value in excluded.values()):raise Denied('EXCLUSION_REASON_REQUIRED',422)
+        files=[dict(f,included=f['id'] not in excluded and (f['direct'] or f['id'] in common),
+                    selection='EXCLUDED' if f['id'] in excluded else 'INCLUDED' if f['direct'] or f['id'] in common else 'NOT_SELECTED') for f in src['files']]
+        return dict(src,files=files,excluded=excluded,common_file_ids=sorted(common))
+    @staticmethod
+    def fingerprint(plan):
+        # Parse reuse may discover a new compatible Parse after a run. That does not
+        # change the logical input or justify a second automatic execution.
+        value={k:v for k,v in plan.items() if k not in ('selection_token','reason')}
+        value['files']=[{k:v for k,v in f.items() if k not in ('parse_id','default_included')} for f in plan['files'] if f['selection']!='NOT_SELECTED']
+        return digest(value)
+    def request(self,who,vid,key,token,excluded,reason,common=None,ensure=False):
         a=self.a;v,r,_=self.target(who,vid,True)
-        body=digest(dict(vid=vid,token=token,excluded=excluded,reason=reason))
+        common=common or []
+        body=digest(dict(vid=vid,token=token,excluded=excluded,reason=reason,common=sorted(common),ensure=ensure))
         old=a.rows(S.receipts,actor_id=who.id,request_key=key)
         if old:
             if old[0]['body_hash']!=body:raise Denied('IDEMPOTENCY_CONFLICT',409)
@@ -58,21 +75,20 @@ class ImprovementAnalysis:
         if a.rows(N.jobs,actor_id=who.id,request_key=key):raise Denied('IDEMPOTENCY_CONFLICT',409)
         src=self.sources(who,vid)
         if src['selection_token']!=token:raise Denied('STALE_INPUT_VERSION',409)
-        if any(fid not in {f['id'] for f in src['files']} for fid in excluded):raise Denied('OBJECT_NOT_FOUND',404)
-        if any(not isinstance(value,str) or len(value.strip())<3 or len(value)>1000 for value in excluded.values()):
-            raise Denied('EXCLUSION_REASON_REQUIRED',422)
-        plan=dict(src,excluded=excluded,reason=reason);fingerprint=digest({k:v for k,v in plan.items() if k!='reason'})
-        for m in a.rows(S.manifests,company_id=r['company_id']):
+        plan=dict(self.plan(src,excluded,common),reason=reason);fingerprint=self.fingerprint(plan)
+        for m in reversed(a.rows(S.manifests,company_id=r['company_id'])):
             job=a.get(N.jobs,m['job_id'])
-            if m['digest']==fingerprint and job['state'] in ('QUEUED','PROCESSING'):
+            if m['digest']==fingerprint and (ensure or job['state'] in ('QUEUED','PROCESSING')):
                 a.add(S.receipts,job_id=job['id'],actor_id=who.id,request_key=key,body_hash=body)
                 return job
+        if ensure and any(x['ordinal']>v['ordinal'] and a.rows(C.improvement_reviews,version_id=x['id'],outcome='SUBMIT') for x in a.rows(C.improvement_versions,improvement_id=r['id'])):
+            raise Denied('NEW_SUBMIT_VERSION',409)
         job=a.add(N.jobs,actor_id=who.id,request_key=key,kind=KIND,version_id=None,payload=dict(body_hash=body),state='QUEUED')
         a.add(S.receipts,job_id=job['id'],actor_id=who.id,request_key=key,body_hash=body)
         m=a.add(S.manifests,job_id=job['id'],company_id=r['company_id'],version_id=vid,submit_review_id=src['submit_review_id'],
             input_version_id=src['input_version_id'],site_version_id=src['site_version_id'],digest=fingerprint,data=plan)
-        for f in src['files']:
-            a.add(S.inputs,manifest_id=m['id'],file_id=f['id'],parse_id=f['parse_id'],origin='DIRECT_ATTACHMENT' if f['direct'] else 'COMMON_REFERENCE',data=dict(f,included=f['id'] not in excluded and f['default_included'],exclude_reason=excluded.get(f['id'],'')))
+        for f in plan['files']:
+            a.add(S.inputs,manifest_id=m['id'],file_id=f['id'],parse_id=f['parse_id'],origin='DIRECT_ATTACHMENT' if f['direct'] else 'COMMON_REFERENCE',data=dict(f,exclude_reason=excluded.get(f['id'],'')))
         for f in src['facts']:
             a.add(S.inputs,manifest_id=m['id'],fact_version_id=f['id'],fact_review_id=f['review_id'],origin='DIRECT_FACT' if f['direct'] else 'CURRENT_FACT',data=f)
         for link in a.rows(C.improvement_evidence,version_id=vid):
@@ -101,9 +117,10 @@ class ImprovementAnalysis:
             ev=a.get(C.evidence,fact['evidence_id'])
             if ev['file_id'] and a.rows(B.file_events,file_id=ev['file_id']):reasons.append('FACT_BASIS_CHANGED')
         current={f['id']:f for f in now['files']}
+        used={x['file_id'] for x in a.rows(S.inputs,manifest_id=m['id']) if x['file_id'] and (x['data'].get('included') or x['origin']=='DIRECT_ATTACHMENT')}
         for f in old['files']:
-            if f['id'] not in old['excluded'] and not f['inactive']:
-                if f['id'] not in current or current[f['id']]['inactive'] or current[f['id']]['digest']!=f['digest']:reasons.append('SOURCE_CHANGED')
+            if (f['id'] in used if old.get('input_policy') else f['id'] not in old['excluded'] and not f['inactive']):
+                if f['id'] not in current or current[f['id']]['inactive']!=f['inactive'] or current[f['id']]['digest']!=f['digest']:reasons.append('SOURCE_CHANGED')
         if set(current)-{f['id'] for f in old['files']}:warnings.append('NEW_COMMON_SOURCE_REVIEW_SUGGESTED')
         if r['current_ordinal']>v['ordinal']:warnings.append('NEWER_WORKING_VERSION')
         attempt=a.get(N.attempts,run['attempt_id']);attempts=self.ordered(N.attempts,job_id=m['job_id']);job=a.get(N.jobs,m['job_id'])
@@ -139,7 +156,7 @@ class ImprovementAnalysis:
         return dict(run=run,manifest=m,inputs=a.rows(S.inputs,manifest_id=m['id']),inspections=a.rows(S.inspections,run_id=rid),diagnostics=ctx['diagnostics'],status=ctx['status'],candidates=candidates,freshness=self.freshness(who,rid))
     def listing(self,who,vid):
         a=self.a;self.target(who,vid)
-        return [self.run(who,c['run_id']) for m in a.rows(S.manifests,version_id=vid) for c in a.rows(S.contexts,manifest_id=m['id'])]
+        return sorted([self.run(who,c['run_id']) for m in a.rows(S.manifests,version_id=vid) for c in a.rows(S.contexts,manifest_id=m['id'])],key=lambda x:(x['run']['created_at'],x['run']['id']))
     def review(self,who,cid,key,expected,decision,note,question):
         a=self.a;a.role(who,'DATCO_OPERATOR');c=a.get(N.candidates,cid);_,_,m=self.manifest_for_run(who,c['run_id'],True)
         body=digest(dict(cid=cid,decision=decision,note=note,question=question,expected=expected))

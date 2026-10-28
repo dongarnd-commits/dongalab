@@ -126,8 +126,8 @@ def process_improvement_one(factory=None,files=None,extractor=extract,before_pub
             elif err and err!='NOT_INSPECTED':
                 p=a.add(C.parses,file_id=x['file_id'],actor_id=who.id,parser_version='company-local-parser-v1',error=err,limitations=[])
             if p:limitations=p['limitations']
-            status=('EXCLUDED' if x['data'].get('exclude_reason') else 'UNSUPPORTED' if not x['data'].get('supported',Path(x['data']['name']).suffix.lower() in ('.pdf','.docx','.xlsx','.txt')) else 'NOT_INSPECTED') if err=='NOT_INSPECTED' else 'FAILED' if err or not ev else 'PARTIAL' if limitations else 'COMPLETE'
-            if status!='COMPLETE' and not (status=='EXCLUDED' and x['origin']=='COMMON_REFERENCE'):incomplete=True
+            status=('NOT_SELECTED' if x['data'].get('selection')=='NOT_SELECTED' else 'EXCLUDED' if x['data'].get('exclude_reason') else 'UNSUPPORTED' if not x['data'].get('supported',Path(x['data']['name']).suffix.lower() in ('.pdf','.docx','.xlsx','.txt')) else 'NOT_INSPECTED') if err=='NOT_INSPECTED' else 'FAILED' if err or not ev else 'PARTIAL' if limitations else 'COMPLETE'
+            if status!='COMPLETE' and not (status in ('EXCLUDED','NOT_SELECTED') and x['origin']=='COMMON_REFERENCE'):incomplete=True
             data=dict(status=status,method='NOT_RUN' if err=='NOT_INSPECTED' else 'REUSED_TEXT' if item.get('reuse') else 'LOCAL_OCR' if parsed and 'ocr' in parsed.parser_version else 'LOCAL_TEXT',
                 parser_version=p['parser_version'] if p else None,error_code=err,limitations=limitations,
                 locations=[dict(descriptor=e['descriptor'],page=e['page']) for e in ev],scope_known=bool(parsed or item.get('scope_verified')),
@@ -138,7 +138,7 @@ def process_improvement_one(factory=None,files=None,extractor=extract,before_pub
             inspection=a.add(S.inspections,run_id=run['id'],input_id=x['id'],parse_id=p['id'] if p else None,data=data)
             coverage.append(dict(data,inspection_id=inspection['id'],origin=x['origin']))
             for e in ev:spans.append(dict(kind='DOCUMENT',evidence_id=e['id'],inspection_id=inspection['id'],file_id=x['file_id'],descriptor=e['descriptor'],page=e['page'],quote=e['text']))
-            if status!='COMPLETE' and not (status=='EXCLUDED' and x['origin']=='COMMON_REFERENCE'):limits.append(dict(category='PROCESSING_LIMITATION',content=f"자료 {x['data']['name']}: {status}",reason='검사하지 못한 자료를 정보부족 증거로 사용하지 않음',data=dict(subject='document',rule_id='PROCESSING',rule_version=VERSION,claim_kind='PROCESSING_STATUS',evidence=[],inspection_id=inspection['id'],uncertainty='자료 내용 전체를 판단하지 못함',question='자료를 직접 확인하거나 읽을 수 있는 자료를 보완해 주세요.')))
+            if status!='COMPLETE' and not (status in ('EXCLUDED','NOT_SELECTED') and x['origin']=='COMMON_REFERENCE'):limits.append(dict(category='PROCESSING_LIMITATION',content=f"자료 {x['data']['name']}: {status}",reason='검사하지 못한 자료를 정보부족 증거로 사용하지 않음',data=dict(subject='document',rule_id='PROCESSING',rule_version=VERSION,claim_kind='PROCESSING_STATUS',evidence=[],inspection_id=inspection['id'],uncertainty='자료 내용 전체를 판단하지 못함',question='자료를 직접 확인하거나 읽을 수 있는 자료를 보완해 주세요.')))
         output,diagnostics=analyze(v['data'],spans,coverage=coverage)
         for c in output+limits:
             c['data']['inspection_ids']=[x['id'] for x in a.rows(S.inspections,run_id=run['id'])]

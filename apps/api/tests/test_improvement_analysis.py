@@ -26,7 +26,7 @@ def submitted(e,data=None):
 
 def request(e,vid,excluded=None):
     src=call(e,'operator',f'/company/improvements/{vid}/analysis-inputs')
-    body=dict(idempotency_key=str(uuid4()),selection_token=src['selection_token'],excluded_files=excluded or {},reason='TEST explicit execution')
+    body=dict(idempotency_key=str(uuid4()),selection_token=src['selection_token'],excluded_files=excluded or {},common_file_ids=[f['id'] for f in src['files'] if not f['direct'] and f['id'] not in (excluded or {})],reason='TEST explicit execution')
     job=call(e,'operator',f'/company/improvements/{vid}/analysis-jobs',body,status=202)
     return job,body,src
 
@@ -141,7 +141,7 @@ def test_concurrent_jobs_reuse_extraction_and_preserve_reviews(env):
     e=env;c,s,p,v,_=submitted(e);f,_=upload(e,c['id'],s['id']);parsed=call(e,'operator','/company/files/'+f['id']+'/parse',{})
     src=call(e,'operator',f"/company/improvements/{v['id']}/analysis-inputs")
     def execute(n):
-        return e['clients']['operator'].post(f"/company/improvements/{v['id']}/analysis-jobs",json=dict(idempotency_key=str(uuid4()),selection_token=src['selection_token'],reason='TEST concurrent'),headers={'Origin':get_settings().web_origin})
+        return e['clients']['operator'].post(f"/company/improvements/{v['id']}/analysis-jobs",json=dict(idempotency_key=str(uuid4()),selection_token=src['selection_token'],common_file_ids=[f['id']],reason='TEST concurrent'),headers={'Origin':get_settings().web_origin})
     with ThreadPoolExecutor(max_workers=2) as pool:responses=list(pool.map(execute,range(2)))
     assert all(r.status_code==202 for r in responses);assert responses[0].json()['id']==responses[1].json()['id']
     run=finish(e,v['id']);assert run['inspections'][0]['parse_id']==parsed['id']

@@ -189,3 +189,10 @@ Status: ACCEPTED (LIMITED). 사용자 개발 착수 지시는 로컬 Rule Slice 
 ### PR #16 GPT 검토 후 제한 보완 — 2026-10-28
 
 Status: ACCEPTED (LIMITED). 사용자 명시 지시에 따라 동일 feature branch/기존 Draft PR에서 Rule별 검사 불확실성, Parse 재사용 적합성, Native 발송 확인창만 보완한다. 공통 Schema/CHECK/Trigger/업무 State/Permission 및 기존 InformationRequest 원자적 생성·발송은 변경하지 않는다. 기존 JSON 검사·후보 필드에 범위/목적/제외 이유를 추가하고 Rule Version을 v2로 올려 이전 결과는 과거 이력으로 보존한다. 제외 이유는 Backend에서 3~1000자 비공백 입력과 동일 Scope의 File을 검증한다. 의미상 무관함의 최종 판단은 운영자에게 있다. 범용 Parse의 native 재검사 비용은 정확한 검사 범위를 증명하기 위한 제한이며 고급 OCR 캐시 정책/Provider 경계는 Slice 2B 등 별도 범위다. 테스트 후 관련 파일 Commit/Push 및 최신 HEAD CI 확인만 승인되며 배포·실사용 DB Migration·main Merge·Draft 해제·외부 AI는 계속 제외한다.
+
+
+## Slice 2 운영자 UX·제출본 검토 이력 — 2026-10-28
+
+Status: ACCEPTED (LIMITED). 사용자 명시 UX 통합 개선 지시에 따라 기존 PR #16에서 운영자 목록/상세/자동 진입 분석/전체 제출본 판단만 개선한다. 최소 typed append-only 검토 테이블 추가가 승인된 범위이며 기존 CONFIRM·후보 Review·요청 불변 Trigger·권한을 우회하지 않는다. 공통파일 미선택은 관련성 제외 판단이 아니다. 테스트 후 관련 파일 Commit/Push·Draft 유지·최신 CI 확인을 수행한다. 실사용 DB Migration·HTTPS 반영·신규 Branch/PR·외부 AI·main Merge는 제외한다.
+
+상세 계약·변경 영향·실행 검증 구분: [운영자 UX 구현 보고](reviews/SLICE2_OPERATOR_UX_REPORT.md).

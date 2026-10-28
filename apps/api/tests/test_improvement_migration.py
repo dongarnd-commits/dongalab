@@ -34,10 +34,10 @@ def test_slice2_upgrade_preserves_existing_request_content_and_guard(tmp_path):
             function=text("SELECT pg_get_functiondef(oid) FROM pg_proc WHERE proname='guard_company_information_request' AND pronamespace=current_schema()::regnamespace")
             config=text("SELECT proconfig FROM pg_proc WHERE proname='validate_common_analysis_lineage' AND pronamespace=current_schema()::regnamespace")
             settings=c.scalar(config)
-            guard=c.scalar(function);increment=load('fe29s0022026_improvement_analysis.py');increment.upgrade()
+            guard=c.scalar(function);increment=load('fe29s0022026_improvement_analysis.py');increment.upgrade();ux=load('ff30u0012026_operator_submission_review.py');ux.upgrade()
             assert c.scalar(function)==guard
             assert c.scalar(config)==settings
             for n,rows in before.items():assert [dict(r) for r in c.execute(text('SELECT * FROM '+n)).mappings()]==rows
             for n,t in Base.metadata.tables.items():assert {x['name'] for x in inspect(c).get_columns(n,schema=schema)}==set(t.c.keys())
-            increment.downgrade();assert c.scalar(function)==guard;increment.upgrade()
+            ux.downgrade();increment.downgrade();assert c.scalar(function)==guard;increment.upgrade();ux.upgrade()
     finally:session.close();outer.rollback();c.close()

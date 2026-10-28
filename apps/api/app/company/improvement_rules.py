@@ -43,7 +43,7 @@ def analyze(data, spans, *, incomplete=False, coverage=()):
         # Excluding a common reference explicitly bounds the search. Direct evidence
         # remains relevant even when excluded. Never guess relevance from filenames.
         unknown=[c['inspection_id'] for c in coverage if c['status']!='COMPLETE' and
-                 not (c['status']=='EXCLUDED' and c['origin']=='COMMON_REFERENCE')]
+                 not (c['status'] in ('EXCLUDED','NOT_SELECTED') and c['origin']=='COMMON_REFERENCE')]
         if found:
             diagnostics.append(dict(rule=rule,outcome='FOUND',reason='지원하는 명시 라벨 확인',evidence=[found],scope=scope));return
         if incomplete and not coverage:

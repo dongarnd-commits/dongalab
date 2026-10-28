@@ -10,7 +10,8 @@ def receipts(a, who, cid):
   for version in a.rows(S.improvement_versions, improvement_id=root['id']):
    submitted=a.rows(S.improvement_reviews, version_id=version['id'], outcome='SUBMIT')
    if submitted:
-    result.append(dict(root_id=root['id'], version_id=version['id'], ordinal=version['ordinal'], site_id=root['site_id'], site_ordinal=version['site_ordinal'], title=version['data']['title'], submitted_at=submitted[0]['created_at'], current_state=root['state']))
+    from app.company.submission_review import SubmissionReview
+    result.append(dict(root_id=root['id'], version_id=version['id'], ordinal=version['ordinal'], site_id=root['site_id'], site_ordinal=version['site_ordinal'], title=version['data']['title'], submitted_at=submitted[0]['created_at'], current_state=root['state'],work=SubmissionReview(a).projection(who,version['id'])))
  return sorted(result, key=lambda r:(r['submitted_at'],r['version_id']), reverse=True)
 
 
@@ -28,6 +29,13 @@ def detail(a, who, cid, version_id=None):
  chosen=next((r for r in rows if r['version_id']==version_id),None) if version_id else (rows[0] if rows else None)
  if version_id and chosen is None:raise Denied('OBJECT_NOT_FOUND',404)
  data=a.detail(who,cid)
+ # Only saved provenance is a confirmed grouping hint; filenames and an attempted
+ # parser purpose alone never classify a document.
+ from app.infrastructure import company_business_schema as B
+ sources=a.rows(B.sources,company_id=cid);extractions={e['id']:e for e in a.rows(B.extractions,company_id=cid)}
+ for file in data['files']:
+  groups={source['kind'].upper() for source in sources if source['extraction_id'] in extractions and extractions[source['extraction_id']]['file_id']==file['id']}
+  file['material_groups']=sorted(groups) or ['UNCLASSIFIED']
  # Keep current company input explicitly separate from exact submitted improvement/site.
  # No historical company profile snapshot is invented: SUBMIT has no such FK.
  submitted={r['version_id'] for r in rows}

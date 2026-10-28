@@ -267,3 +267,10 @@ P01-P05 구현은 기존 O의 생성/작성/내용검토/승인요청과 지정 
 ## Slice 2 승인된 로컬 분석·영속 요청 초안 — 2026-10-28
 
 새 Role은 없다. 분석 입력/Job/결과/검토는 DATCO_OPERATOR와 기존 Company Membership을 요구한다. 자료는 해당 기업의 공통자료 또는 선택 사업장으로 제한한다. 분석 초안은 생성 운영자만 조회·수정·발송한다. 기업에는 내부 후보·검토·미발송 초안을 공개하지 않는다. 최종 발송 후 기존 정보요청·응답·검토 권한을 유지한다.
+
+
+## Slice 2 운영자 UX·제출본 검토 이력 — 2026-10-28
+
+submission-reviews GET/POST는 기존 DATCO_OPERATOR+Company membership만 허용한다. 권한 있는 운영자는 같은 제출본 이력을 공유한다. POST는 정확한 제출 Version·최신 Run·Job Attempt·소유 Draft와 expected ordinal/idempotency를 검사한다. 초안 소유권 및 최종 발송 Guard는 유지한다. 신규 Role/Permission은 없다.
+
+상세 계약·변경 영향·실행 검증 구분: [운영자 UX 구현 보고](reviews/SLICE2_OPERATOR_UX_REPORT.md).

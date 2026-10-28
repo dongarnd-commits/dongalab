@@ -18,6 +18,8 @@ class AnalysisRequest(Key):
     selection_token:str=Field(pattern='^[a-f0-9]{64}$')
     excluded_files:dict[str,str]=Field(default_factory=dict,max_length=100)
     reason:str=Field(min_length=1,max_length=1000)
+    common_file_ids:list[str]=Field(default_factory=list,max_length=100)
+    mode:Literal['MANUAL','ENSURE']='MANUAL'
 class Retry(Key):
     expected_attempt:int=Field(ge=0)
 class Review(Key):
@@ -36,12 +38,32 @@ class DraftSave(Key):
     review_ids:list[str]=Field(min_length=1,max_length=100)
 class Send(Command):
     expected_ordinal:int=Field(ge=1)
+class SubmissionJudgement(Key):
+    expected_ordinal:int=Field(ge=0)
+    decision:Literal['COMPLETED','NEEDS_CHECK','PREPARE_REQUEST']
+    note:str=Field(min_length=1,max_length=5000)
+    run_id:str|None=None
+    job_id:str|None=None
+    draft_id:str|None=None
+    analysis_limit:str=Field(default='',max_length=5000)
+
+@router.get('/improvements/{vid}/submission-reviews',response_model=dict,responses=errors(401,403,404))
+def submission_reviews(vid:str,session:DB,who=Depends(actor)):
+    from app.company.submission_review import SubmissionReview
+    svc=SubmissionReview(service(session).a)
+    return dict(history=svc.history(who,vid),projection=svc.projection(who,vid))
+
+@router.post('/improvements/{vid}/submission-reviews',response_model=dict,dependencies=[Depends(trusted_origin)],responses=errors(401,403,404,409,422))
+def judge_submission(vid:str,body:SubmissionJudgement,session:DB,who=Depends(actor)):
+    from app.company.submission_review import SubmissionReview
+    result=SubmissionReview(service(session).a).save(who,vid,body.idempotency_key,body.expected_ordinal,body.decision,body.note,body.run_id,body.job_id,body.draft_id,body.analysis_limit)
+    session.commit();return result
 
 @router.get('/improvements/{vid}/analysis-inputs',response_model=dict,responses=errors(401,403,404))
 def inputs(vid:str,session:DB,who=Depends(actor)):return service(session).sources(who,vid)
 @router.post('/improvements/{vid}/analysis-jobs',response_model=dict,status_code=202,dependencies=[Depends(trusted_origin)],responses=errors(401,403,404,409,422))
 def request(vid:str,body:AnalysisRequest,session:DB,who=Depends(actor)):
-    result=service(session).request(who,vid,body.idempotency_key,body.selection_token,body.excluded_files,body.reason);session.commit();return result
+    svc=service(session);result=svc.request(who,vid,body.idempotency_key,body.selection_token,body.excluded_files,body.reason,body.common_file_ids,body.mode=='ENSURE');session.commit();return svc.job(who,result['id'])
 @router.get('/analysis-jobs/{jid}',response_model=dict,responses=errors(401,403,404))
 def job(jid:str,session:DB,who=Depends(actor)):return service(session).job(who,jid)
 @router.post('/analysis-jobs/{jid}/retry',response_model=dict,status_code=202,dependencies=[Depends(trusted_origin)],responses=errors(401,403,404,409))

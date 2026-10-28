@@ -660,3 +660,10 @@ Proposal은 독립 승인 State를 추가하지 않는다. DIRECT_APPROVER는 �
 ## Slice 2 승인된 로컬 분석·영속 요청 초안 — 2026-10-28
 
 분석 실행은 기존 QUEUED/PROCESSING/SUCCEEDED/PARTIAL/FAILED와 Attempt/lease를 사용한다. 요청 활용·제외·추가확인 검토는 Improvement 최종 CONFIRM과 별개이며 Improvement Root 상태를 자동 전환하지 않는다. REGISTER_IMPROVEMENT_CANDIDATE의 최종 확정 연결을 대신하지 않는다. 별도 요청 초안에서 최종 확인 시 기존 InformationRequest 생성·SEND를 단일 트랜잭션으로 수행한다. 취소는 발송을 발생시키지 않는다. 입력변경은 과거 분석을 보존하고 현재 활용 Guard로 처리한다.
+
+
+## Slice 2 운영자 UX·제출본 검토 이력 — 2026-10-28
+
+제출본 전체 운영자 판단 COMPLETED/NEEDS_CHECK/PREPARE_REQUEST는 새로운 업무 State가 아니라 append-only 판단이다. CONFIRM·Fact 확정과 분리한다. GET/열람/분석 성공은 판단을 만들지 않는다. 대시보드 9가지 업무 표시는 Job·Run freshness·명시적 판단·실제 요청/응답에서 계산한다. 새 제출본/새 Run/근거 변경은 과거 완료를 상속하지 않는다.
+
+상세 계약·변경 영향·실행 검증 구분: [운영자 UX 구현 보고](reviews/SLICE2_OPERATOR_UX_REPORT.md).
