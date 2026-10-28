@@ -457,3 +457,5 @@ C07에서 PDF A→B 교체를 확인하면 단일 DRAFT의 일반 첨부에만 �
 ## Slice 2 승인된 로컬 분석·영속 요청 초안 — 2026-10-28
 
 Slice 2 인수는 합성자료·격리 PostgreSQL·실제 Worker·API·Web으로 SUBMIT→Manifest→추출/Rule→Candidate/Evidence→검토→영속 초안→최종 발송을 검증한다. 새 Draft 분리, 입력변경, 기업/사업장 격리, PDF digest/원문, OCR 실패, 후보 0건, 잘못된 근거, 동시 Job/lease, 불변 Review, F5/재로그인, 취소 발송0회, 이중발송/부분실패 원자성을 포함한다. 기존 테스트를 제거하거나 SKIP을 추가하지 않는다. 실행 결과와 미실행 항목은 reviews/SLICE2_IMPLEMENTATION_REPORT.md에 구분 기록한다.
+
+PR #16 보완 인수: 제조·서비스·물류 합성기업에서 정상 PDF와 제외 PNG/공통자료, 이유 없는 제외 거부, 직접 첨부 스캔 PDF의 OCR 실패·혼합 PDF 부분 검사, 정확한 답변 근거의 중복 질문 억제, Rule별 미검사 불확실성을 검증한다. 재무 전용 Parse만 있는 PDF·용도가 다른 복수 Parse·범용 Parser 이름이나 검사 범위가 불충분한 Parse를 구분하고 재사용 또는 로컬 재추출의 원본 계보를 검사한다. Native dialog의 초기/복귀 포커스·Escape·배경 차단·Context 분리·발송 전 0건·취소·중복 클릭·요청 전 네트워크 실패 및 서버 성공 응답 유실을 검증한다. 전체 Backend/PostgreSQL/Frontend/Playwright와 기존 Slice 1·Capability·Matching·Proposal 회귀를 유지한다.

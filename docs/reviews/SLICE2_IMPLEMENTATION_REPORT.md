@@ -79,3 +79,36 @@ Slice 1의 정확한 접수/원본/F5·Scope, Company Fact 확인·충돌·기�
 ## I. 남은 범위와 의사결정
 
 사용자 인수: PENDING. 로컬 Rule의 제한된 라벨/적용조건 범위를 넘어서는 의미분석, 복잡한 표·도면·이미지 지원, 대용량 성능·운영 배치 검증은 완료로 주장하지 않는다. 외부 AI Provider/모델/전송·비용·보존 정책, 향후 자동 분석 실행 정책, 실사용 DB Migration·배포는 별도 승인 대상이다.
+
+## J. PR #16 GPT 검토 보완 — 기준 HEAD 290c419d
+
+| 항목 | 변경 전 | 보완 구현 |
+|---|---|---|
+| A. 검사 범위 | 파일 하나라도 COMPLETE가 아니면 모든 부족정보 후보 억제 | COMPLETE/PARTIAL/FAILED/EXCLUDED/UNSUPPORTED/NOT_INSPECTED와 직접 첨부 여부를 구분. Rule별 답변 근거를 먼저 확인하고 미확인 항목에 검사 범위·불확실성을 기록 |
+| A. 제외 | 고정된 제외 문구, 빈 이유도 허용 | 운영자 입력 이유를 Backend에서 비공백 최소 3자·전체 최대 1000자 및 File Scope와 함께 검증, Manifest/입력/검사에 보존. 명시 제외 공통자료는 질문을 차단하거나 별도 보완 질문을 만들지 않음 |
+| B. Parse | 마지막 성공 Parse를 목적·범위 검증 없이 재사용 | 범용 Parser allowlist, 정확한 File/digest, 동일 원문의 native reader 전체 위치·텍스트·한계 대조 후만 재사용. 전용/불일치/미처리 OCR 범위는 로컬 재추출. 새 추출 digest 불일치는 텍스트 게시 차단 |
+| C. 확인창 | div role=dialog | 기존 Slice 1과 같은 Native dialog/showModal, 취소 초기 포커스·Escape·배경 차단·복귀 포커스. 기업/Version/초안 Version Context 분리 및 확인창 내부 저장·발송 상태 재조회 |
+
+변경 제품 파일: `apps/api/app/company/improvement_analysis.py`, `improvement_rules.py`, `improvement_worker.py`; `apps/web/src/portal/improvement-analysis.tsx`, `operator-intake.css`. 테스트는 기존 `test_improvement_analysis.py`, `test_improvement_rules.py`, `apps/web/tests/improvement-analysis.spec.ts`, `operator-intake.spec.ts`를 보강했다. 문서는 `07_INTELLIGENCE_DESIGN.md`, `10_TEST_ACCEPTANCE.md`, `11_DECISION_LOG.md`, 본 보고서를 동기화했다. 기존 테스트 삭제·SKIP 추가·제한시간 완화는 없다.
+
+`improvement-rules-v2`는 기존 R01~R08의 적용조건을 확대하지 않는다. 부족정보 후보의 Evidence는 질문 적용의 근거이며, 존재하지 않는 답변을 인용하지 않는다. 검토하지 못한 자료가 남으면 `PROCESSING_LIMITATION / NEEDS_SOURCE_REVIEW`를 제공하며 정보가 없다고 주장하지 않는다. 이미 답변이 발견된 Rule은 미검사 파일이 있어도 중복 질문을 만들지 않는다. 검사 범위를 알 수 없는 파일의 주제를 파일명으로 추정하지 않으므로, 미검사 자료가 어떤 항목을 답할 수 있을지 모르는 경우는 보수적인 추가 검토 후보가 남는다. 제외 사유의 의미상 타당성은 운영자가 판단한다.
+
+재사용 검증은 과거 Parse에 범위 attestation이 없다는 제약을 해결하기 위해 동일 파일을 다시 로컬 native 추출하므로 계산 비용이 발생한다. OCR/용도 전용 Parse는 재사용 allowlist 밖이며 로컬 재추출을 수행한다. COMPLETE와 scope_known은 추출 가능한 텍스트/위치의 범위만 나타내고 이미지·표·의미 전체의 검사를 보증하지 않는다. OCR 원문 위치·품질 한계 및 부분 검사 결과를 보존한다.
+
+공통 Schema·Migration·CHECK·Trigger·업무 State·Permission·기존 InformationRequest 원자적 생성/발송은 변경하지 않았다. 검사/후보의 기존 JSON에 목적·위치·재사용 검증·제외 이유를 추가한다. 과거 Run/Review/원본은 수정하지 않으며 v1은 기존 RULE_CHANGED 현재성 Guard로 신규 활용을 제한한다. 새 입력으로 운영자가 분석을 명시 실행해야 한다. 원본/Evidence/Version/회사·사업장 Scope·요청 불변성은 기존 Guard와 회귀로 검증한다. 실사용 DB·HTTPS 서비스·외부 AI는 접근/변경 대상이 아니다.
+
+아래는 보완 후 실제 실행 결과이며 기존 F절 수치는 최초 구현 당시의 기록이다.
+
+| 보완 후 검증 | 실제 결과 |
+|---|---|
+| Backend Unit 전체 | 157 passed |
+| 격리 PostgreSQL 전체 | 256 passed / 기존 Live opt-in 1 skipped, 399.30s |
+| 신규 합성 시나리오 | Rule Unit 9 cases + PostgreSQL 9 cases 추가, 기존 검증 유지 |
+| Frontend lint·TypeScript·Production build | PASS, 고유 Next 출력과 로컬 webpack build |
+| API Type 일치 | API_TYPES_MATCH |
+| Slice 1·2 집중 Playwright | 3 passed, 1.2m |
+| 전체 Playwright | 50 passed, 13.2m. 테스트 전송 설정 보완 후 새 격리 환경에서 전체 재실행 |
+
+최종 Commit·PR HEAD·CI Job 결과는 최신 PR Checks와 완료 채팅에 기록한다. PR #16은 Draft로 유지하며 사용자/GPT 인수는 PENDING이다.
+
+로컬 초기 집중 E2E(2 passed/1 failed)와 첫 전체 E2E(49 passed/1 failed)에서 기존 Slice 1의 UI 제출 후 두 번째 직접 API POST가 `ECONNRESET`으로 실패했다. 두 실행에서 해당 두 번째 POST는 Next/API 로그에 도달하지 않았다. 직접 API setup 호출의 유휴 연결 재사용과 관련된 전송 문제로 판단해 해당 테스트 helper에 `Connection: close`를 지정했고, 재시도 없이 집중 E2E 3 passed를 확인했다. 기존 검증문을 유지하며 Draft v2 ordinal=2 확인을 추가했다. 제품 프록시·Node/서비스 설정·보완요청 로직은 변경하지 않았다. 실패 로그는 Git 제외 `storage/private/runtime/slice2/slice2-e2e-initial-reset.log`, `e2e-initial-reset.log`에 보존한다.

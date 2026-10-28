@@ -6,7 +6,9 @@ async function login(page:Page,username:string,password:string,role='operator'){
 test('operator Slice1 real receipt excludes drafts and preserves submitted PDF/version after edits and F5',async({page,playwright})=>{
  test.setTimeout(180000);const c=fixture(),origin=process.env.DATCO_E2E_BASE_URL!,tag=Date.now().toString();
  await login(page,c.accounts.editor,c.password,'editor');
- const post=async(path:string,data:unknown)=>{const r=await page.request.post('/api/company'+path,{headers:{Origin:origin},data});expect(r.ok(),await r.text()).toBe(true);return r.json();};
+ // Keep direct API setup independent of idle Dev-server sockets while the browser
+ // performs the real submission. Do not retry a possibly committed mutation.
+ const post=async(path:string,data:unknown)=>{const r=await page.request.post('/api/company'+path,{headers:{Origin:origin,Connection:'close'},data});expect(r.ok(),await r.text()).toBe(true);return r.json();};
  const digits=String(Math.floor(100000000+Math.random()*899999999)).split('').map(Number),weights=[1,3,7,1,3,7,1,3,5],total=digits.reduce((n,d,i)=>n+d*weights[i],0)+Math.floor(digits[8]*5/10),number=digits.join('')+String((10-total%10)%10);
  const company=await post('',{name:'TEST Slice1 receipt '+tag+' 긴기업명표시검증제조기업운영업무자료연계검수',business_number:number,representative:'TEST synthetic person',contact:'TEST no real contact',financials:[2023,2024,2025].map(year=>({year,revenue:year===2023?'123456789012345678901234567890':year===2024?'1234.567890':'100',unit:year===2025?'unverified-unit':'million KRW',currency:'KRW',period:String(year)})).concat([{year:2024,revenue:'0.000000',unit:'원',currency:'KRW',period:'2024 Q1'}]),history:[{name:'TEST completed synthetic project',period:'2024',agency:'TEST agency',role:'TEST recipient'}]});
  const cid=company.id,site=(await post('/'+cid+'/sites',{data:{name:'TEST receipt site '+tag,address:'TEST synthetic address'}})).site;
@@ -20,6 +22,7 @@ test('operator Slice1 real receipt excludes drafts and preserves submitted PDF/v
  const overview=await(await op.get('/api/company/operator/intake')).json();expect(overview.companies.find((i:{company:{id:string}})=>i.company.id===cid).receipts).toEqual([]);
  await page.goto('/portal/company?company='+cid);await page.locator('aside').getByRole('button',{name:'개선요구 등록',exact:true}).click();await page.locator('article[data-root-id="'+v1.improvement_id+'"]').getByRole('button',{name:'상세보기',exact:true}).click();await page.getByRole('button',{name:'DATCO에 제출',exact:true}).click();await expect(page.getByRole('status').filter({hasText:'DATCO에 제출했습니다.'})).toBeVisible();
  const v2=await post('/'+cid+'/improvements',{data:{...data,title:'TEST unsubmitted draft '+tag,to_be:'TEST unsubmitted change'},improvement_id:v1.improvement_id,expected_ordinal:1});
+ expect(v2.ordinal).toBe(2);
  await post('/'+cid+'/sites',{data:{name:'TEST changed site '+tag,address:'TEST later address'},site_id:site.id,expected_ordinal:1});
  await login(page,c.accounts.operator,c.password);await expect(page.getByText('조회 가능한 수요기업',{exact:true})).toBeVisible();await expect(page.getByText('TEST unsubmitted draft '+tag,{exact:true})).toHaveCount(0);
  await page.getByRole('row').filter({hasText:data.title}).getByRole('button',{name:'제출 내용 검토',exact:true}).click();await expect(page).toHaveURL(/screen=improvement/);

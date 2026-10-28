@@ -181,3 +181,111 @@ def test_direct_manual_evidence_and_unsupported_image_scope(env):
     run=finish(e,v['id']);assert run['status']=='PARTIAL'
     assert any(c['content']=='TEST manual context' and c['data']['evidence'][0]['kind']=='EVIDENCE' for c in run['candidates'])
     assert not any(c['category']=='MISSING_INFORMATION' and c['data']['rule_id']=='R02' for c in run['candidates'])
+
+
+def synthetic_file(e,cid,sid,name,raw):
+    from app.core.config import get_settings
+    response=e['clients']['editor'].post('/company/'+cid+'/files',params=dict(site_id=sid),content=raw,
+        headers={'Origin':get_settings().web_origin,'X-Upload-Name':name})
+    assert response.status_code==200,response.text
+    return response.json()
+
+def synthetic_pdf(text='TEST ordinary document'):
+    from io import BytesIO
+    from reportlab.pdfgen import canvas
+    raw=BytesIO();pdf=canvas.Canvas(raw);pdf.drawString(40,760,text);pdf.save();return raw.getvalue()
+
+@pytest.mark.parametrize('industry',['manufacturing','service','logistics'])
+def test_normal_pdf_and_explicit_unrelated_exclusion_preserve_questions(env,industry):
+    from io import BytesIO
+    from PIL import Image
+    e=env;c,s,p,v,_=submitted(e)
+    call(e,'editor','/company/'+c['id']+'/profile',dict(data=dict(p,industry=industry),expected_ordinal=1))
+    pdf=synthetic_file(e,c['id'],s['id'],'TEST normal.pdf',synthetic_pdf(industry))
+    raw=BytesIO();Image.new('RGB',(10,10),'white').save(raw,format='PNG')
+    png=synthetic_file(e,c['id'],s['id'],'TEST unrelated.png',raw.getvalue())
+    other=synthetic_file(e,c['id'],s['id'],'TEST unrelated.txt',b'TEST marketing only')
+    src=call(e,'operator',f"/company/improvements/{v['id']}/analysis-inputs")
+    for invalid in ('  ','ab','x'*1001,'  '+'x'*999+'  '):
+        call(e,'operator',f"/company/improvements/{v['id']}/analysis-jobs",dict(idempotency_key=str(uuid4()),selection_token=src['selection_token'],excluded_files={other['id']:invalid},reason='TEST'),status=422)
+    reasons={png['id']:'TEST unrelated corporate logo',other['id']:'TEST unrelated marketing brochure'}
+    request(e,v['id'],reasons);run=finish(e,v['id'])
+    assert run['status']=='SUCCEEDED'
+    statuses={i['input_id']:i['data'] for i in run['inspections']}
+    for source in run['inputs']:
+        if source['file_id'] in reasons:
+            assert source['data']['exclude_reason']==reasons[source['file_id']]
+            assert statuses[source['id']]['status']=='EXCLUDED'
+    candidate=next(c for c in run['candidates'] if c['category']=='MISSING_INFORMATION' and c['data']['rule_id']=='R02')
+    assert not candidate['data']['uninspected_ids'] and len(candidate['data']['search_scope'])==3
+    assert any(i['data']['status']=='COMPLETE' and i['data']['digest']==pdf['digest'] for i in run['inspections'])
+
+@pytest.mark.parametrize('partial',[False,True])
+def test_one_failed_direct_pdf_keeps_found_answers_and_scopes_other_reviews(env,monkeypatch,partial):
+    from app.company.documents import DocumentError
+    from io import BytesIO
+    from pypdf import PdfReader,PdfWriter
+    import app.company.ocr as ocr
+    e=env;c,s,p=fresh(e)
+    good=synthetic_file(e,c['id'],s['id'],'TEST good.pdf',synthetic_pdf())
+    writer=PdfWriter()
+    if partial:writer.add_page(PdfReader(BytesIO(synthetic_pdf('TEST readable first page'))).pages[0])
+    writer.add_blank_page(width=100,height=100);raw=BytesIO();writer.write(raw)
+    bad=synthetic_file(e,c['id'],s['id'],'TEST failed.pdf',raw.getvalue())
+    synthetic_file(e,c['id'],s['id'],'TEST answer.txt','기존 시스템: TEST ERP'.encode())
+    proof=call(e,'editor','/company/'+c['id']+'/evidence',dict(file_id=bad['id'],site_id=s['id'],descriptor='TEST direct attachment',transcription='TEST direct source'))
+    v=call(e,'editor','/company/'+c['id']+'/improvements',dict(data=dict(title='TEST mixed PDF',original_text='물류 업무 처리시간 및 시스템 연계',as_is='업무 처리시간 개선',to_be='처리시간 개선',site_id=s['id'],evidence_ids=[proof['id']])) )
+    call(e,'editor','/company/improvements/'+v['id']+'/actions',dict(action='SUBMIT',note='TEST submit'))
+    request(e,v['id'])
+    def fail_ocr(raw):raise DocumentError('OCR_TIMEOUT')
+    monkeypatch.setattr(ocr,'ocr_pdf',fail_ocr)
+    run=finish(e,v['id'])
+    assert run['status']=='PARTIAL'
+    failed=next(i for i in run['inspections'] if 'OCR_TIMEOUT' in i['data']['limitations'])
+    assert failed['data']['status']==('PARTIAL' if partial else 'FAILED')
+    assert len(failed['data']['locations'])==(1 if partial else 0)
+    inp=next(x for x in run['inputs'] if x['id']==failed['input_id']);assert inp['origin']=='DIRECT_ATTACHMENT'
+    candidate=next(c for c in run['candidates'] if c['data']['rule_id']=='R02')
+    assert candidate['category']=='PROCESSING_LIMITATION' and candidate['data']['assessment']=='NEEDS_SOURCE_REVIEW'
+    assert candidate['data']['uninspected_ids']==[failed['id']]
+    assert not any(c['data']['rule_id']=='R05' for c in run['candidates'])
+    assert next(d for d in run['diagnostics']['rules'] if d['rule']=='R05')['outcome']=='FOUND'
+    assert any(i['data']['digest']==good['digest'] and i['data']['status']=='COMPLETE' for i in run['inspections'])
+
+@pytest.mark.parametrize('history',['finance_only','generic_then_specialized','unverified_range'])
+def test_parse_purpose_and_actual_native_range_are_verified(env,history):
+    from app.company.application import CompanyApplication
+    from app.company.documents import parse_document
+    from app.infrastructure import company_schema as C
+    e=env;c,s,p,v,_=submitted(e)
+    f=synthetic_file(e,c['id'],s['id'],'TEST purposes.pdf',synthetic_pdf('TEST finance data and general context'))
+    generic=None
+    if history=='generic_then_specialized':generic=call(e,'operator','/company/files/'+f['id']+'/parse',{})
+    with e['factory'].begin() as session:
+        a=CompanyApplication(session,e['files']);who=e['people']['operator']['id']
+        old=a.add(C.parses,file_id=f['id'],actor_id=who,parser_version='company-local-parser-v1' if history=='unverified_range' else 'company-business-finance-labelled-v1',error=None,limitations=[])
+        a.add(C.evidence,actor_id=who,company_id=c['id'],site_id=s['id'],file_id=f['id'],parse_id=old['id'],descriptor='PDF page 1',page=1,text='TEST selected finance fields only',mode='RULE_BASED_EXTRACTION')
+    job,_,src=request(e,v['id']);chosen=next(x for x in src['files'] if x['id']==f['id'])
+    assert chosen['parse_id']==(generic['id'] if generic else old['id'] if history=='unverified_range' else None)
+    run=finish(e,v['id']);inspection=run['inspections'][0]
+    assert inspection['data']['digest']==f['digest'] and inspection['data']['scope_known']
+    assert inspection['data']['purpose']=='IMPROVEMENT_LABEL_SEARCH'
+    if generic:
+        assert inspection['parse_id']==generic['id'] and inspection['data']['reuse_verified']
+    else:
+        assert inspection['parse_id']!=old['id'] and not inspection['data']['reuse_verified']
+    with e['factory']() as session:
+        a=CompanyApplication(session,e['files']);actual=a.rows(C.evidence,parse_id=inspection['parse_id'])
+        assert any('general context' in ev['text'] for ev in actual)
+        assert a.get(C.parses,inspection['parse_id'])['file_id']==f['id']
+
+def test_extraction_digest_mismatch_does_not_publish_source_text(env):
+    from dataclasses import replace
+    from app.company.documents import parse_document
+    e=env;c,s,p,v,_=submitted(e);upload(e,c['id'],s['id']);request(e,v['id'])
+    def wrong_digest(name,raw):return replace(parse_document(name,raw),digest='0'*64)
+    run=finish(e,v['id'],extractor=wrong_digest)
+    assert run['status']=='PARTIAL'
+    assert run['inspections'][0]['data']['error_code']=='ANALYSIS_PARSE_DIGEST_MISMATCH'
+    assert run['inspections'][0]['data']['locations']==[]
+    assert not any(ev['kind']=='DOCUMENT' for c in run['candidates'] for ev in c['data']['evidence'])

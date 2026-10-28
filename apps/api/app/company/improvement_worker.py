@@ -3,6 +3,7 @@ from dataclasses import replace
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+from hashlib import sha256
 from sqlalchemy import update
 from app.company.application import CompanyApplication
 from app.company.improvement_analysis import ImprovementAnalysis, KIND, digest
@@ -60,13 +61,29 @@ def process_improvement_one(factory=None,files=None,extractor=extract,before_pub
                 ImprovementAnalysis(a).target(who,m['version_id'])
                 f=a.get(C.files,x['file_id'])
                 if x['parse_id']:
-                    p=a.get(C.parses,x['parse_id']);item['reuse']=p
-                    item['evidence']=a.rows(C.evidence,parse_id=p['id'])
+                    p=a.get(C.parses,x['parse_id'])
+                    ev=a.rows(C.evidence,parse_id=p['id'])
+                else:p=None;ev=[]
             # Binary IO and bounded OCR run with no open DB session/transaction.
             raw=files.read(f['storage_key'],x['data']['digest'])
-            if not x['parse_id']:
-                try:item['parsed']=extractor(f['name'],raw)
-                except DocumentError as e:item['error']=str(e)
+            if f['id']!=x['file_id'] or f['digest']!=x['data']['digest'] or sha256(raw).hexdigest()!=f['digest']:
+                raise DocumentError('ANALYSIS_DIGEST_MISMATCH')
+            # Historical parses have no purpose/scope/digest attestation. Revalidate
+            # the native reader's exact range against the same immutable bytes.
+            # This is deliberately separate from OCR and specialized field extraction.
+            if p and p['file_id']==f['id'] and p['error'] is None and p['parser_version']=='company-local-parser-v1':
+                try:
+                    checked=parse_document(f['name'],raw)
+                    expected=sorted((l.descriptor,l.page or 0,l.text) for l in checked.locations)
+                    actual=sorted((e['descriptor'],e['page'] or 0,e['text']) for e in ev if e['file_id']==f['id'] and e['parse_id']==p['id'])
+                    if expected and not any('OCR/manual' in l for l in checked.limitations) and len(actual)==len(ev) and actual==expected and list(checked.limitations)==p['limitations']:
+                        item.update(reuse=p,evidence=ev,scope_verified=True)
+                except DocumentError:pass
+            if not item.get('reuse'):
+                try:
+                    item['parsed']=extractor(f['name'],raw)
+                    if item['parsed'].digest!=f['digest']:raise DocumentError('ANALYSIS_PARSE_DIGEST_MISMATCH')
+                except DocumentError as e:item.update(parsed=None,error=str(e))
             prepared.append(item)
     except Exception as exc:error=exc.reason if isinstance(exc,Denied) else 'ANALYSIS_INPUT_FAILED'
     if before_publish:before_publish(job,attempt)
@@ -100,7 +117,7 @@ def process_improvement_one(factory=None,files=None,extractor=extract,before_pub
                 e=a.get(C.evidence,source['evidence_id'])
                 if e['text'].strip():spans.append(dict(kind='EVIDENCE',evidence_id=e['id'],descriptor=e['descriptor'],quote=e['text'],mode=e['mode']))
         run=a.add(N.runs,analysis_kind=KIND,attempt_id=t['id'],actor_id=who.id,provider_version=VERSION,extractor_version='company-local-parser-v1/improvement-local-ocr-v1',missing=[],conflicts=[])
-        incomplete=False;limits=[]
+        incomplete=False;limits=[];coverage=[]
         for item in prepared:
             x=item['input'];p=item.get('reuse');ev=item['evidence'];parsed=item['parsed'];err=item['error'];limitations=[]
             if parsed:
@@ -109,16 +126,20 @@ def process_improvement_one(factory=None,files=None,extractor=extract,before_pub
             elif err and err!='NOT_INSPECTED':
                 p=a.add(C.parses,file_id=x['file_id'],actor_id=who.id,parser_version='company-local-parser-v1',error=err,limitations=[])
             if p:limitations=p['limitations']
-            status='NOT_INSPECTED' if err=='NOT_INSPECTED' else 'FAILED' if err else 'PARTIAL' if limitations or not ev else 'COMPLETE'
-            if status!='COMPLETE':incomplete=True
-            data=dict(status=status,method='REUSED_TEXT' if item.get('reuse') else 'LOCAL_OCR' if parsed and 'ocr' in parsed.parser_version else 'LOCAL_TEXT',
+            status=('EXCLUDED' if x['data'].get('exclude_reason') else 'UNSUPPORTED' if not x['data'].get('supported',Path(x['data']['name']).suffix.lower() in ('.pdf','.docx','.xlsx','.txt')) else 'NOT_INSPECTED') if err=='NOT_INSPECTED' else 'FAILED' if err or not ev else 'PARTIAL' if limitations else 'COMPLETE'
+            if status!='COMPLETE' and not (status=='EXCLUDED' and x['origin']=='COMMON_REFERENCE'):incomplete=True
+            data=dict(status=status,method='NOT_RUN' if err=='NOT_INSPECTED' else 'REUSED_TEXT' if item.get('reuse') else 'LOCAL_OCR' if parsed and 'ocr' in parsed.parser_version else 'LOCAL_TEXT',
                 parser_version=p['parser_version'] if p else None,error_code=err,limitations=limitations,
-                locations=[dict(descriptor=e['descriptor'],page=e['page']) for e in ev],scope_known=not bool(item.get('reuse')),
+                locations=[dict(descriptor=e['descriptor'],page=e['page']) for e in ev],scope_known=bool(parsed or item.get('scope_verified')),
+                purpose='IMPROVEMENT_LABEL_SEARCH',scope_kind='EXTRACTABLE_TEXT_ONLY',reuse_verified=bool(item.get('scope_verified')),
+                reuse_decision='VALIDATED_NATIVE_RANGE' if item.get('reuse') else 'NOT_INSPECTED' if err=='NOT_INSPECTED' else 'REEXTRACTED_OR_ATTEMPTED',
+                file_id=x['file_id'],selected_parse_id=x['parse_id'],exclude_reason=x['data'].get('exclude_reason',''),
                 digest=x['data']['digest'])
             inspection=a.add(S.inspections,run_id=run['id'],input_id=x['id'],parse_id=p['id'] if p else None,data=data)
+            coverage.append(dict(data,inspection_id=inspection['id'],origin=x['origin']))
             for e in ev:spans.append(dict(kind='DOCUMENT',evidence_id=e['id'],inspection_id=inspection['id'],file_id=x['file_id'],descriptor=e['descriptor'],page=e['page'],quote=e['text']))
-            if status!='COMPLETE':limits.append(dict(category='PROCESSING_LIMITATION',content=f"자료 {x['data']['name']}: {status}",reason='검사하지 못한 자료를 정보부족 증거로 사용하지 않음',data=dict(subject='document',rule_id='PROCESSING',rule_version=VERSION,claim_kind='PROCESSING_STATUS',evidence=[],inspection_id=inspection['id'],uncertainty='자료 내용 전체를 판단하지 못함',question='자료를 직접 확인하거나 읽을 수 있는 자료를 보완해 주세요.')))
-        output,diagnostics=analyze(v['data'],spans,incomplete=incomplete)
+            if status!='COMPLETE' and not (status=='EXCLUDED' and x['origin']=='COMMON_REFERENCE'):limits.append(dict(category='PROCESSING_LIMITATION',content=f"자료 {x['data']['name']}: {status}",reason='검사하지 못한 자료를 정보부족 증거로 사용하지 않음',data=dict(subject='document',rule_id='PROCESSING',rule_version=VERSION,claim_kind='PROCESSING_STATUS',evidence=[],inspection_id=inspection['id'],uncertainty='자료 내용 전체를 판단하지 못함',question='자료를 직접 확인하거나 읽을 수 있는 자료를 보완해 주세요.')))
+        output,diagnostics=analyze(v['data'],spans,coverage=coverage)
         for c in output+limits:
             c['data']['inspection_ids']=[x['id'] for x in a.rows(S.inspections,run_id=run['id'])]
             c['data']['searched_fields']=['original_text','as_is','problem','goal','to_be','required_functions','constraints','overview','process','confirmed_fact_values']

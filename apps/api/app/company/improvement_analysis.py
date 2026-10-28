@@ -28,10 +28,11 @@ class ImprovementAnalysis:
             if f['site_id'] not in (None,r['site_id']):continue
             inactive=bool(a.rows(B.file_events,file_id=f['id']))
             if inactive and f['id'] not in direct:continue
-            parses=[p for p in a.rows(C.parses,file_id=f['id']) if p['error'] is None]
+            # Purpose-specific registration/finance/history parsers are not document readers.
+            parses=[p for p in a.rows(C.parses,file_id=f['id']) if p['error'] is None and p['parser_version']=='company-local-parser-v1']
             supported=PurePath(f['name']).suffix.lower() in ('.pdf','.docx','.xlsx','.txt')
             files.append(dict(id=f['id'],name=f['name'],digest=f['digest'],direct=f['id'] in direct,inactive=inactive,
-                default_included=not inactive and supported,parse_id=parses[-1]['id'] if parses else None))
+                supported=supported,default_included=not inactive and supported,parse_id=parses[-1]['id'] if parses else None))
         current=a.get(C.companies,r['company_id'])['current_ordinal']
         profile=next(p for p in a.rows(C.inputs,company_id=r['company_id']) if p['ordinal']==current)
         site=next(s for s in a.rows(C.site_versions,site_id=r['site_id']) if s['ordinal']==v['site_ordinal'])
@@ -58,6 +59,8 @@ class ImprovementAnalysis:
         src=self.sources(who,vid)
         if src['selection_token']!=token:raise Denied('STALE_INPUT_VERSION',409)
         if any(fid not in {f['id'] for f in src['files']} for fid in excluded):raise Denied('OBJECT_NOT_FOUND',404)
+        if any(not isinstance(value,str) or len(value.strip())<3 or len(value)>1000 for value in excluded.values()):
+            raise Denied('EXCLUSION_REASON_REQUIRED',422)
         plan=dict(src,excluded=excluded,reason=reason);fingerprint=digest({k:v for k,v in plan.items() if k!='reason'})
         for m in a.rows(S.manifests,company_id=r['company_id']):
             job=a.get(N.jobs,m['job_id'])
