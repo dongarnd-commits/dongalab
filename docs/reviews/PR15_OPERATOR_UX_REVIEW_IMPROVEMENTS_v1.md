@@ -100,3 +100,11 @@ business-ux는 발송 전 확인 절차를 실제로 거치며 기업 응답·�
 - GitHub CI는 이 보고서가 포함된 Commit의 Actions 결과를 확인한다. 최종 Run URL은 완료 보고에 기재한다.
 - 파일 유형·연도 자동 분류, 서버 전체 검색·필터·페이지 조회, 분석·추천·매칭 및 후속 제안서 연결은 추가하지 않았다.
 - 실사용 HTTPS에는 이번 최종 UX를 자동 배포·재시작하지 않는다. 사용자·GPT 최종 검토 및 별도 적용 승인 대기다.
+
+### GitHub CI 재검증 이력
+- 첫 Push Commit 4929445의 DATCO CI Run 40606349781: Backend Unit·PostgreSQL Integration·Frontend Quality PASS, Public E2E 48 PASS / 1 FAIL. 수요기업·운영자·관리자 Preview는 모두 PASS.
+- 실패 위치는 운영자 로그아웃 후 재로그인 POST 응답 대기였다. 로컬 개발 모드 추가 실행도 48 PASS / 1 FAIL이며, 같은 재로그인에서 HTTP 422가 반환됐다. 이 실패 기록도 보존한다.
+- URL 변경 직후 입력하던 테스트에 최초 로그인 page.goto와 동일한 페이지 load 대기를 추가했다. 고정 지연·타임아웃 증가·검증 삭제·제품 인증 코드 변경은 없다. URL 변경만으로 페이지 입력 준비를 판단하지 않도록 보완했다.
+
+- 보완 후 개발 모드 운영자 관련 E2E: 2 PASS / 0 FAIL (46초). Production 전체 E2E: 49 PASS / 0 FAIL / 0 SKIP (8.1분), production build·lint·typecheck PASS.
+- 보완 후 로그: Private runtime의 pr15-final-ux-dev-fixed/review.log, pr15-final-ux-full4/review.log. 앞선 실패 로그는 pr15-final-ux-dev-repro/review.log에 유지한다. 검증용 임시 DB·역할은 실행기가 정리했으며 실사용 DB·PDF·계정·권한·HTTPS 프로세스는 변경하지 않았다.
