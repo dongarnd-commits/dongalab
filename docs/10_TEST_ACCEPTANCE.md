@@ -452,3 +452,8 @@ C07에서 PDF A→B 교체를 확인하면 단일 DRAFT의 일반 첨부에만 �
 ### PR #15 Slice 1 UI·실제 자료 검증 v1.2
 
 합성 E2E에서 긴 기업명, 30자리 금액 정밀도, 원래 단위의 한국어 표시, 중복 연도 제거, 출처별 근거 펼치기, 검토 완료 기록 없음 안내, 모바일 메뉴·기업/Version 선택 보존 및 기존 PDF/Scope/F5를 검증한다. 실제 기업자료 대조는 기존 승인된 DATCO_OPERATOR/Membership에 한해 읽기 전용으로 수행하며 합성 회귀 PASS와 구분한다. 추가 복사·권한 부여·기존 DB Migration·실제 기업자료 쓰기는 별도 승인 전 실행하지 않는다. 원본 응답/PDF는 공개 fixture·Git·CI에 포함하지 않는다. 확인된 제출 기록 수 이상의 재제출 이력을 있다고 가정하지 않는다.
+
+
+## Slice 2 승인된 로컬 분석·영속 요청 초안 — 2026-10-28
+
+Slice 2 인수는 합성자료·격리 PostgreSQL·실제 Worker·API·Web으로 SUBMIT→Manifest→추출/Rule→Candidate/Evidence→검토→영속 초안→최종 발송을 검증한다. 새 Draft 분리, 입력변경, 기업/사업장 격리, PDF digest/원문, OCR 실패, 후보 0건, 잘못된 근거, 동시 Job/lease, 불변 Review, F5/재로그인, 취소 발송0회, 이중발송/부분실패 원자성을 포함한다. 기존 테스트를 제거하거나 SKIP을 추가하지 않는다. 실행 결과와 미실행 항목은 reviews/SLICE2_IMPLEMENTATION_REPORT.md에 구분 기록한다.

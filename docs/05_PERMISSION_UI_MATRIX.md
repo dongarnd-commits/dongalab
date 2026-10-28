@@ -262,3 +262,8 @@ P01-P05 구현은 기존 O의 생성/작성/내용검토/승인요청과 지정 
 이 절은 상단 COMPANY_EDITOR의 일반 Proposal 승인 불가 원칙에 대한 명시적·제한적 증분이다. [사용자 승인](reviews/PR14_V14_CONTRACT_APPROVAL.md) D에 따라 COMPANY_RECORDED_AUTHORIZATION 요청의 정확히 지정된 같은 기업 COMPANY_EDITOR만 그 ProposalVersion의 내부 승인 근거를 기록·전송할 수 있다. 일반 Membership만으로 승인자 권한을 주지 않으며 DIRECT_APPROVER 요청에는 기존 지정 COMPANY_APPROVER만 결정한다. DATCO_ADMIN/OPERATOR의 기업 승인 대행은 계속 금지한다. 승인권자와 시스템 기록자는 구분하며 후자의 근거 기록은 전자의 전자서명이 아니다.
 
 기업 공개 조회는 실제 발송된 같은 Company의 정확한 ProposalVersion/문서에 한한다. 미발송 Draft, 내부 Review/전체 Manifest/비공개 기업 Fact 원문을 공개하지 않는다. Editor 공개 조회와 승인 근거 기록 권한을 구분하며 지정되지 않은 Editor의 승인/수정요청은 차단한다. File 교체·취소는 같은 Company Editor의 현재 등록에만 적용하고, 원본/Evidence/과거 승인·제출 참조는 계속 보존한다. 보완 요청 발송·검증은 Scoped Operator, 응답은 같은 Company Editor다. 자동 Company Access 부여는 없다.
+
+
+## Slice 2 승인된 로컬 분석·영속 요청 초안 — 2026-10-28
+
+새 Role은 없다. 분석 입력/Job/결과/검토는 DATCO_OPERATOR와 기존 Company Membership을 요구한다. 자료는 해당 기업의 공통자료 또는 선택 사업장으로 제한한다. 분석 초안은 생성 운영자만 조회·수정·발송한다. 기업에는 내부 후보·검토·미발송 초안을 공개하지 않는다. 최종 발송 후 기존 정보요청·응답·검토 권한을 유지한다.

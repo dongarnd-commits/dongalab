@@ -41,3 +41,6 @@ app.include_router(company_router)
 
 from app.api.workspace import router as workspace_router
 app.include_router(workspace_router)
+
+from app.api.improvement_analysis import router as improvement_analysis_router
+app.include_router(improvement_analysis_router)

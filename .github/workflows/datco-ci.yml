@@ -30,7 +30,7 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y fonts-nanum tesseract-ocr tesseract-ocr-kor
       - name: Synthetic inventory and comparator unit tests
         working-directory: apps/api
-        run: uv run --frozen pytest tests/test_dmp_inventory.py tests/test_capability_comparison.py tests/test_proposal_documents.py tests/test_company_documents.py tests/test_company_registration.py tests/test_company_business_documents.py tests/test_statement_documents.py tests/test_v14_contracts.py -v --junitxml=unit.xml
+        run: uv run --frozen pytest tests/test_improvement_rules.py tests/test_dmp_inventory.py tests/test_capability_comparison.py tests/test_proposal_documents.py tests/test_company_documents.py tests/test_company_registration.py tests/test_company_business_documents.py tests/test_statement_documents.py tests/test_v14_contracts.py -v --junitxml=unit.xml
   integration:
     name: PostgreSQL Integration
     runs-on: ubuntu-24.04

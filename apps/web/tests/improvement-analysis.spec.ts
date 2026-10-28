@@ -1,0 +1,33 @@
+import {test,expect,Page} from '@playwright/test';
+import {readFile} from 'node:fs/promises';
+import {createHash,randomUUID} from 'node:crypto';
+const fixture=()=>{const c=JSON.parse(process.env.DATCO_HANDOFF_CONTEXT!);return {...c,accounts:{...c.accounts,editor:c.accounts.slice1_editor,operator:c.accounts.slice1_operator,admin:c.accounts.slice1_admin}};};
+async function login(page:Page,user:string,password:string,role='operator'){await page.goto('/login');await page.getByLabel('아이디',{exact:true}).fill(user);await page.getByLabel('비밀번호',{exact:true}).fill(password);await page.getByRole('button',{name:'로그인',exact:true}).click();await expect(page).toHaveURL(new RegExp('/portal/'+(role==='editor'?'company':'operator')));}
+test('Slice2 real worker: submitted inputs, evidence, review, persistent draft, cancel and atomic send',async({page,playwright})=>{
+ test.setTimeout(180000);const c=fixture(),origin=process.env.DATCO_E2E_BASE_URL!,tag=randomUUID();
+ await login(page,c.accounts.editor,c.password,'editor');
+ const post=async(path:string,data:unknown)=>{const r=await page.request.post('/api/company'+path,{headers:{Origin:origin},data});expect(r.ok(),await r.text()).toBe(true);return r.json();};
+ const digits=String(Math.floor(100000000+Math.random()*899999999)).split('').map(Number),weights=[1,3,7,1,3,7,1,3,5],sum=digits.reduce((n,d,i)=>n+d*weights[i],0)+Math.floor(digits[8]*5/10),number=digits.join('')+String((10-sum%10)%10);
+ const company=await post('',{name:'TEST Slice2 '+tag,business_number:number});const cid=company.id;
+ const site=(await post('/'+cid+'/sites',{data:{name:'TEST Slice2 site',address:'TEST synthetic'}})).site;
+ const raw=await readFile(c.documents.find((p:string)=>p.endsWith('.pdf')));
+ const up=await page.request.post('/api/company/'+cid+'/files?site_id='+site.id,{headers:{Origin:origin,'X-Upload-Name':'TEST-Slice2.pdf'},data:raw});expect(up.ok()).toBe(true);const file=await up.json();expect(file.digest).toBe(createHash('sha256').update(raw).digest('hex'));
+ const data={title:'TEST Slice2 submitted '+tag,original_text:'업무 처리시간과 시스템 연계 개선',as_is:'업무 처리시간 개선 필요',to_be:'시스템 연계로 처리시간 개선',site_id:site.id};
+ const v1=await post('/'+cid+'/improvements',{data});await post('/improvements/'+v1.id+'/actions',{action:'SUBMIT',note:'TEST submit'});
+ await post('/'+cid+'/improvements',{data:{...data,original_text:'TEST private draft do not mix'},improvement_id:v1.improvement_id,expected_ordinal:1});
+ const admin=await playwright.request.newContext({baseURL:origin,extraHTTPHeaders:{Origin:origin}});expect((await admin.post('/api/notice/session',{data:{username:c.accounts.admin,password:c.password}})).ok()).toBe(true);expect((await admin.post('/api/company/'+cid+'/access',{data:{username:c.accounts.operator}})).ok()).toBe(true);await admin.dispose();
+ await login(page,c.accounts.operator,c.password);await page.goto('/portal/operator?company='+cid+'&version='+v1.id+'&screen=improvement');
+ const panel=page.getByTestId('improvement-analysis');await expect(panel.getByRole('heading',{name:'규칙 기반 1차 분석'})).toBeVisible();await panel.getByRole('button',{name:'분석 실행',exact:true}).click();
+ await expect.poll(async()=>{const runs=await(await page.request.get('/api/company/improvements/'+v1.id+'/analysis-runs')).json();return runs.length;},{timeout:60000}).toBeGreaterThan(0);
+ await expect(panel.getByText('현재 입력에 활용 가능한 분석',{exact:true})).toBeVisible({timeout:60000});
+ const runs=await(await page.request.get('/api/company/improvements/'+v1.id+'/analysis-runs')).json();const run=runs.at(-1);expect(run.manifest.version_id).toBe(v1.id);expect(JSON.stringify(run)).not.toContain('TEST private draft do not mix');expect(run.inspections.some((i:{data:{digest:string}})=>i.data.digest===file.digest)).toBe(true);
+ const cand=run.candidates.find((x:{category:string})=>x.category==='MISSING_INFORMATION');expect(cand).toBeTruthy();
+ const card=panel.locator('article[data-candidate-id="'+cand.id+'"]');await card.getByLabel('확인 의견',{exact:true}).fill('TEST source reviewed');await card.getByRole('button',{name:'요청 활용',exact:true}).click();await expect(card.getByText(/최근 검토: 요청 활용/)).toBeVisible();await card.locator('..').getByLabel('보완요청 초안에 포함').check();await panel.getByRole('button',{name:'선택 후보로 보완요청 초안 작성',exact:true}).click();
+ await expect(panel.getByRole('heading',{name:'분석 기반 보완요청 초안',exact:true})).toBeVisible();await panel.getByLabel('분석 요청 제목',{exact:true}).fill('TEST saved Slice2 '+tag);await panel.getByLabel('분석 요청 내용',{exact:true}).fill('TEST edited measurement request');await panel.getByRole('button',{name:'분석 초안 저장',exact:true}).click();await expect(panel.getByText('서버 저장본',{exact:true})).toBeVisible();
+ const url=page.url();await page.reload();await panel.getByRole('button',{name:new RegExp('TEST saved Slice2 '+tag)}).click();await expect(panel.getByLabel('분석 요청 내용',{exact:true})).toHaveValue('TEST edited measurement request');
+ await panel.getByRole('button',{name:'분석 초안 발송 확인',exact:true}).click();const dialog=panel.getByRole('dialog',{name:'분석 초안 최종 발송 확인'});await expect(dialog).toContainText(company.name);await dialog.getByRole('button',{name:'발송 취소',exact:true}).click();expect(await(await page.request.get('/api/company/'+cid+'/information-requests')).json()).toEqual([]);
+ await login(page,c.accounts.operator,c.password);await page.goto(url);await panel.getByRole('button',{name:new RegExp('TEST saved Slice2 '+tag)}).click();await expect(panel.getByLabel('분석 요청 내용',{exact:true})).toHaveValue('TEST edited measurement request');
+ await panel.getByRole('button',{name:'분석 초안 발송 확인',exact:true}).click();await dialog.getByRole('button',{name:'분석 초안 최종 발송',exact:true}).evaluate((b:HTMLButtonElement)=>{b.click();b.click();});await expect(panel.getByRole('status').filter({hasText:'분석 초안 발송 완료'})).toBeVisible();
+ const requests=await(await page.request.get('/api/company/'+cid+'/information-requests')).json();expect(requests).toHaveLength(1);expect(requests[0].improvement_version_id).toBe(v1.id);expect(requests[0].message).toBe('TEST edited measurement request');
+ await page.screenshot({path:test.info().outputPath('slice2-draft-delivered.png'),fullPage:true});
+});

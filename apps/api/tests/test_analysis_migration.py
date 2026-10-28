@@ -40,7 +40,7 @@ def test_safe_empty_down_and_up_model_columns(migration_schema):
  assert 'analysis_kind' not in {x['name'] for x in inspect(c).get_columns('analysis_runs',schema=schema)}
  m.upgrade()
  # Verify the historical round-trip also upgrades through the real remaining chain.
- for filename in ['d752a0012026_immutable_matching_inputs.py','e863p0012026_proposal_production.py','f974c0012026_company_workflow.py','fa85b0012026_company_business_sources.py','fb96c0012026_information_requests.py','fc07d0012026_recorded_authorization.py']:
+ for filename in ['d752a0012026_immutable_matching_inputs.py','e863p0012026_proposal_production.py','f974c0012026_company_workflow.py','fa85b0012026_company_business_sources.py','fb96c0012026_information_requests.py','fc07d0012026_recorded_authorization.py','fd18e0012026_company_file_reregistration.py','fe29s0022026_improvement_analysis.py']:
   path=ROOT/'apps/api/alembic/versions'/filename
   spec=importlib.util.spec_from_file_location('tested_following_'+filename,path);following=importlib.util.module_from_spec(spec);spec.loader.exec_module(following);following.upgrade()
  for name,t in Base.metadata.tables.items():

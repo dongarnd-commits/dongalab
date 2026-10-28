@@ -114,6 +114,8 @@ def main():
     while True:
         process_collection_one()
         process_one()
+        from app.company.improvement_worker import process_improvement_one
+        process_improvement_one()
         if args.once:
             return
         time.sleep(1)

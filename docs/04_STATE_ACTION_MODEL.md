@@ -655,3 +655,8 @@ Action은 03의 기존 Entity와 Attribute/검토 Record 의미를 사용한다.
 [승인안](reviews/PR14_V14_CONTRACT_APPROVAL.md)에 따라 InformationRequest는 기존 DRAFT/WAITING_RESPONSE/REVIEW_REQUIRED/REVISION_REQUESTED/VERIFIED 전이를 사용한다. 발송은 Scoped Operator, 응답 초안·제출은 Company Editor, 검증·재보완은 Scoped Operator다. 응답 제출/재제출은 새 불변 Version과 첨부·감사로 남기고 이전 제출본을 변경하지 않는다.
 
 Proposal은 독립 승인 State를 추가하지 않는다. DIRECT_APPROVER는 기존 지정 Approver의 직접 결정이며 COMPANY_RECORDED_AUTHORIZATION에만 요청에 지정된 Editor가 실제 내부 승인권자의 근거를 기록해 전송한다. 두 모드 모두 OPEN/현재 ProposalVersion/최신 입력·기존 내용 검토 Guard를 유지한다. 이전 승인으로 새 Version을 승인하지 않는다. Editor 기록 모드의 APPROVE에는 실제 승인권자/방식/시각/근거/최종 확인이 필수다. 파일 취소/교체는 승인·제출/재무 내용 자동 변경이 아니며 원본 보존 이벤트다.
+
+
+## Slice 2 승인된 로컬 분석·영속 요청 초안 — 2026-10-28
+
+분석 실행은 기존 QUEUED/PROCESSING/SUCCEEDED/PARTIAL/FAILED와 Attempt/lease를 사용한다. 요청 활용·제외·추가확인 검토는 Improvement 최종 CONFIRM과 별개이며 Improvement Root 상태를 자동 전환하지 않는다. REGISTER_IMPROVEMENT_CANDIDATE의 최종 확정 연결을 대신하지 않는다. 별도 요청 초안에서 최종 확인 시 기존 InformationRequest 생성·SEND를 단일 트랜잭션으로 수행한다. 취소는 발송을 발생시키지 않는다. 입력변경은 과거 분석을 보존하고 현재 활용 Guard로 처리한다.
