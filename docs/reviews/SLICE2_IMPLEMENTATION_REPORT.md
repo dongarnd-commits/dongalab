@@ -70,7 +70,11 @@ Slice 1의 정확한 접수/원본/F5·Scope, Company Fact 확인·충돌·기�
 
 ## H. GitHub
 
-전용 Feature Branch만 사용한다. 최종 구현 Commit SHA·Draft PR URL·최신 CI 결과는 완료 채팅 및 PR Checks에 기록한다. main Merge·Draft 해제·HTTPS 적용은 수행하지 않는다.
+- 구현 Commit: `399d1a9f47910919f8a94fefca5fff3b0731c624`.
+- Branch: `feat/datco-slice2-improvement-analysis`, origin 추적 및 Push 완료.
+- Draft PR: [#16](https://github.com/dongarnd-commits/dongalab/pull/16).
+- GitHub CI는 [최신 PR Checks](https://github.com/dongarnd-commits/dongalab/pull/16/checks)의 최종 HEAD를 기준으로 확인하며 실제 완료 결과를 완료 채팅에 보고한다. 보고서 동기화 Commit은 구현 코드를 변경하지 않는다.
+- main Merge·Draft 해제·HTTPS 적용·실사용 검수 DB Migration은 수행하지 않았다.
 
 ## I. 남은 범위와 의사결정
 
