@@ -90,6 +90,9 @@ jobs:
           PYTHONPATH: .
         run: uv run --frozen python tests/verify_api_types.py ../../storage/private/runtime/ci-types
       - run: npm run lint --prefix apps/web
+      - name: Operator review workflow unit tests
+        working-directory: apps/web
+        run: node --test tests/operator-review-unit.mjs
       - run: npm run build --prefix apps/web
   playwright:
     name: Playwright Public E2E
