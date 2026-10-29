@@ -121,3 +121,5 @@ UI 흐름 Unit 9 PASS, 요청 Projection·기존 파일/응답 이력 PostgreSQL
 초기 실패는 오류 주입 후 busy가 끝나기 전 테스트 클릭, 새 버튼명과 사이드바의 전역 선택자 충돌, 기존 상세 체류를 전제한 복귀/재로그인 기대값이었다. 실제 행/목록에 선택자를 한정하고 올바른 목록 및 기존 로그인 기본 동작을 검증하도록 수정했다. F5로 미리 채운 답변 textarea는 명시적 접근성 이름을 추가했다. 기존 보안·Version·원본/발송 검증은 완화하지 않았다. 전체 회귀의 최종 판정은 최종 Commit의 GitHub CI/Preview 결과와 완료 보고를 따른다.
 
 최종 제품 코드의 현재 업무별 표시 분기·초안 재조회·복원·저장/발송 안전성 집중 7 PASS. ESLint·TypeScript·고유 출력 production build PASS. 응답 기한 F5/재로그인, 최신 제출 답변·첨부 제외 후 과거 원본/Version 유지, 실제 검토 응답 유실 후 재조회, 409/이중 클릭·같은 Request 재보완 및 좁은 화면 overflow 검증을 포함한다. 이전 Source/실제 서비스 실행물은 교체하지 않았다. 생성된 Next 타입 참조와 Private Runtime 도구는 Commit 대상에서 제외한다.
+
+후속 집중 보완: 서로 다른 요청 카드가 같은 시점에 눌릴 때 공통 workflow 잠금이 Action을 건너뛰더라도 카드별 잠금이 해제되도록 `run()` Promise의 최종 처리에서 해제한다. 같은 기업의 두 실제 Request에서 동시 클릭 후 별도 저장 재개를 검증하는 합성 시나리오를 기존 요청 E2E에 추가했다. 집중 3 PASS와 TypeScript/ESLint PASS. Backend Action·권한·State는 변경하지 않았다. 최신 Commit의 전체 CI를 최종 근거로 확인한다.

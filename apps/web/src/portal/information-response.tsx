@@ -16,7 +16,7 @@ export function InformationResponse({item,w,operator,load,command,onReviewed,exp
  const editable=!operator&&['WAITING_RESPONSE','REVISION_REQUESTED'].includes(item.state);
  const changed=()=>window.dispatchEvent(new CustomEvent('datco-information-requests-changed',{detail:{company:w.cid}}));
  async function observe(){const rows=await load();const row=rows.find(r=>r.id===item.id);if(!row||row.company_id!==w.cid||row.improvement_version_id!==item.improvement_version_id)throw Error('요청 대상이 변경되었습니다.');return row;}
- function work(fn:()=>Promise<void>,message=''){if(lock.current||w.busy)return;lock.current=true;void w.run(async()=>{try{await fn();}finally{lock.current=false;}},message);}
+ function work(fn:()=>Promise<void>,message=''){if(lock.current||w.busy)return;lock.current=true;void w.run(fn,message).finally(()=>{lock.current=false;});}
  async function check(){
   const row=await observe();if(!alive.current)return;
   if(pendingReview.current){
