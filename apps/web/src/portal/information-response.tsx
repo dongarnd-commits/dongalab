@@ -71,7 +71,7 @@ export function InformationResponse({item,w,operator,load,command,onReviewed,exp
  }
  const files=(reply:ResponseRecord)=><>{reply.file_ids.length?reply.file_ids.map(id=><p key={id}><a className={secondary} href={'/api/company/files/'+id+'/download'}>{w.detail?.files.find(f=>f.id===id)?.name??'첨부 원본'}</a></p>):<p>제출 첨부자료 없음</p>}</>;
  const current=operator?submitted:editable?undefined:submitted;
- return <article data-request-id={item.id}><BusinessCard title={item.title}><p>{requestLabels[item.state]} · 기업 응답 기한: {item.due_date??'미지정'}</p><p>{w.detail?.company.name}</p>
+ return <article data-request-id={item.id}><BusinessCard title={item.title}><p>{!operator&&item.state==='REVIEW_REQUIRED'?'DATCO 담당자 확인 대기':requestLabels[item.state]} · 기업 응답 기한: {item.due_date??'미지정'}</p><p>{w.detail?.company.name}</p>
  {item.sent_at&&<p>발송 담당자 {operator?item.sender_name:'DATCO 담당자'} · {new Date(item.sent_at).toLocaleString('ko-KR')}</p>}
  {operator&&item.sender_name&&<details><summary>내부 발송 책임 정보</summary><p>{item.sender_name}</p></details>}
  {item.improvement_version_id&&<p>관련 제출본: {w.detail?.improvements.flatMap(i=>i.versions).find(v=>v.id===item.improvement_version_id)?.data.title} · v{w.detail?.improvements.flatMap(i=>i.versions).find(v=>v.id===item.improvement_version_id)?.ordinal}</p>}
