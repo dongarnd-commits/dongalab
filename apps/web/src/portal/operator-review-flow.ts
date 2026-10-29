@@ -1,11 +1,11 @@
 /** UI workflow only; every write still passes the existing backend guards. */
 export type ListView={search:string;filter:string;page:number;scroll?:number;inbox?:number};
-export type ReviewOrigin={page:'dashboard'|'improvement';view:ListView};
+export type ReviewOrigin={page:'dashboard'|'improvement'|'requests';view:ListView};
 export const emptyList=():ListView=>({search:'',filter:'',page:1});
 const bounded=(value:string|null,max:number)=>Math.min(max,Math.max(0,Number(value)||0));
 export function readOrigin(q:URLSearchParams,actor:string):ReviewOrigin|undefined{
  const from=q.get('review_from');
- if(q.get('context_actor')!==actor||!q.get('company')||!q.get('version')||!['dashboard','improvement'].includes(from??''))return;
+ if(q.get('context_actor')!==actor||!q.get('company')||!['dashboard','improvement','requests'].includes(from??'')||!q.get('version')&&from!=='requests')return;
  return {page:from as ReviewOrigin['page'],view:{search:(q.get('review_search')??'').slice(0,300),filter:(q.get('review_filter')??'').slice(0,40),page:Math.max(1,Math.floor(bounded(q.get('review_page'),100000))),scroll:bounded(q.get('review_scroll'),10000000),inbox:bounded(q.get('review_inbox'),10000000)}};
 }
 export function writeOrigin(q:URLSearchParams,origin?:ReviewOrigin){

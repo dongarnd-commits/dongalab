@@ -84,3 +84,40 @@ COMPLETED/NEEDS_CHECK는 저장 성공과 서버 상태 조회 이후 원래 대
 - 재로그인 직후 초기 조회가 끝나기 전 판단 저장을 누를 수 있는 실제 UI 경합을 발견했다. 입력·이력 로딩 Guard와 저장 전 정확한 Run·Review ordinal 재확인을 추가해 해결했다. 서버 Guard는 완화하지 않았다.
 - 전체 회귀의 최종 판정은 해당 Commit의 GitHub CI 결과를 따른다. HTTPS 배포 및 실제 데이터 인수는 이번 실행에 포함하지 않았다.
 - Frontend ESLint·TypeScript·고유 출력 디렉터리의 production build PASS. 생성된 Next 타입 참조는 원복했고 임시 실행파일은 Commit 대상에서 제외했다.
+## 최종 인수 UX 통합 보완 — 2026-10-29
+
+사용자 6개 영역 지시에 따른 추가 변경이다. 개발 Worktree/기존 PR16 Feature Branch에서만 작업하며 현재 HTTPS의 842fac1 frozen release·Backend·Worker·검수 DB·실제 검수 이력은 변경하지 않는다.
+
+- UX-01: 대시보드의 기업/Root/SUBMIT 집계를 유지하고 최근 제출본 기준 신규·검토/추가확인·재검토 과제 수 및 실제 Request 기준 답변 대기/검토 수를 추가했다. 개별 기업의 성공 flash는 대시보드에서 제거했고 메뉴 이동/F5에 재표시하지 않는다. 기존 개선요구 목록의 즉시 저장 안내는 유지한다.
+- UX-02: 기존 상태에 맞는 다음 행동을 표시한다. 답변검토·대기에서 정확한 Request가 1건이면 해당 Company·제출 Version·최신 제출 Response로 직접 진입하고, 여러 건이면 명시적 선택을 제공한다. 현재 검토에 지정된 소유 초안만 자동 복원하며 임의의 첫 요청/초안을 선택하지 않는다. URL은 인증·Scope·최신 Response 검증을 대체하지 않는다.
+- UX-03: 보완자료 요청 메뉴를 실제 Request 단위 검색·상태·검토 우선·20건 페이지 목록으로 바꿨다. 기업 공통 요청과 개선요구 요청 및 현재/완료 상태를 구분한다. 기존 목록 출처·검색·필터·페이지는 같은 Actor의 bounded URL Context로 복원한다.
+- UX-04: 요청 상세에서 최신 제출 답변·첨부/0건 안내·운영자 판단을 먼저 표시한다. 과거 초안/제출/검토는 접고 수동 신규 요청 작성은 명시적으로 펼친다. 기존 review Action 뒤 저장 Review와 최신 Request를 확인해야 원래 목록으로 복귀한다. 409/오류/응답 유실은 상세에서 조회하고 Actor·Response·판단·의견을 대조한다. 자동 재검토/재요청 생성은 없다.
+- UX-05: 로컬 파일명/크기/수/개별 취소, 현재 초안의 명시적 첨부 file_ids 선택·제외를 제공한다. 다음 ResponseVersion만 변경하고 이전 응답·원본·Digest·다른 참조는 보존한다. 업로드 성공/답변 저장 실패를 구분하고 기존 업로드 결과/digest를 재사용하며 원본 삭제 보상은 하지 않는다. 최신 제출·담당자 확인 대기를 우선 표시하고 기업 화면의 내부 ID 대신 DATCO 담당자를 표시한다.
+- UX-06: 수요기업 보완자료 요청/보완자료 요청 제목/수요기업에 요청할 사항/기업 응답 기한/요청 초안 저장/보완요청 발송 전 확인/수요기업에 발송하기/돌아가기로 정리했다. 초안 저장·미저장·저장 중·실패·발송 완료와 미발송 안내를 구분한다. 선택적 기한 계약과 Native dialog·취소/focus·결과 불확실 차단·원자적 Delivery를 유지한다.
+
+### Backend 및 공통 계약 영향
+
+제품 Backend 변경은 `app/company/operator_intake.py`의 읽기 Projection뿐이다. 새 endpoint 없이 기존 GET `/company/operator/intake` 응답에 `request_items`/`work_counts`를 추가했다. 기존 DATCO_OPERATOR role 및 listing의 Membership 회사 범위로 batch SQL을 읽으며 브라우저의 Company별 다중 호출을 추가하지 않는다. Request 목록은 제목·정확한 Version·현재 Response 식별자/업무 상태만 제공하고 답변 원문·검토 내용은 기존 기업별 GET으로 읽는다. 기존 소비자 필드는 보존한다.
+
+DB Schema/Migration/Domain State·Permission·Review/Respond/Send Action·Immutable Trigger·Rule/Worker·Capability/Matching/Proposal 계보 변경은 없다. 새 상태 enum이나 서버 권한 완화도 없다. 응답/검토의 기존 Action에는 새 idempotency 계약을 가정하지 않는다. UI lock과 서버 ordinal/state/unique guard를 유지하고 결과불명 시 정확한 이력 조회 후 사용자 명시 행동만 허용한다.
+
+### 검증 경계
+
+실제 서비스나 실제 기업자료로 입력하지 않았다. 합성기업/계정과 nonce 소유 DB·Role을 쓰는 기존 격리 harness를 재사용한다. UI Unit은 복수 요청 선택·정확한 Actor/응답/의견/파일 대조를 추가했고, API Integration은 요청별 집계·공통/Version 구분·Scope·반복 GET 무변경·동일 Request 재보완을 추가했다. 신규 E2E는 정확한 답변 이동·복수 요청 선택·409·실제 POST 응답 유실·이중 클릭·F5 목록 복귀·로컬 파일 취소·초안 첨부 제외·업로드 성공/답변 실패 재시도·과거 원본/Version 보존·동일 Request 재보완을 검증한다. 기존 E2E는 변경된 업무 동선/명칭/접힌 수동 폼의 기대값만 수정하고 보안/원본/발송/권한 검증을 유지한다. 응답 기한 F5·재로그인 회귀도 보강했다.
+
+복수 Review 저장 등 기존 비원자적 UI 단계의 부분 성공 가능성은 그대로 안내한다. 실제 사용자 인수와 HTTPS 반영은 별도 승인 이후이며 최종 CI와 구분한다.
+
+### 이번 변경 파일
+
+- Backend 제품: `apps/api/app/company/operator_intake.py`.
+- Frontend 제품: `operator-intake.tsx`, `operator-worklists.tsx`, `operator-review-flow.ts`, `improvement-analysis.tsx`, `company-requests.tsx`, 신규 `information-response.tsx`, 신규 `request-flow.ts` (모두 `apps/web/src/portal/`).
+- 테스트: `apps/api/tests/ci_run.py`, `test_operator_intake.py`; `apps/web/tests/business-ux.spec.ts`, `improvement-analysis.spec.ts`, `operator-final-ux.spec.ts`, `operator-intake.spec.ts`, `operator-review.spec.ts`, `operator-review-unit.mjs`, 신규 `request-ux.spec.ts`.
+- 문서: `docs/08_SCREEN_ACTION_SPEC.md`, `docs/10_TEST_ACCEPTANCE.md`, 이 보고서.
+
+### 이번 실행 기록
+
+UI 흐름 Unit 9 PASS, 요청 Projection·기존 파일/응답 이력 PostgreSQL 집중 22 PASS, 기존 Slice 2 PostgreSQL 집중 27 PASS. 신규 요청/응답 E2E 3 PASS 이후 변경된 Slice 1·2·기업 업무를 함께 실행한 집중 E2E 14 PASS를 확인했다. 추가된 응답 검토는 실제 API/합성 DB/Worker를 통과하며 이전 응답·파일과 같은 Request의 재보완을 확인했다.
+
+초기 실패는 오류 주입 후 busy가 끝나기 전 테스트 클릭, 새 버튼명과 사이드바의 전역 선택자 충돌, 기존 상세 체류를 전제한 복귀/재로그인 기대값이었다. 실제 행/목록에 선택자를 한정하고 올바른 목록 및 기존 로그인 기본 동작을 검증하도록 수정했다. F5로 미리 채운 답변 textarea는 명시적 접근성 이름을 추가했다. 기존 보안·Version·원본/발송 검증은 완화하지 않았다. 전체 회귀의 최종 판정은 최종 Commit의 GitHub CI/Preview 결과와 완료 보고를 따른다.
+
+최종 제품 코드의 현재 업무별 표시 분기·초안 재조회·복원·저장/발송 안전성 집중 7 PASS. ESLint·TypeScript·고유 출력 production build PASS. 응답 기한 F5/재로그인, 최신 제출 답변·첨부 제외 후 과거 원본/Version 유지, 실제 검토 응답 유실 후 재조회, 409/이중 클릭·같은 Request 재보완 및 좁은 화면 overflow 검증을 포함한다. 이전 Source/실제 서비스 실행물은 교체하지 않았다. 생성된 Next 타입 참조와 Private Runtime 도구는 Commit 대상에서 제외한다.

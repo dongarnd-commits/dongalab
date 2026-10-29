@@ -1,6 +1,27 @@
 """Operator receipt projection from immutable SUBMIT records; no new state or writes."""
 from app.infrastructure import company_schema as S
 from app.notice.domain import Denied
+from sqlalchemy import select
+from app.infrastructure import company_business_schema as B
+
+
+def request_items(a, who, companies):
+ """Read-only bounded-scope projection; never one browser request per company."""
+ a.role(who, 'DATCO_OPERATOR')
+ allowed={c['id']:c['name'] for c in companies}
+ if not allowed:return []
+ rows=[dict(r) for r in a.session.execute(select(B.requests, S.improvement_versions.c.ordinal.label('version_ordinal'),
+    S.improvement_versions.c.data.label('version_data')).outerjoin(S.improvement_versions,
+    B.requests.c.improvement_version_id==S.improvement_versions.c.id).where(B.requests.c.company_id.in_(allowed))).mappings()]
+ ids=[r['id'] for r in rows];latest={}
+ if ids:
+  for r in a.session.execute(select(B.responses).where(B.responses.c.request_id.in_(ids))).mappings():
+   if r['request_id'] not in latest or r['ordinal']>latest[r['request_id']]['ordinal']:latest[r['request_id']]=r
+ return [dict(id=r['id'],company_id=r['company_id'],company_name=allowed[r['company_id']],title=r['title'],
+    improvement_version_id=r['improvement_version_id'],version_ordinal=r['version_ordinal'],
+    improvement_title=(r['version_data'] or {}).get('title'),state=r['state'],due_date=r['due_date'],created_at=r['created_at'],
+    response_id=latest[r['id']]['id'] if r['id'] in latest and latest[r['id']]['submitted'] else None,
+    response_ordinal=r['response_ordinal']) for r in rows]
 
 
 def receipts(a, who, cid):
@@ -21,7 +42,13 @@ def overview(a, who):
  for company in companies:
   rows=receipts(a,who,company['id'])
   items.append(dict(company=company,receipts=rows))
- return dict(companies=items,company_count=len(items),submitted_count=sum(len(i['receipts']) for i in items),submitted_root_count=sum(len({r['root_id'] for r in i['receipts']}) for i in items))
+ requests=request_items(a,who,companies)
+ latest=[next(r for r in i['receipts'] if r['root_id']==root) for i in items for root in {r['root_id'] for r in i['receipts']}]
+ counts=dict(review_roots=sum(r['work']['status'] in ('NEW_RECEIPT','NEEDS_REVIEW') for r in latest),
+    recheck_roots=sum(r['work']['status'] in ('NEEDS_CHECK','REREVIEW') for r in latest),
+    waiting_requests=sum(r['state'] in ('WAITING_RESPONSE','REVISION_REQUESTED') for r in requests),
+    review_requests=sum(r['state']=='REVIEW_REQUIRED' for r in requests))
+ return dict(companies=items,company_count=len(items),submitted_count=sum(len(i['receipts']) for i in items),submitted_root_count=len(latest),request_items=requests,work_counts=counts)
 
 
 def detail(a, who, cid, version_id=None):

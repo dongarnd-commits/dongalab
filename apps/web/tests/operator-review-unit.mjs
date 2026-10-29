@@ -4,6 +4,21 @@ import {fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
 const bundle=await build({entryPoints:[fileURLToPath(new URL('../src/portal/operator-review-flow.ts',import.meta.url))],bundle:true,platform:'node',format:'esm',write:false});
 const {ReviewCommands,readOrigin,writeOrigin,usableReview,sameReviews}=await import('data:text/javascript;base64,'+Buffer.from(bundle.outputFiles[0].text).toString('base64'));
+const requests=await build({entryPoints:[fileURLToPath(new URL('../src/portal/request-flow.ts',import.meta.url))],bundle:true,platform:'node',format:'esm',write:false});
+const {requestTargets,savedResponse,savedReview}=await import('data:text/javascript;base64,'+Buffer.from(requests.outputFiles[0].text).toString('base64'));
+test('multiple requests remain explicit alternatives and completed/other-version requests are not chosen',()=>{
+ const rows=[{id:'a',improvement_version_id:'v1',state:'REVIEW_REQUIRED'},{id:'b',improvement_version_id:'v1',state:'REVIEW_REQUIRED'},{id:'c',improvement_version_id:'v2',state:'REVIEW_REQUIRED'},{id:'d',improvement_version_id:'v1',state:'VERIFIED'}];
+ assert.deepEqual(requestTargets(rows,'v1','RESPONSE_REVIEW').map(r=>r.id),['a','b']);assert.deepEqual(requestTargets(rows,'v2','WAITING_RESPONSE'),[]);
+});
+test('lost response reconciliation requires exact actor, ordinal, submit flag, content and file selection',()=>{
+ const body={expected_ordinal:2,message:' TEST ',submit:true,file_ids:['f1']},r={id:'r3',ordinal:3,actor_id:'E',message:'TEST',submitted:true,file_ids:['f1']};
+ assert.equal(savedResponse([r],body,'E')?.id,'r3');
+ for(const altered of [{actor_id:'other'},{ordinal:4},{message:'different'},{submitted:false},{file_ids:['f1','f2']}])assert.equal(savedResponse([{...r,...altered}],body,'E'),undefined);
+});
+test('review reconciliation never attributes another reviewer or another response to the current action',()=>{
+ const body={response_id:'r3',outcome:'REVISION_REQUESTED',note:' TEST '},r={id:'review',actor_id:'O',response_id:'r3',outcome:'REVISION_REQUESTED',note:'TEST'};
+ assert.equal(savedReview([r],body,'O')?.id,'review');assert.equal(savedReview([r],body,'other'),undefined);assert.equal(savedReview([{...r,response_id:'r2'}],body,'O'),undefined);
+});
 
 test('return context is actor-bound and uses a closed list of destinations',()=>{
  const q=new URLSearchParams({context_actor:'A',company:'C',version:'V'}),origin={page:'dashboard',view:{search:'TEST query',filter:'NEEDS_REVIEW',page:6,scroll:120,inbox:80}};

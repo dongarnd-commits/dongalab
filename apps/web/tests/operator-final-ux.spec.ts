@@ -16,14 +16,14 @@ async function setup(page:Page,playwright:Playwright,options:{neutral?:boolean;u
  const data={title:'TEST Final task '+tag,original_text:options.neutral?'TEST neutral':'서비스 업무 처리시간 개선 및 시스템 연계, 예산 검토와 희망 일정',as_is:options.neutral?'':'처리시간 개선 필요',to_be:options.neutral?'':'시스템 연계로 업무 개선',site_id:site.id,evidence_ids};
  const version=await post('/'+cid+'/improvements',{data});await post('/improvements/'+version.id+'/actions',{action:'SUBMIT',note:'TEST submit'});
  const admin=await playwright.request.newContext({baseURL:origin,extraHTTPHeaders:{Origin:origin}});await admin.post('/api/notice/session',{data:{username:c.accounts.admin,password:c.password}});expect((await admin.post('/api/company/'+cid+'/access',{data:{username:c.accounts.operator}})).ok()).toBe(true);await admin.dispose();
- await login(page);await page.getByLabel('접수목록 검색',{exact:true}).fill(data.title);await page.getByRole('button',{name:'제출 내용 검토',exact:true}).click();
+ await login(page);await page.getByLabel('접수목록 검색',{exact:true}).fill(data.title);await page.locator('.intake-inbox').getByRole('button',{name:/^(개선요구 검토|분석 상태 보기|분석 결과 검토|개선요구 재검토|검토 결과 보기|작성 중인 요청|보완요청 현황|기업 답변 검토|재검토)$/}).click();
  const panel=page.getByTestId('improvement-analysis');await expect(panel.getByText('현재 입력에 활용 가능한 분석',{exact:true})).toBeVisible({timeout:60000});
  const run=(await(await page.request.get('/api/company/improvements/'+version.id+'/analysis-runs')).json()).at(-1);
  return {company,cid,version,data,run,panel,tag};
 }
 
 test('compact candidates: explicit selection, partial review recovery, persistent draft and verified send return',async({page,playwright})=>{
- test.setTimeout(180000);const {cid,company,version,run,panel,data}=await setup(page,playwright);
+ test.setTimeout(180000);const {cid,version,run,panel,data}=await setup(page,playwright);
  const missing=run.candidates.filter((c:{category:string})=>c.category==='MISSING_INFORMATION');expect(missing.length).toBeGreaterThanOrEqual(2);
  await expect(panel.locator('[aria-label="시스템 분석 요약"]')).toContainText(missing.length+'건');
  expect(await panel.locator('textarea:visible').count()).toBe(1);await expect(panel.locator('details.intake-structure')).not.toHaveAttribute('open','');
@@ -42,24 +42,24 @@ test('compact candidates: explicit selection, partial review recovery, persisten
  current=(await(await page.request.get('/api/company/analysis-runs/'+run.run.id)).json());
  expect(current.candidates.find((c:{id:string})=>c.id===missing[0].id).reviews).toHaveLength(1);expect(current.candidates.find((c:{id:string})=>c.id===missing[1].id).reviews).toHaveLength(0);
  expect(await(await page.request.get('/api/company/improvements/'+version.id+'/analysis-drafts')).json()).toEqual([]);
- await panel.getByRole('button',{name:'보완요청 작성',exact:true}).click();await expect(panel.getByRole('heading',{name:'분석 기반 보완요청 초안',exact:true})).toBeVisible();
+ await panel.getByRole('button',{name:'보완요청 작성',exact:true}).click();await expect(panel.getByRole('heading',{name:'수요기업 보완자료 요청',exact:true})).toBeVisible();
  expect(firstPosts).toBe(1);await page.unroute(reviewPattern);
  current=(await(await page.request.get('/api/company/analysis-runs/'+run.run.id)).json());
  for(const c of current.candidates){if(missing.slice(0,2).some((m:{id:string})=>m.id===c.id)){expect(c.reviews).toHaveLength(1);expect(c.reviews[0].decision).toBe('USE_FOR_REQUEST');expect(c.reviews[0].note).toBe('TEST common human review');}else expect(c.reviews).toEqual([]);}
  const drafts=await(await page.request.get('/api/company/improvements/'+version.id+'/analysis-drafts')).json();expect(drafts).toHaveLength(1);expect(drafts[0].versions[0].review_ids).toHaveLength(2);
- await expect(panel.getByLabel('분석 요청 내용',{exact:true})).toHaveValue(/TEST edited specific question/);
- await panel.getByLabel('분석 요청 제목',{exact:true}).fill('TEST compact saved');await panel.getByRole('button',{name:'분석 초안 저장',exact:true}).click();await expect(panel.getByText('서버 저장본',{exact:true})).toBeVisible();
- await page.reload();await panel.getByRole('button',{name:'TEST compact saved · v2',exact:true}).click();await expect(panel.getByLabel('분석 요청 내용',{exact:true})).toHaveValue(/TEST edited specific question/);
- await panel.getByRole('button',{name:'분석 초안 발송 확인',exact:true}).click();const dialog=panel.getByRole('dialog');await expect(dialog).toContainText('제출본 v1');
+ await expect(panel.getByLabel('수요기업에 요청할 사항',{exact:true})).toHaveValue(/TEST edited specific question/);
+ await panel.getByLabel('기업 응답 기한',{exact:true}).fill('2026-12-31');await panel.getByLabel('보완자료 요청 제목',{exact:true}).fill('TEST compact saved');await panel.getByRole('button',{name:'요청 초안 저장',exact:true}).click();await expect(panel.getByText('초안 저장 완료',{exact:true})).toBeVisible();
+ await page.reload();await panel.getByRole('button',{name:'TEST compact saved · v2',exact:true}).click();await expect(panel.getByLabel('기업 응답 기한',{exact:true})).toHaveValue('2026-12-31');await expect(panel.getByLabel('수요기업에 요청할 사항',{exact:true})).toHaveValue(/TEST edited specific question/);
+ await panel.getByRole('button',{name:'수요기업에 보완요청 보내기',exact:true}).click();const dialog=panel.getByRole('dialog');await expect(dialog).toContainText('제출본 v1');
  expect(await(await page.request.get('/api/company/'+cid+'/information-requests')).json()).toEqual([]);
- await dialog.getByRole('button',{name:'발송 취소',exact:true}).click();await expect(panel.getByRole('button',{name:'분석 초안 발송 확인',exact:true})).toBeFocused();
- await panel.getByRole('button',{name:'분석 초안 발송 확인',exact:true}).click();
+ await dialog.getByRole('button',{name:'돌아가기',exact:true}).click();await expect(panel.getByRole('button',{name:'수요기업에 보완요청 보내기',exact:true})).toBeFocused();
+ await panel.getByRole('button',{name:'수요기업에 보완요청 보내기',exact:true}).click();
  let deliveryProbe=true;
  await page.route('**/analysis-drafts/'+drafts[0].id,route=>{if(deliveryProbe&&route.request().method()==='GET'){deliveryProbe=false;return route.abort();}return route.continue();});
- await dialog.getByRole('button',{name:'분석 초안 최종 발송',exact:true}).evaluate((b:HTMLButtonElement)=>{b.click();b.click();});await expect(dialog.getByRole('alert')).toBeVisible();
- await expect(dialog.getByRole('button',{name:'분석 초안 최종 발송',exact:true})).toBeDisabled();await expect(panel).toBeVisible();
+ await dialog.getByRole('button',{name:'수요기업에 발송하기',exact:true}).evaluate((b:HTMLButtonElement)=>{b.click();b.click();});await expect(dialog.getByRole('alert')).toBeVisible();
+ await expect(dialog.getByRole('button',{name:'수요기업에 발송하기',exact:true})).toBeDisabled();await expect(panel).toBeVisible();
  await dialog.getByRole('button',{name:'저장·발송 상태 확인',exact:true}).click();
- await expect(page.getByRole('heading',{name:'업무 대시보드',exact:true})).toBeVisible();await expect(page.getByRole('status').filter({hasText:'보완요청 발송이 확인되었습니다.'})).toContainText(company.name);
+ await expect(page.getByRole('heading',{name:'업무 대시보드',exact:true})).toBeVisible();await expect(page.locator('.intake-feedback')).toHaveCount(0);
  await expect(page.getByLabel('접수목록 검색',{exact:true})).toHaveValue(data.title);await expect(page.getByRole('row').filter({hasText:data.title})).toContainText('보완요청 발송·답변 대기');
  const requests=await(await page.request.get('/api/company/'+cid+'/information-requests')).json();expect(requests).toHaveLength(1);expect(requests[0].improvement_version_id).toBe(version.id);
  await page.screenshot({path:test.info().outputPath('final-compact-send-return.png'),fullPage:true});
@@ -76,7 +76,7 @@ test('judgement errors and response loss stay in detail, exact history reconcili
  await panel.getByRole('button',{name:'추가 확인 필요 — 판단 보류',exact:true}).evaluate((b:HTMLButtonElement)=>{b.click();b.click();});
  await expect(panel.getByRole('alert')).toBeVisible();await expect(panel.getByRole('button',{name:'확인한 결과로 목록 복귀',exact:true})).toBeVisible();await expect(panel).toBeVisible();
  const saved=await(await page.request.get('/api/company/improvements/'+version.id+'/submission-reviews')).json();expect(saved.history).toHaveLength(1);expect(saved.history[0].decision).toBe('NEEDS_CHECK');
- await panel.getByRole('button',{name:'확인한 결과로 목록 복귀',exact:true}).click();await expect(page.getByRole('status').filter({hasText:'검토 판단 저장이 확인되었습니다.'})).toContainText('추가 확인 필요');
+ await panel.getByRole('button',{name:'확인한 결과로 목록 복귀',exact:true}).click();await expect(page.getByRole('heading',{name:'업무 대시보드',exact:true})).toBeVisible();await expect(page.locator('.intake-feedback')).toHaveCount(0);
 });
 
 test('list origin, search filter page and filtered-out success survive F5 and re-login',async({page,playwright})=>{
@@ -86,7 +86,7 @@ test('list origin, search filter page and filtered-out success survive F5 and re
  await page.route(augment,async route=>{const real=await(await route.fetch()).json();const companies=real.companies.filter((x:{company:{id:string}})=>x.company.id===cid);const current=companies[0].receipts[0];current.submitted_at='2020-01-01T00:00:00Z';for(let i=0;i<105;i++)companies.push({company:{id:'TEST-'+i,name:'TEST Final '+tag+' fake '+i},receipts:[{...current,root_id:'TEST-root-'+i,version_id:'TEST-version-'+i,title:'TEST fake '+i,submitted_at:'2025-01-01T00:00:00Z',work:{status:'NEEDS_REVIEW',label:'검토 필요',next_action:'제출 내용 검토'}}]});await route.fulfill({json:{...real,companies,company_count:companies.length}});});
  await page.reload();await page.getByLabel('접수목록 검색',{exact:true}).fill('TEST Final '+tag);await page.getByLabel('업무 상태 필터',{exact:true}).selectOption('NEEDS_REVIEW');
  for(let i=0;i<5;i++)await page.getByRole('button',{name:'다음 페이지',exact:true}).click();
- await page.locator('tr[data-version-id="'+version.id+'"]').getByRole('button',{name:'제출 내용 검토',exact:true}).click();await expect(panel).toBeVisible();
+ await page.locator('tr[data-version-id="'+version.id+'"]').getByRole('button',{name:/^(개선요구 검토|분석 상태 보기|분석 결과 검토|개선요구 재검토|검토 결과 보기|작성 중인 요청|보완요청 현황|기업 답변 검토|재검토)$/}).click();await expect(panel).toBeVisible();
  await page.reload();await expect(panel).toBeVisible();await page.getByRole('button',{name:'로그아웃',exact:true}).first().click();await page.getByRole('dialog').getByRole('button',{name:'로그아웃',exact:true}).click();await expect(page).toHaveURL(/login\?returnTo=/);await login(page,'operator',true);await expect(panel).toBeVisible();
  await panel.getByLabel('운영자 검토 의견',{exact:true}).fill('TEST hold from filtered page');await panel.getByRole('button',{name:'추가 확인 필요 — 판단 보류',exact:true}).click();
  await expect(page.getByRole('heading',{name:'개선요구 검토',exact:true})).toBeVisible();await expect(panel).toHaveCount(0);await expect(page.getByLabel('접수목록 검색',{exact:true})).toHaveValue('TEST Final '+tag);await expect(page.getByLabel('업무 상태 필터',{exact:true})).toHaveValue('NEEDS_REVIEW');
