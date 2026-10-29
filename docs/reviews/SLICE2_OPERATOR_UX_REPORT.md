@@ -111,7 +111,7 @@ DB Schema/Migration/Domain State·Permission·Review/Respond/Send Action·Immuta
 
 - Backend 제품: `apps/api/app/company/operator_intake.py`.
 - Frontend 제품: `operator-intake.tsx`, `operator-worklists.tsx`, `operator-review-flow.ts`, `improvement-analysis.tsx`, `company-requests.tsx`, 신규 `information-response.tsx`, 신규 `request-flow.ts` (모두 `apps/web/src/portal/`).
-- 테스트: `apps/api/tests/ci_run.py`, `test_operator_intake.py`; `apps/web/tests/business-ux.spec.ts`, `improvement-analysis.spec.ts`, `operator-final-ux.spec.ts`, `operator-intake.spec.ts`, `operator-review.spec.ts`, `operator-review-unit.mjs`, 신규 `request-ux.spec.ts`.
+- 테스트: `apps/api/tests/ci_run.py`, `test_operator_intake.py`; `apps/web/tests/business-ux.spec.ts`, `improvement-analysis.spec.ts`, `operator-final-ux.spec.ts`, `operator-intake.spec.ts`, `operator-review.spec.ts`, `operator-review-unit.mjs`, `portal-handoff.spec.ts`, 신규 `request-ux.spec.ts`.
 - 문서: `docs/08_SCREEN_ACTION_SPEC.md`, `docs/10_TEST_ACCEPTANCE.md`, 이 보고서.
 
 ### 이번 실행 기록
@@ -123,3 +123,5 @@ UI 흐름 Unit 9 PASS, 요청 Projection·기존 파일/응답 이력 PostgreSQL
 최종 제품 코드의 현재 업무별 표시 분기·초안 재조회·복원·저장/발송 안전성 집중 7 PASS. ESLint·TypeScript·고유 출력 production build PASS. 응답 기한 F5/재로그인, 최신 제출 답변·첨부 제외 후 과거 원본/Version 유지, 실제 검토 응답 유실 후 재조회, 409/이중 클릭·같은 Request 재보완 및 좁은 화면 overflow 검증을 포함한다. 이전 Source/실제 서비스 실행물은 교체하지 않았다. 생성된 Next 타입 참조와 Private Runtime 도구는 Commit 대상에서 제외한다.
 
 후속 집중 보완: 서로 다른 요청 카드가 같은 시점에 눌릴 때 공통 workflow 잠금이 Action을 건너뛰더라도 카드별 잠금이 해제되도록 `run()` Promise의 최종 처리에서 해제한다. 같은 기업의 두 실제 Request에서 동시 클릭 후 별도 저장 재개를 검증하는 합성 시나리오를 기존 요청 E2E에 추가했다. 집중 3 PASS와 TypeScript/ESLint PASS. Backend Action·권한·State는 변경하지 않았다. 최신 Commit의 전체 CI를 최종 근거로 확인한다.
+
+전체 CI의 첫 완료 실행에서는 Backend Unit/Integration/Frontend Quality/Preview가 통과했고 E2E 57 PASS / 1 FAIL이었다. 실패는 기존 `portal-handoff` 테스트의 옛 버튼명 `제출 내용 검토` 잔존에 따른 대기 timeout이었다. 해당 행의 새 상태별 버튼 기대값만 수정했으며 기업·정확한 Version·원문·파일 해시·권한 검증을 유지했다. 이 인계 파일의 기존 3개 E2E를 별도 격리 실행해 3 PASS를 확인했다. 제품 코드의 추가 변경은 없으며 수정한 최신 HEAD 전체 CI로 최종 판정한다.
