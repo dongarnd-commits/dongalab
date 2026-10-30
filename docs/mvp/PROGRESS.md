@@ -44,3 +44,10 @@ main Merge/HTTPS 배포/공유 DB 변경은 승인 범위가 아니다. 외부 A
 - 추가발견1건: OperatorNotices 분석버튼version_id가Backend expected_version과달라422예상. 포털Agent가좁은수정및미분석공고부터시작하는실브라우저검증작성중. 이항목완료전최종READY선언안함.
 - 기존Bizinfo키정확비교검사: 변경75파일에키포함0(키미출력/미저장). 실제고객자료외부AI전송0, 외부4종NOT_CONFIGURED는정상목표.
 - 다음: GovUI payload/분석전원문 E2E 통합→최종전체 E2E→인수문서실측반영→통합명시Push/DraftPR→최신GitHub7Job확인. 현재PARTIAL.
+
+## 최종 코드 동결
+
+- root 통합 기능HEAD3102548까지, portals bf5fabb / solutions0d4d156 통합. Gov UI expected_version 필드 및생성API Body타입검증수정완료.
+- 미분석Notice원문입력에서실제UI/Worker/사람요건검토까지신규브라우저5건모두PASS(1.7분). FileACK→Fact→Rule→구조화와MVP16전달/회사수정요청도포함.
+- 최종소스Frontend lint/TypeScript/Production build PASS(FINAL_FRONTEND_QUALITY_PASS). 새소스동결, 허용된CI오류수정외추가개발없음.
+- tests/ci_run.py에신규공고spec을focused/full모두등록. 다음은최종전체63브라우저회귀, 이후인수문서최종화/통합Push/DraftPR/최신CI. 현재전체확인전PARTIAL.
