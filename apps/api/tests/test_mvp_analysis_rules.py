@@ -70,3 +70,52 @@ def test_rule_result_retains_exact_context_and_unreviewed_status():
     assert result.context==context and result.provider_version==VERSION
     assert result.structure['review_status']=='UNREVIEWED_CANDIDATES'
     assert result.structure['cause_candidates']==[]
+
+@pytest.mark.parametrize('target,field',[
+    ('목표: 처리시간 5분','goal'),
+    ('처리시간 5분으로 단축 희망','to_be'),
+    ('예상 처리시간 5분','original_text')])
+def test_desired_or_predicted_numbers_are_not_observed_measurement_baselines(target,field):
+    wanted=dict(span(target),field=field)
+    sources=[span('업무 처리시간 개선 필요'),wanted]
+    out,diagnostics=analyze({},sources)
+    candidate=next(c for c in out if c['data']['rule_id']=='R02')
+    assert candidate['category']=='MISSING_INFORMATION'
+    assert candidate['data']['evidence']==[sources[0]]
+    assert next(d for d in diagnostics if d['rule']=='R02')['outcome']=='NOT_FOUND_IN_SCOPE'
+
+
+def test_mixed_goal_and_actual_lines_keep_the_exact_actual_source():
+    source=span('목표: 처리시간 5분\\n현재 처리시간은 2026년 평균 25분')
+    out,diagnostics=analyze({},[span('업무 처리시간 개선 필요'),source])
+    assert not any(c['data']['rule_id']=='R02' for c in out)
+    assert next(d for d in diagnostics if d['rule']=='R02')['evidence']==[source]
+
+def test_external_provider_is_denied_before_injected_local_rule_callback():
+    def forbidden(*args,**kwargs):
+        pytest.fail('RULE_CALLBACK_MUST_NOT_RUN_FOR_EXTERNAL_PROVIDER')
+    with pytest.raises(Denied,match='ANALYSIS_PROVIDER_NOT_CONFIGURED'):
+        execute_provider('GPT',AnalysisContext('C','V','a'*64),{},[],rule_analyzer=forbidden)
+
+# Gold expectations are business cases, not generated from regex or provider output.
+GOLD_CASES=[
+ ('PRODUCTION','생산 업무 처리시간 측정이 필요하다.',{'R02','R04'}),
+ ('QUALITY','품질 불량 검사 결과를 수기 집계한다.',{'R02'}),
+ ('LOGISTICS','창고 입출고 업무 처리시간을 줄여야 한다.',{'R02','R04'}),
+ ('HR','인사 근태 업무의 중복 입력을 없애려 한다.',{'R04'}),
+ ('ACCOUNTING','회계 전표 입력 오류가 발생한다.',set()),
+ ('COLLABORATION','협업 전자결재 업무의 승인 처리가 지연된다.',{'R04'}),
+]
+
+@pytest.mark.parametrize('domain,current,questions',GOLD_CASES)
+def test_business_gold_question_sets_and_source_grounding(domain,current,questions):
+    data=dict(as_is=current,to_be='등록한 기록을 조회한다.')
+    sources=[dict(span(value),field=field) for field,value in data.items()]
+    result=execute_provider('RULE',AnalysisContext('TEST','TEST_V','a'*64),data,sources)
+    assert {c['data']['rule_id'] for c in result.candidates if c['category']=='MISSING_INFORMATION'}==questions
+    assert domain in {d['id'] for d in result.structure['domains']}
+    assert result.structure['cause_candidates']==[]
+    for candidate in result.candidates:
+        validate(candidate,sources)
+        assert candidate['data']['rule_id'] in {'R01','R02','R03','R04','R05','R06','R07','R08'}
+        assert candidate['data']['claim_kind']!='CONFIRMED_FACT'

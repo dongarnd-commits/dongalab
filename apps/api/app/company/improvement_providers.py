@@ -45,9 +45,12 @@ class ImprovementAnalysisProvider(Protocol):
                 *, coverage=(), incomplete=False) -> StructuredAnalysisResult: ...
 
 class RuleProvider:
+    def __init__(self, analyzer=None):
+        self.analyzer=analyzer
+
     def analyze(self, context, data, spans, *, coverage=(), incomplete=False):
         from app.company.improvement_rules import analyze
-        candidates, diagnostics = analyze(data, spans, coverage=coverage, incomplete=incomplete)
+        candidates, diagnostics = (self.analyzer or analyze)(data, spans, coverage=coverage, incomplete=incomplete)
         def texts(*subjects):
             return [dict(text=c['content'], evidence=c['data']['evidence'],
                          uncertainty=c['data']['uncertainty']) for c in candidates
@@ -65,9 +68,9 @@ class RuleProvider:
             ('제한된 명시 표현·규칙 분석; 범용 AI 의미분석 아님',
              '원인·추천·정보부족은 사람 검토 후보이며 확정 사실이 아님'))
 
-def execute_provider(name, context, data, spans, *, coverage=(), incomplete=False):
+def execute_provider(name, context, data, spans, *, coverage=(), incomplete=False, rule_analyzer=None):
     ensure_provider(name)
-    result=RuleProvider().analyze(context,data,spans,coverage=coverage,incomplete=incomplete)
+    result=RuleProvider(rule_analyzer).analyze(context,data,spans,coverage=coverage,incomplete=incomplete)
     if result.context!=context or result.provider!='RULE':
         raise Denied('ANALYSIS_SOURCE_MISMATCH',409)
     return result

@@ -39,10 +39,17 @@ ANSWERS={
 
 def answer_span(rule,spans,present):
     for source in spans:
-        found=re.search(present,source['quote']) or re.search(ANSWERS.get(rule,r'(?!)'),source['quote'])
-        if found:
-            value=source['quote'][found.start():found.end()+12]
-            return source,'DECLARED_UNKNOWN' if re.search(r'미정|모름|추후\s*확인',value) else 'FOUND'
+        for line in source['quote'].splitlines():
+            # A desired/predicted value is not an observed baseline. Preserve the
+            # whole immutable source as Evidence while inspecting bounded lines.
+            if rule=='R02':
+                baseline=bool(re.search(r'현재|실측|측정|기준|평균|발생',line))
+                if not baseline and (source.get('field') in ('goal','to_be') or re.search(r'목표|희망|예상|추정',line)):
+                    continue
+            found=re.search(present,line) or re.search(ANSWERS.get(rule,r'(?!)'),line)
+            if found:
+                value=line[found.start():found.end()+12]
+                return source,'DECLARED_UNKNOWN' if re.search(r'미정|모름|추가\s*확인',value) else 'FOUND'
     return None,None
 
 UNITS={'초':('TIME',Decimal(1)),'분':('TIME',Decimal(60)),'시간':('TIME',Decimal(3600)),
