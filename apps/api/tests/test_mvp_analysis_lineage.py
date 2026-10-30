@@ -402,3 +402,158 @@ def test_pending_other_company_job_is_processed_without_becoming_target_version_
     assert result['manifest']['company_id'] != older['company']['id']
     assert call(e, 'operator', '/company/analysis-jobs/' + old_job['id'])['state'] in ('SUCCEEDED', 'PARTIAL')
     assert call(e, 'operator', '/company/improvements/' + older['source']['id'] + '/analysis-runs')[-1]['manifest']['version_id'] == older['source']['id']
+
+
+def reviewed_notice(e, monkeypatch):
+    """Input-only DEMO fixture -> actual Notice Worker -> actual API confirmations."""
+    from app.demo import load_input
+    from app.infrastructure.notice_store import SqlNoticeStore
+    from app.notice.application import NoticeApplication
+    from app.worker import process_one
+    import app.api.notice as notice_api
+
+    monkeypatch.setattr(notice_api, 'application',
+        lambda session: NoticeApplication(SqlNoticeStore(session), e['files']))
+    with e['factory'].begin() as session:
+        store = SqlNoticeStore(session)
+        notice = load_input(store, e['files'], 'normal', external_key='TEST_MVP_LINEAGE_' + nonce())
+        original = store.rows('versions', notice_id=notice['id'])[0]
+    job = call(e, 'operator', '/notice/analysis',
+        dict(expected_version=original['id'], idempotency_key=nonce()))
+    for _ in range(256):
+        result = call(e, 'operator', '/notice/' + notice['id'])
+        output = next(v for v in result['versions'] if v['id'] == original['id'])
+        target_job = next(j for j in output['jobs'] if j['id'] == job['id'])
+        assert target_job['state'] != 'FAILED', target_job.get('error')
+        if target_job['state'] in ('SUCCEEDED', 'PARTIAL'):
+            break
+        assert process_one(e['factory'], e['files'])
+    else:
+        raise AssertionError('Target Notice Job did not complete through the ordinary shared queue')
+    assert output['mode'] == 'DEMO_TEST'
+    assert output['runs'] and output['runs'][-1]['candidates']
+    confirmed = None
+    for candidate in output['runs'][-1]['candidates']:
+        confirmed = call(e, 'operator', '/notice/candidates/' + candidate['id'] + '/confirm',
+            dict(expected_version=original['id'], official_verified=True,
+                note='TEST synthetic source reviewed; flag exercises the review guard, not real government verification',
+                scope='TEST these exact DEMO source clauses only',
+                conflict_resolution='TEST source context reviewed' if output['runs'][-1]['conflicts'] else ''))
+    assert confirmed is not None
+    return dict(notice_id=notice['id'], notice_version_id=original['id'],
+                requirement_version_id=confirmed['id'])
+
+
+def test_reviewed_analysis_basis_reaches_notice_match_mvp_documents_and_company_revision(env, monkeypatch):
+    """One complete real-domain path; no candidate, review or approval result seed."""
+    import io
+    import zipfile
+    from xml.etree import ElementTree as ET
+    from pypdf import PdfReader
+    from app.infrastructure import proposal_schema as P
+
+    e = env
+    item = prepare_source(e)
+    target = structure_and_confirm(e, item)
+    composition, composition_data = compose(e, item, target)
+    notice = reviewed_notice(e, monkeypatch)
+    matched = call(e, 'operator', '/capability/matches', dict(
+        composition_version_id=composition['version_id'], notice_id=notice['notice_id'],
+        requirement_version_id=notice['requirement_version_id'], idempotency_key=nonce()))
+    match_id = matched['candidate_id']
+    detail = call(e, 'operator', '/capability/matches/' + match_id)
+    assert detail['current_valid'] and detail['candidate']['fit'] == 'NEED_MORE_INFO'
+    assert detail['snapshot']['input']['company']['improvement_version_id'] == target['id']
+    assert detail['snapshot']['input']['composition']['basis'] == item['basis']
+    call(e, 'operator', '/proposal', dict(candidate_id=match_id,
+        title='TEST cannot skip real MatchReview', template_version='MVP_16', idempotency_key=nonce()), status=409)
+
+    # Consume the actual authority-backed proof/required tasks, not fixture-only
+    # ProposalInputs. Every human item keeps its own note and exact Notice proof.
+    preparation = call(e, 'operator', '/capability/matches/' + match_id + '/proposal-preparation')
+    assert preparation['company_confirmed'] and not preparation['can_create']
+    evidence_id = item['values']['evidence_ids'][0]
+    assert any(p['id'] == evidence_id and p['confirmed'] and p['current_valid']
+               for p in preparation['review_evidence'])
+    completed = [dict(task_id=task['id'], decision='CONFIRMED',
+        note='TEST human reviewed exact synthetic source for this task: ' + task['label'],
+        proof_ids=[evidence_id], notice_evidence_id=task.get('notice_evidence_id'))
+        for task in preparation['review_tasks']]
+    review_match = call(e, 'operator', '/capability/matches/' + match_id + '/review',
+        dict(outcome='PROPOSABLE', note='TEST all synthetic source items separately reviewed',
+             completion_items=completed, idempotency_key=nonce()))
+    assert call(e, 'operator', '/capability/matches/' + match_id)['candidate']['fit'] == 'NEED_MORE_INFO'
+    assert call(e, 'operator', '/capability/matches/' + match_id + '/proposal-preparation')['can_create']
+
+    created = call(e, 'operator', '/proposal', dict(candidate_id=match_id,
+        title='TEST 실제 계보 맞춤형 제안서', template_version='MVP_16', idempotency_key=nonce()))
+    proposal = call(e, 'operator', '/proposal/versions/' + created['version_id'])
+    assert len(proposal['sections']) == 16
+    refs = proposal['manifest']['refs']
+    assert refs['improvement_version_id'] == target['id']
+    assert refs['analysis_source_version_id'] == item['source']['id']
+    assert refs['analysis_run_id'] == item['run']['run']['id']
+    assert refs['analysis_review_ids'] == [item['review']['id']]
+    assert refs['composition_version_id'] == composition['version_id']
+    assert refs['match_review_id'] == review_match['id']
+    assert refs['notice_version_id'] == notice['notice_version_id']
+    assert refs['requirement_version_id'] == notice['requirement_version_id']
+    assert refs['feature_revision_ids'] == composition_data['coverage'][0]['feature_revision_ids']
+    analyzed = proposal['manifest']['reviewed_analysis']
+    assert len(analyzed) == 1
+    assert analyzed[0]['candidate_id'] == item['candidate']['id']
+    assert analyzed[0]['review_id'] == item['review']['id']
+    assert analyzed[0]['evidence'][0]['version_id'] == item['source']['id']
+    assert proposal['manifest']['input']['composition']['coverage'][0]['evidence_refs'][0]['version_id'] == target['id']
+
+    cid, vid = item['company']['id'], proposal['id']
+    assert call(e, 'approver', '/proposal/inbox/' + cid) == []
+    call(e, 'operator', '/proposal/versions/' + vid + '/export',
+        dict(kind='PDF', idempotency_key=nonce()), status=409)
+    content_review = call(e, 'operator', '/proposal/versions/' + vid + '/review',
+        dict(confirmed=True, note='TEST all sixteen sections reviewed separately from matching',
+             idempotency_key=nonce()))
+    files = []
+    for kind in ('DOCX', 'PDF'):
+        output = call(e, 'operator', '/proposal/versions/' + vid + '/export',
+            dict(kind=kind, idempotency_key=nonce()))
+        response = e['clients']['operator'].get('/proposal/files/' + output['id'] + '/download')
+        assert response.status_code == 200 and sha256(response.content).hexdigest() == output['digest']
+        if kind == 'DOCX':
+            document = ET.fromstring(zipfile.ZipFile(io.BytesIO(response.content)).read('word/document.xml'))
+            text = ''.join(document.itertext())
+        else:
+            text = ''.join(p.extract_text() for p in PdfReader(io.BytesIO(response.content)).pages)
+        normalized = ''.join(text.split())
+        for identity in (vid, target['id'], item['source']['id'], item['run']['run']['id'], item['review']['id']):
+            assert identity in normalized
+        assert all(''.join(section['heading'].split()) in normalized for section in proposal['sections'])
+        assert 'TESTexactsyntheticcandidateevidencereviewed' not in normalized
+        call(e, 'approver', '/proposal/files/' + output['id'] + '/download', status=404)
+        files.append(output)
+    with e['factory']() as session:
+        a = CompanyApplication(session, e['files'])
+        assert not a.rows(P.requests, version_id=vid)
+        assert all(f['content_review_id'] == content_review['id'] for f in a.rows(P.files, version_id=vid))
+    assert call(e, 'approver', '/proposal/inbox/' + cid) == []
+
+    send_body = dict(idempotency_key=nonce())
+    sent = call(e, 'operator', '/proposal/versions/' + vid + '/approval', send_body)
+    assert call(e, 'operator', '/proposal/versions/' + vid + '/approval', send_body) == sent
+    inbox = call(e, 'approver', '/proposal/inbox/' + cid)
+    assert len(inbox) == 1 and inbox[0]['version_id'] == vid and len(inbox[0]['sections']) == 16
+    for output in files:
+        response = e['clients']['approver'].get('/proposal/files/' + output['id'] + '/download')
+        assert response.status_code == 200 and sha256(response.content).hexdigest() == output['digest']
+        call(e, 'other', '/proposal/files/' + output['id'] + '/download', status=404)
+    decision = call(e, 'approver', '/proposal/approvals/' + sent['id'] + '/decision',
+        dict(outcome='REVISION_REQUEST', reason='TEST exact version scope amendment requested',
+             idempotency_key=nonce()))
+    assert decision['outcome'] == 'REVISION_REQUEST'
+    history = call(e, 'operator', '/proposal/' + created['proposal_id'])
+    assert history['decisions'][0]['version_id'] == vid
+    assert history['decisions'][0]['actor_id'] == e['people']['approver']['id']
+    assert history['requests'][0]['state'] == 'CLOSED' and history['requests'][0]['closure_reason'] == 'DECIDED'
+    assert call(e, 'operator', '/proposal/versions/' + vid) == proposal
+    assert history['versions'][0]['manifest']['refs'] == refs
+    assert basis_current(e, target['id'], item['basis'])
