@@ -13,6 +13,6 @@ function Portal({session,onLogout}:{session:PortalIdentity;onLogout:()=>void}){
   }catch{if(!abort.signal.aborted&&request===epoch)setCatalogRead({status:'error',data:null});}};
   const first=window.setTimeout(()=>void load(),0),timer=window.setInterval(()=>void load(),15000);return()=>{abort.abort();clearTimeout(first);clearInterval(timer);};
  },[session.id,session.role]);
- return <AdminPortal session={session} onLogout={onLogout} catalogRead={catalogRead} renderLive={(screen,detail)=>['overview','reference','users','infrastructure','ai-quality'].includes(screen)?<AdminLive key={session.id+screen} session={session} screen={screen} detail={detail}/>:null}/>;
+ return <AdminPortal session={session} onLogout={onLogout} catalogRead={catalogRead} renderLive={(screen,detail)=>['overview','reference','users','infrastructure','ai-quality'].includes(screen)&&!(screen==='reference'&&detail&&['notices','requirements'].includes(detail))?<AdminLive key={session.id+screen} session={session} screen={screen} detail={detail}/>:null}/>;
 }
 mountPortal((session,onLogout)=><Portal session={session} onLogout={onLogout}/>);
