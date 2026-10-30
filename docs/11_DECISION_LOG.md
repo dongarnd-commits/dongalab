@@ -180,3 +180,19 @@ Status: ACCEPTED (LIMITED). 사용자 명령 v1.0에 따라 최신 main에서 fe
 Status: ACCEPTED (LIMITED). ???? ?? PR #15 ????? Next.js 16.4.3 ? ??? ?? ??? ??, production build?Frontend?Backend/PostgreSQL?Playwright???? ??? ?? ????? ??? ?? ? Commit/Push? ????. npm/package-lock? ???? ?? UI?Backend ???Role/Permission/State??? ?? DB Schema? ????? ???? ???. ???? ?? ?? DB? ????.
 
 ??? ?? ??? LAN ??? ?? CA?IT ??????? ?? ?? ????? ??? ?? ???. ??? TLS ??? ?? PC HTTPS ???? ???? ???. PR Draft ??, main Merge??? ????? ?? DB Migration?? ???? ??? ???? ???. ?? ??? reviews/PR15_NEXTJS_SECURITY_PATCH_16_4_3.md? ???.
+
+
+## Slice 2 승인된 로컬 분석·영속 요청 초안 — 2026-10-28
+
+Status: ACCEPTED (LIMITED). 사용자 개발 착수 지시는 로컬 Rule Slice 2 개발·합성자료 격리 검증·전용 Branch Commit/Push·Draft PR을 승인한다. 제안서 중 기존 InformationRequest DRAFT 본문 편집 허용안은 채택하지 않는다. 별도 영속 분석 초안과 최종 생성/발송 원자성을 구현하며 기존 불변 Trigger를 유지한다. 공통 계보·CHECK·Trigger는 개선요구 종류만 확장하고 과거 데이터 backfill·Legacy 우회·업무 확정 자동화는 금지한다. 신규자료는 무조건 폐기 사유가 아니며 명시된 변경영향과 검토 안내를 적용한다. 운영 HTTPS·실사용 검수 DB Migration·main Merge·Draft 해제·외부 AI는 미승인이다. 상세 계약은 reviews/SLICE2_IMPLEMENTATION_CONTRACT.md. 구현·실행 검증 결과는 별도 보고하며 사용자 인수는 PENDING이다.
+
+### PR #16 GPT 검토 후 제한 보완 — 2026-10-28
+
+Status: ACCEPTED (LIMITED). 사용자 명시 지시에 따라 동일 feature branch/기존 Draft PR에서 Rule별 검사 불확실성, Parse 재사용 적합성, Native 발송 확인창만 보완한다. 공통 Schema/CHECK/Trigger/업무 State/Permission 및 기존 InformationRequest 원자적 생성·발송은 변경하지 않는다. 기존 JSON 검사·후보 필드에 범위/목적/제외 이유를 추가하고 Rule Version을 v2로 올려 이전 결과는 과거 이력으로 보존한다. 제외 이유는 Backend에서 3~1000자 비공백 입력과 동일 Scope의 File을 검증한다. 의미상 무관함의 최종 판단은 운영자에게 있다. 범용 Parse의 native 재검사 비용은 정확한 검사 범위를 증명하기 위한 제한이며 고급 OCR 캐시 정책/Provider 경계는 Slice 2B 등 별도 범위다. 테스트 후 관련 파일 Commit/Push 및 최신 HEAD CI 확인만 승인되며 배포·실사용 DB Migration·main Merge·Draft 해제·외부 AI는 계속 제외한다.
+
+
+## Slice 2 운영자 UX·제출본 검토 이력 — 2026-10-28
+
+Status: ACCEPTED (LIMITED). 사용자 명시 UX 통합 개선 지시에 따라 기존 PR #16에서 운영자 목록/상세/자동 진입 분석/전체 제출본 판단만 개선한다. 최소 typed append-only 검토 테이블 추가가 승인된 범위이며 기존 CONFIRM·후보 Review·요청 불변 Trigger·권한을 우회하지 않는다. 공통파일 미선택은 관련성 제외 판단이 아니다. 테스트 후 관련 파일 Commit/Push·Draft 유지·최신 CI 확인을 수행한다. 실사용 DB Migration·HTTPS 반영·신규 Branch/PR·외부 AI·main Merge는 제외한다.
+
+상세 계약·변경 영향·실행 검증 구분: [운영자 UX 구현 보고](reviews/SLICE2_OPERATOR_UX_REPORT.md).

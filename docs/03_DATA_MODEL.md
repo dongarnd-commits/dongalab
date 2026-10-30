@@ -704,3 +704,15 @@ ApprovalRequest는 기존 DIRECT_APPROVER 모드와, 명시적으로 지정된 �
 ## PR14 v1.4.2 제한 승인 A — 파일 등록과 내용의 분리
 
 동일 Company/digest의 활성 등록은 최대 1개다. 취소·교체된 불변 File은 과거 등록으로 보존하며, 동일 원본 재등록은 새 File ID/등록자/시각/Audit를 생성한다. SHA-256 Storage 객체는 공유 가능하나 Company·Site·Evidence 권한은 File ID 관계로 검증한다. 과거 Evidence/Version을 새 ID로 치환하지 않는다. 기존 데이터 삭제 없는 증분이며 기존 업무·사용자 검수 DB 적용과 영구 삭제는 승인되지 않았다.
+
+
+## Slice 2 승인된 로컬 분석·영속 요청 초안 — 2026-10-28
+
+공통 AnalysisRun/Candidate/Review에 IMPROVEMENT_ANALYSIS typed 계보를 추가한다. 불변 Manifest는 SUBMIT Review·ImprovementVersion·SiteVersion·현재 CompanyInputVersion과 Fact/Evidence/File/Parse를 실제 FK로 연결한다. 자료별 검사 결과와 후보 상세는 해당 Run에 귀속한다. 후보 0건은 이 종류에만 허용하며 기존 Capability/Matching/Company 계보 조건은 유지한다. 별도 분석 기반 요청 초안 Root/Version/선택 Review/최종 Delivery를 보존한다. 기존 InformationRequest 본문·기한 불변 계약은 변경하지 않는다.
+
+
+## Slice 2 운영자 UX·제출본 검토 이력 — 2026-10-28
+
+새 테이블 `improvement_submission_reviews`는 Company·Root·정확한 SUBMIT Version·Run 또는 분석 한계·Job·Draft·Actor·판단·의견·시각·basis를 append-only로 연결한다. Version ordinal과 Actor idempotency key를 보호하고 전용 Trigger로 typed scope를 검사한다. Migration ff30u0012026은 기존 테이블·상태·이력을 변환하지 않는다.
+
+상세 계약·변경 영향·실행 검증 구분: [운영자 UX 구현 보고](reviews/SLICE2_OPERATOR_UX_REPORT.md).

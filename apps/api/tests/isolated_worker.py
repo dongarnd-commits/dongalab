@@ -21,4 +21,6 @@ for attempt in range(100):
 while True:
  process_collection_one(factory,files)
  process_one(factory,files)
+ from app.company.improvement_worker import process_improvement_one
+ process_improvement_one(factory,files)
  time.sleep(.15)

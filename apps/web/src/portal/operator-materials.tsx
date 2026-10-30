@@ -1,0 +1,14 @@
+import type {CompanyData} from '../company/client';
+import {FinancialRecords,HistoryRecords,SourceReview} from './operator-intake-records';
+import {factLabels} from './company-documents';
+
+type Material=CompanyData['files'][number]&{material_groups?:string[]};
+export function OperatorMaterials({detail}:{detail:CompanyData}){
+ const profile=detail.inputs.at(-1)?.data;
+ const groups=[['BASIC','기업 기본증빙'],['FINANCE','재무정보·증빙'],['HISTORY','정부지원사업 수행자료'],['UNCLASSIFIED','기타·미분류 자료']];
+ return <><details className="intake-section"><summary>기업정보·사업장 상세</summary><section className="intake-card"><h2>현재 기업정보</h2><p>현재 저장된 공통정보이며 특정 개선요구의 제출 Snapshot과 구분합니다.</p><dl className="intake-grid">{([['name','기업명'],['business_number','사업자등록번호'],['representative','대표자'],['industry','업종'],['contact','연락처'],['overview','기업 현황']] as const).map(([key,label])=><div key={key}><dt>{label}</dt><dd>{profile?.[key]||'미입력'}</dd></div>)}</dl>{detail.sites.map(s=><section key={s.id} data-site-id={s.id}><h3>{s.name}</h3><p>{s.versions.at(-1)?.data.address}</p></section>)}</section></details>
+ <details className="intake-section"><summary>재무정보 · 연도별 비교</summary><section className="intake-card"><h2>재무정보</h2><FinancialRecords profile={profile}/></section></details><details className="intake-section"><summary>정부지원사업 수행이력</summary><section className="intake-card"><h2>정부지원사업 수행이력</h2><HistoryRecords profile={profile} detail={detail}/></section></details>
+ <p>파일명으로 업무 유형을 추정하지 않습니다. 저장·확인된 출처 메타데이터가 없으면 미분류입니다. 기업 공통자료는 특정 제출본의 직접 첨부와 다릅니다.</p>
+ {groups.map(([key,label])=>{const files=(detail.files as Material[]).filter(f=>(f.material_groups??['UNCLASSIFIED']).includes(key));return <section className="intake-card" key={key}><h2>{label}</h2><div className="intake-table"><table><thead><tr><th>파일명</th><th>등록일</th><th>확인된 자료 유형</th><th>자료 상태</th><th>원본</th></tr></thead><tbody>{files.map(f=><tr key={f.id} data-file-id={f.id} data-digest={f.digest}><td>{f.name}</td><td>{new Date(f.created_at).toLocaleString('ko-KR')}</td><td>{key==='UNCLASSIFIED'?'미분류':label+' · 저장된 출처 연결'}</td><td>{f.lifecycle?<strong>{f.lifecycle.kind==='CANCELLED'?'등록 취소 · 과거 자료':'교체됨 · 과거 자료'}</strong>:<span aria-label="현재 등록자료">현재</span>}</td><td><a className="op-btn op-btn-outline" href={'/api/company/files/'+f.id+'/download'}>원본 다운로드</a></td></tr>)}</tbody></table></div>{!files.length&&<p>확인된 분류 자료가 없습니다.</p>}</section>;})}
+ <details className="intake-section"><summary>확인된 기업정보·Fact</summary>{detail.facts.flatMap(f=>f.versions.map(v=><section className="intake-card" key={v.id}><h3>{factLabels[f.field]??f.field}: {v.value}</h3><p>{v.current_valid?'현재 유효':'과거 기록'} · {v.review.actor_name} · {v.review.note}</p></section>))}{!detail.facts.length&&<p>별도로 검토 완료된 기업정보가 없습니다.</p>}</details><details className="intake-section"><summary>자료 근거·추출 후보 상세</summary><SourceReview detail={detail}/></details></>;
+}

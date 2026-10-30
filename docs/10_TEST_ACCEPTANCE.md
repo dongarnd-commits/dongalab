@@ -452,3 +452,26 @@ C07에서 PDF A→B 교체를 확인하면 단일 DRAFT의 일반 첨부에만 �
 ### PR #15 Slice 1 UI·실제 자료 검증 v1.2
 
 합성 E2E에서 긴 기업명, 30자리 금액 정밀도, 원래 단위의 한국어 표시, 중복 연도 제거, 출처별 근거 펼치기, 검토 완료 기록 없음 안내, 모바일 메뉴·기업/Version 선택 보존 및 기존 PDF/Scope/F5를 검증한다. 실제 기업자료 대조는 기존 승인된 DATCO_OPERATOR/Membership에 한해 읽기 전용으로 수행하며 합성 회귀 PASS와 구분한다. 추가 복사·권한 부여·기존 DB Migration·실제 기업자료 쓰기는 별도 승인 전 실행하지 않는다. 원본 응답/PDF는 공개 fixture·Git·CI에 포함하지 않는다. 확인된 제출 기록 수 이상의 재제출 이력을 있다고 가정하지 않는다.
+
+
+## Slice 2 승인된 로컬 분석·영속 요청 초안 — 2026-10-28
+
+Slice 2 인수는 합성자료·격리 PostgreSQL·실제 Worker·API·Web으로 SUBMIT→Manifest→추출/Rule→Candidate/Evidence→검토→영속 초안→최종 발송을 검증한다. 새 Draft 분리, 입력변경, 기업/사업장 격리, PDF digest/원문, OCR 실패, 후보 0건, 잘못된 근거, 동시 Job/lease, 불변 Review, F5/재로그인, 취소 발송0회, 이중발송/부분실패 원자성을 포함한다. 기존 테스트를 제거하거나 SKIP을 추가하지 않는다. 실행 결과와 미실행 항목은 reviews/SLICE2_IMPLEMENTATION_REPORT.md에 구분 기록한다.
+
+PR #16 보완 인수: 제조·서비스·물류 합성기업에서 정상 PDF와 제외 PNG/공통자료, 이유 없는 제외 거부, 직접 첨부 스캔 PDF의 OCR 실패·혼합 PDF 부분 검사, 정확한 답변 근거의 중복 질문 억제, Rule별 미검사 불확실성을 검증한다. 재무 전용 Parse만 있는 PDF·용도가 다른 복수 Parse·범용 Parser 이름이나 검사 범위가 불충분한 Parse를 구분하고 재사용 또는 로컬 재추출의 원본 계보를 검사한다. Native dialog의 초기/복귀 포커스·Escape·배경 차단·Context 분리·발송 전 0건·취소·중복 클릭·요청 전 네트워크 실패 및 서버 성공 응답 유실을 검증한다. 전체 Backend/PostgreSQL/Frontend/Playwright와 기존 Slice 1·Capability·Matching·Proposal 회귀를 유지한다.
+
+
+## Slice 2 운영자 UX·제출본 검토 이력 — 2026-10-28
+
+합성자료·격리 DB에서 자동 진입/중복 재사용/본문만 분석/미선택 공통자료/실패 retry/전체 판단 이력/다른 운영자 공유/새 SUBMIT·새 Run·근거변경 재검토/회사·과제 독립성을 검증한다. 기존 원본 digest·권한·Version·요청 불변성·Native dialog Escape/포커스/취소/이중 클릭·응답 유실 검증을 유지한다. 집중 테스트 후 최신 HEAD GitHub 전체 CI를 최종 근거로 사용한다. HTTPS 인수는 별도 승인 전 PENDING.
+
+상세 계약·변경 영향·실행 검증 구분: [운영자 UX 구현 보고](reviews/SLICE2_OPERATOR_UX_REPORT.md).
+
+### Slice 2 최종 UX 집중 검증 — 2026-10-29
+
+합성자료·격리 DB에서 부족정보 우선/구조화 접기, 미선택 무변경, 선택 후보의 공통·개별 의견 Review, 중간 실패/응답 유실/409 및 재시도 중복 방지, 동일 선택 초안 재사용, 저장·Delivery 확인 후 원래 목록 복귀, 검색/필터/페이지·F5·재로그인, 필터에서 사라진 행의 성공 안내, 미검사 직접 자료의 처리 한계 표시를 검증한다. 기존 원본·권한·Version·기업 응답·발송 불변성 검증은 유지한다. 최신 HEAD의 전체 CI를 최종 통합 근거로 사용하며 실제 HTTPS 반영과 사용자 기능 인수는 별도 승인 후 수행한다.
+## Slice 2 최종 요청·응답 UX 인수 (2026-10-29)
+
+합성자료/격리 PostgreSQL에서 Root·SUBMIT·Request별 집계를 구분하고 동일 과제의 복수 Request/공통정보 요청/타기업 차단/GET 반복 무변경을 검증한다. RESPONSE_REVIEW→정확한 최신 제출 답변 직접 진입, 복수 대상 명시 선택, 요청 단위 메뉴·검색·상태·페이지·F5 복귀를 검증한다. 최신 답변/첨부0건/과거 초안 기본 접기·빈 작성폼 접기, 실제 Review 확인 후 복귀와 409·응답 유실·이중 클릭 시 자동 복귀/중복 검토 금지를 확인한다.
+
+기업 답변은 선택 파일 취소→미업로드, 초안 첨부 제외→새 Version만 변경, 업로드 성공/답변 실패→서버 확인·기존 파일 재사용, 과거 제출 첨부 및 원본 다운로드 보존, 재보완의 동일 Request/새 ResponseVersion, 첨부0건, 타기업 파일 연결 차단을 확인한다. 최신 제출/담당자 확인 대기 및 내부 Actor ID 비노출, 초안 용어·저장 상태·기한 F5/재로그인·Native dialog 취소/focus/중복 발송·Delivery 확인의 기존 회귀를 유지한다. 실제 기업자료/HTTPS에서 자동화 업무입력·발송은 하지 않는다. 최신 HEAD CI 및 UI Preview와 실제 사용자 인수를 구분한다.

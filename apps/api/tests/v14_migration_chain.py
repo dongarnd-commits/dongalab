@@ -5,7 +5,7 @@ from sqlalchemy import text
 from alembic.operations import Operations
 from alembic.migration import MigrationContext
 BEFORE_PROPOSAL=('6d5ba2015303_notice_first_slice.py','a44df74db1ac_bizinfo_ingestion.py','b730cf01a649_capability_catalog.py','c941a0042026_common_analysis_lineage.py','d752a0012026_immutable_matching_inputs.py')
-AFTER_COMPANY=('fa85b0012026_company_business_sources.py','fb96c0012026_information_requests.py','fc07d0012026_recorded_authorization.py','fd18e0012026_company_file_reregistration.py')
+AFTER_COMPANY=('fa85b0012026_company_business_sources.py','fb96c0012026_information_requests.py','fc07d0012026_recorded_authorization.py','fd18e0012026_company_file_reregistration.py','fe29s0022026_improvement_analysis.py','ff30u0012026_operator_submission_review.py')
 def load(name):
  spec=importlib.util.spec_from_file_location('v14_test_'+name,ROOT/'apps/api/alembic/versions'/name);module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
 class ThroughLatest:

@@ -28,7 +28,8 @@ for(const role of ['editor','operator','admin'] as const)test('Slice0a real logi
   const allowed=await(await page.request.get('/api/company')).json();if(allowed.length>1){const own=page.getByLabel('소속 기업',{exact:true});if(await own.isVisible())await own.selectOption(allowed[0].id);else await page.getByLabel('업무 기업 선택',{exact:true}).selectOption(allowed[0].id);}await expect(page.getByRole('button',{name:'기업정보 저장',exact:true})).toBeEnabled();
  }else{
   const menu=page.getByRole('navigation',{name:role==='operator'?'운영자 업무 메뉴':'관리자 메뉴'});
-  const buttons=await menu.getByRole('button').all();expect(buttons.length).toBe(12);
+  const buttons=await menu.getByRole('button').all();expect(buttons.length).toBe(role==='operator'?11:12);
+  if(role==='operator')await expect(menu.getByRole('button',{name:'기업 통합 업무',exact:true})).toHaveCount(0);
   for(const button of buttons){await button.click();await expect(page.getByRole('heading').first()).toBeVisible();}
   await expect(page.getByText('예시 화면 보기 · 기업 1개',{exact:true})).toHaveCount(0);
  }
