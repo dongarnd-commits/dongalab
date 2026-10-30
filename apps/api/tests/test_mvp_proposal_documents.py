@@ -27,7 +27,8 @@ def manifest():
     integration = dict(from_capability_version_id='TEST_CAP_A', to_capability_version_id='TEST_CAP_B',
         data='TEST 검사 식별자 및 결재 상태', workflow='TEST 검사 등록 후 문서 검토',
         prerequisites=['TEST 식별자 매핑 확인'], uncertainty='TEST 인터페이스 상세 확인 필요')
-    refs = dict(company_id='TEST_COMPANY', improvement_version_id='TEST_IMPROVEMENT',
+    refs = dict(company_id='TEST_COMPANY', improvement_version_id='TEST_STRUCTURED_VERSION_2',
+        analysis_source_version_id='TEST_SOURCE_VERSION_1',
         feature_revision_ids=[feature['id'], excluded['id']], analysis_run_id='TEST_RUN',
         analysis_review_ids=['TEST_REVIEW'], composition_version_id='TEST_COMPOSITION')
     return dict(template_version='MVP_16', refs=refs, notice_title='TEST 실제 저장경로 합성 공고',
@@ -40,7 +41,7 @@ def manifest():
             constraints='TEST 데이터 정의 협의'), fact_details=[dict(field='company_name', value='TEST 합성기업',
                 version_id='TEST_FACT', current_valid=True, unit='', period='2026')]),
             composition=dict(name='TEST 품질·협업 조합', coverage=coverage,
-                excluded_feature_revision_ids=[excluded['id']], basis=dict(run_id='TEST_RUN', review_ids=['TEST_REVIEW']),
+                excluded_feature_revision_ids=[excluded['id']], basis=dict(run_id='TEST_RUN', review_ids=['TEST_REVIEW'], source_version_id='TEST_SOURCE_VERSION_1'),
                 integrations=[integration], conditions=['TEST 데이터 사전 확인'], unresolved=['TEST 추가 현장 검토']),
             notice=dict(notice_id='TEST_NOTICE', notice_version_id='TEST_NOTICE_V', requirement_version_id='TEST_REQ_V',
                 items=[dict(kind='SUPPORT_SCOPE', content='TEST 확인된 지원범위'),
@@ -60,7 +61,8 @@ def test_all_sixteen_sections_use_sources_and_preserve_uncertainty():
     body = '\n'.join(s['body'] for s in v['sections'])
     assert all(text in body for text in ['TEST 수기 검사 기록', 'TEST 검토된 기능 요구',
         '품질 불량 현황', 'TEST 검사 식별자 및 결재 상태', 'TEST 검사 등록 후 문서 검토',
-        '부분 대응', '자동 원인 분석 미해결', 'TEST 데이터 사전 확인', 'TEST_RUN'])
+        '부분 대응', '자동 원인 분석 미해결', 'TEST 데이터 사전 확인', 'TEST_RUN',
+        'TEST_SOURCE_VERSION_1', 'TEST_STRUCTURED_VERSION_2'])
     assert 'TEST_PRIVATE_REVIEW_NOTE' not in body
     assert 'TEST_EXCLUDED_SECRET_DESCRIPTION' not in body
     assert '기준값·산식·단위·측정기간' in body and '사업비·견적 범위' in body

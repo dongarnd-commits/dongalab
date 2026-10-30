@@ -4,7 +4,7 @@ from copy import deepcopy
 from app.capability.search import search_reasons, query_terms
 from app.notice.domain import Denied
 
-VERSION = 'published-solutions-v1'
+VERSION = 'published-solutions-v2'
 VOCABULARY = (
     ('재고', '입고', '출고', '입출고', '수불', '물류', '창고'),
     ('생산', '공정', '작업실적', '제조', 'mes'),
@@ -16,7 +16,20 @@ VOCABULARY = (
     ('센서', '설비데이터', '게이트웨이', 'iot'),
     ('영업', '수주', '고객관리'),
 )
-EXCLUDED = re.compile(r'불필요|필요\s*없|원하지\s*않|도입하지\s*않|대상[이은]?\s*아[닌님]|제외')
+# Domain membership is a retrieval guard, not a synonym relation: payroll does
+# not become attendance just because both belong to HR.
+SYNONYMS = (
+    ('입출고', '입고', '출고'), ('생산실적', '작업실적'),
+    ('근태', '출퇴근'), ('휴가', '연차'), ('급여', '임금'),
+    ('전자결재', '결재', '기안'), ('전표', '분개'),
+    ('hr', '인사'), ('mes', '생산'), ('qms', '품질'), ('scms', '공급망'),
+)
+DOMAIN_EXCLUSIONS = {'물류':0, '생산':1, '제조':1, 'mes':1, '품질':2,
+    'qms':2, '구매':3, '공급망':3, 'scms':3, '인사':4, 'hr':4,
+    '회계':5, '협업':6, '그룹웨어':6}
+EXCLUDED = re.compile(r'불필요|필요\s*없|원하지\s*않|(?:도입|검토|추천)하지\s*않|대상[이은는]?\s*아[닌님니]|제외|무관|(?:관련|상관)[이는은]?\s*없')
+PARTIAL_SCOPE = re.compile(r'원인\s*(?:분석|규명|진단)|예측|자동\s*판정|최적화')
+
 FIELDS = (('as_is', 'CURRENT_STATE'), ('problem', 'PROBLEM'), ('goal', 'GOAL'),
     ('to_be', 'GOAL'), ('required_functions', 'REQUIRED_FUNCTION'), ('constraints', 'CONSTRAINT'))
 
@@ -26,6 +39,8 @@ def clauses(text):
     value = re.sub(r'불필요하고', '불필요,', value)
     value = re.sub(r'필요\s*없고', '필요 없음,', value)
     value = re.sub(r'아니라', '대상 아님,', value)
+    value = re.sub(r'무관(?:하며|하고|하지만)', '무관,', value)
+    value = re.sub(r'관련[이는은]?\s*없(?:고|으며)', '관련 없음,', value)
     return re.split(r'[\n,;.!?]', value)
 
 
@@ -36,21 +51,44 @@ def positive_text(text):
 
 def expanded(text):
     value = positive_text(text)
-    lower = value.lower().replace(' ', '')
-    related = [word for group in VOCABULARY if any(word in lower for word in group) for word in group]
-    return ' '.join([value, *related])
+    tokens = set(query_terms(value))
+    related = [word for group in SYNONYMS if any(word in tokens for word in group) for word in group]
+    weak = ('확인', '개선', '통합', '중복', '분산', '현재', '체계적', '정리')
+    return ' '.join(term for term in query_terms(' '.join([value, *related])) if not term.startswith(weak))
+
+
+def word_in(value, word):
+    return bool(re.search(r'(?<![a-z0-9])' + re.escape(word) + r'(?![a-z0-9])', value.lower())) if word.isascii() else word in value.replace(' ', '')
+
+
+def business_words(value):
+    return {word for group in VOCABULARY for word in group if word_in(value, word)}
 
 
 def groups_for(value):
-    value = value.lower().replace(' ', '')
-    return {index for index, group in enumerate(VOCABULARY) if any(word in value for word in group)}
+    return {index for index, group in enumerate(VOCABULARY) if any(word_in(value, word) for word in group)}
 
 
-def excluded_groups(context):
+def exclusions(context):
     texts = [context.get('original_text', '')]
     texts.extend(value for value in context.get('structured', {}).values() if isinstance(value, str))
-    return {group for text in texts for clause in clauses(text) if EXCLUDED.search(clause)
-            for group in groups_for(clause)}
+    negative = list(dict.fromkeys(clause.strip() for text in texts for clause in clauses(text)
+                                  if EXCLUDED.search(clause)))
+    words = set()
+    for clause in negative:
+        # Excluding causal/AI inference does not exclude a source-backed status view.
+        # The exact excluded sub-scope remains visible as a limitation.
+        if PARTIAL_SCOPE.search(clause) and not re.search(r'전체|모든', clause):
+            continue
+        found = business_words(clause)
+        words.update(found)
+        for word in found:
+            if word in DOMAIN_EXCLUSIONS:
+                words.update(VOCABULARY[DOMAIN_EXCLUSIONS[word]])
+    for group in SYNONYMS:
+        if words.intersection(group):
+            words.update(group)
+    return words, negative
 
 
 def source_demands(context, reviewed=()):
@@ -159,7 +197,7 @@ def validate_basis(service, actor, context, basis):
 def retrieve(context, catalog, feature_reader, reviewed=()):
     demands = source_demands(context, reviewed)
     result, covered = [], set()
-    excluded = excluded_groups(context)
+    excluded, excluded_clauses = exclusions(context)
     for item in catalog:
         if not item.get('version_id'):
             continue
@@ -173,34 +211,35 @@ def retrieve(context, catalog, feature_reader, reviewed=()):
             if demand['kind'] == 'CONSTRAINT':
                 continue
             query = expanded(demand['text'])
-            original_groups = groups_for(positive_text(demand['text']))
-            demand_groups = original_groups - excluded
-            if original_groups and not demand_groups:
+            original_words = business_words(positive_text(demand['text']))
+            allowed_words = original_words - excluded
+            demand_groups = groups_for(' '.join(allowed_words))
+            if original_words and not allowed_words:
                 continue
             if demand_groups and catalog_groups and not demand_groups & catalog_groups:
                 continue
-            for group in excluded:
-                for term in VOCABULARY[group]:
-                    query = query.replace(term, '')
-            if not demand_groups:
-                weak = ('확인', '개선', '통합', '중복', '분산', '현재', '체계적', '정리')
-                query = ' '.join(term for term in query_terms(query) if not term.startswith(weak))
+            for term in excluded:
+                query = query.replace(term, '')
             hits = search_reasons(query, item['data'], [f['data'] for _, f in features]) if query.strip() else []
             if not hits:
                 continue
+            supporting = [feature for _, feature in features if search_reasons(
+                query, dict(service='', description='', problems=[], functions=[]), [feature['data']])]
+            if not supporting:
+                continue
             demand_ids.append(demand['id'])
             reasons.extend(demand['id'] + ': ' + reason for reason in hits)
-            for _, feature in features:
-                if search_reasons(query, dict(service='', description='', problems=[], functions=[]), [feature['data']]):
-                    matched[feature['id']] = dict(revision_id=feature['id'],
-                        feature_id=feature['data']['feature_id'], system=feature['data']['system'],
-                        name=feature['data']['name'])
-        if not demand_ids:
+            for feature in supporting:
+                matched[feature['id']] = dict(revision_id=feature['id'],
+                    feature_id=feature['data']['feature_id'], system=feature['data']['system'],
+                    name=feature['data']['name'])
+        if not demand_ids or not matched:
             continue
         covered.update(demand_ids)
         limits = ['검색 근거는 적합성 확정이 아닙니다. 적용조건·제외범위와 기능 역할을 검토하세요.']
         limits.extend(item['data'].get('prerequisites', []))
         limits.extend(item['data'].get('exclusions', []))
+        limits.extend('명시 제외·한계(원문): ' + clause for clause in excluded_clauses)
         result.append(dict(item, search_reasons=list(dict.fromkeys(reasons))[:30],
             demand_ids=demand_ids, reasons=list(dict.fromkeys(reasons))[:30],
             matched_features=list(matched.values()), limitations=limits))
