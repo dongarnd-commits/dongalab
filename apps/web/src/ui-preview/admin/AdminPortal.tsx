@@ -273,9 +273,9 @@ const BLANK = {
  integration:{id:"",name:"연동 대상 선택",category:"",status:"",desc:"",prerequisites:[],owner:""} as Integration,
 };
 const DISCONNECTED:Fixture={schemaVersion:"",dataNature:"",admin:{id:"",displayName:"",roleLabel:""},features:[],capabilities:[],notices:[],users:[],companies:[],aiRuns:[],qualityIssues:[],integrations:[],audit:[]};
-export default function AdminPortal({testData,session,onLogout,catalogRead}:PortalProps & {testData?:AdminPreviewData;catalogRead?:AdminCatalogRead}){
+export default function AdminPortal({testData,session,onLogout,catalogRead,renderLive}:PortalProps & {testData?:AdminPreviewData;catalogRead?:AdminCatalogRead;renderLive?:React.ComponentProps<typeof AdminControlCenter>['renderLive']}){
  const [started,setStarted]=useState(!!session);
  const logout=()=>{if(session)onLogout?.();else setStarted(false);};
  if(!started)return <div className="datco-admin-details ad-auth-layout"><div className="ad-brand-side"><div className="ad-auth-logo"><Layers3 size={24}/><strong>DATCO ONE</strong></div><div className="ad-brand-hero"><small>SYSTEM ADMINISTRATION PORTAL</small><h1>더 정확한 기준,<br/>더 신뢰할 수 있는 운영.</h1><p>기준정보·사용자 접근범위·분석품질을 검토하는 관리자 화면</p></div></div><main className="ad-login-stage"><div className="ad-login-card"><div className="ad-login-icon"><LockKeyhole size={24}/></div><h2>관리자 UI 미리보기</h2><p>실제 로그인·인증 없이 화면을 확인합니다.</p><SafeAction kind="primary" onClick={()=>setStarted(true)}>미리보기 시작 <ArrowRight size={16}/></SafeAction></div></main></div>;
- return <AdminControlCenter catalogRead={catalogRead} session={session} onLogout={logout} renderDetails={(page,onNavigate)=><AdminDetails sample={session?DISCONNECTED:testData??DISCONNECTED} isTest={!session&&testData!==undefined} page={page} onNavigate={onNavigate}/>}/>;
+ return <AdminControlCenter renderLive={renderLive} catalogRead={catalogRead} session={session} onLogout={logout} renderDetails={(page,onNavigate)=><AdminDetails sample={session?DISCONNECTED:testData??DISCONNECTED} isTest={!session&&testData!==undefined} page={page} onNavigate={onNavigate}/>}/>;
 }

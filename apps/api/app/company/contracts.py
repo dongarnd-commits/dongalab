@@ -83,7 +83,13 @@ class FactInput(Input):
  def financial(self):
   if self.field in ('revenue','assets','liabilities') and not(self.period and self.unit and self.currency):raise ValueError('FINANCIAL_CONTEXT_REQUIRED')
   return self
+class AnalysisBasis(Input):
+ run_id:str=Field(min_length=1,max_length=100)
+ source_version_id:str=Field(min_length=1,max_length=100)
+ review_ids:list[str]=Field(min_length=1,max_length=100)
+
 class Improvement(Input):
+ analysis_basis:AnalysisBasis|None=None
  title:str=Field(min_length=1,max_length=500)
  original_text:str=Field(min_length=1,max_length=20000)
  as_is:str=Field(default='',max_length=10000)

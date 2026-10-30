@@ -1,5 +1,7 @@
 # DATCO 정부지원사업 운영체계 - Demo Scenario
 
+> 2026-10-30 MVP v1.0 범위 증분: 이번 사용자 명시 개발 지시의 완료 범위는 기업 개선요구 → 검토된 DATCO 서비스 단독/복합 구성 → 실제 지원사업 검토·3자 매칭 → 표준 제안서 DOCX/PDF 검토·수요기업 전달까지다. 아래 전주기 H01~H32·신청/선정 후 운영은 미래 확장과 과거 기준으로 보존한다. 기존 Role/State/Company Scope·CONFIRM/ACK/PROPOSABLE·승인·원본/Version Guard는 변경하지 않는다. 대표/조직의 별도 공식 승인 상태는 미확인이다. 세부 실행 계약과 신규 M01~M18 인수는 [MVP 개발 계약](mvp/MASTER_DEVELOPMENT_CONTRACT.md), [인수 기준](mvp/ACCEPTANCE.md)을 따른다.
+
 ## 1. 목적 / 기준 / 범위
 
 개발 완료 후 실제 Browser에서 누가 어떤 자료·화면·Action으로 핵심 가치와 Domain 무결성을 증명할지 정의한다. 기준은 [AGENTS](../AGENTS.md) → [00 Baseline](00_PROJECT_BASELINE.md) → [01 Architecture](01_SYSTEM_ARCHITECTURE.md) → [02 E2E](02_E2E_SYSTEM_FLOW.md) → [03 Data](03_DATA_MODEL.md) → [04 State/Action](04_STATE_ACTION_MODEL.md) → [05 Permission](05_PERMISSION_UI_MATRIX.md) → [06 Collector](06_BIZINFO_COLLECTOR.md) → [07 Intelligence](07_INTELLIGENCE_DESIGN.md) → [08 Screen/Action](08_SCREEN_ACTION_SPEC.md) → 이 문서다.
