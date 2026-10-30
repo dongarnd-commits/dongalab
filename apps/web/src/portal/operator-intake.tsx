@@ -38,7 +38,7 @@ export default function OperatorIntake({session,onLogout}:{session:PortalIdentit
  const {page,cid,vid,rid,responseId}=location;const mvpPage=['recommendations','compositions','grants','matching','proposals','delivery'].includes(page);const locationRef=useRef(location);useEffect(()=>{locationRef.current=location;},[location]);
  const [activeDraft,setActiveDraft]=useState('');const dirty=useRef(false);const onDirty=useCallback((value:boolean)=>{dirty.current=value;},[]);
  const onDraftActive=useCallback((active:boolean)=>{const key=cid+vid;setActiveDraft(previous=>active?key:previous===key?'':previous);},[cid,vid]);
- const canLeave=useCallback(()=>!dirty.current||window.confirm('저장하지 않은 분석 초안 수정을 버리고 이동하시겠습니까?'),[]);
+ const canLeave=useCallback(()=>!dirty.current||window.confirm('저장하지 않은 업무 수정을 버리고 이동하시겠습니까?'),[]);
  const [overview,setOverview]=useState<Overview|null>(null),[record,setRecord]=useState<{cid:string;vid:string;data:Intake}|null>(null),[error,setError]=useState('');
  const detail=record?.cid===cid&&record.vid===vid?record.data:null;
  const navigate=useCallback((next:Location)=>{if(!canLeave())return;setFlash('');dirty.current=false;const old=locationRef.current;if(old.cid!==next.cid||old.vid!==next.vid)setRecord(null);setError('');const u=urlFor(next,session.id);if(u.href!==window.location.href)window.history.pushState({},'',u);setLocation(next);setMobileNav(false);},[canLeave,session.id]);
@@ -78,6 +78,6 @@ export default function OperatorIntake({session,onLogout}:{session:PortalIdentit
  {page==='requests'&&<Requests key={'requests:'+session.id+cid+vid+(rid??'')} session={session} cid={cid} vid={vid} hideComposer={!!vid&&activeDraft===cid+vid} requestId={rid} responseId={responseId} onSelectRequest={(id,responseId)=>navigate({...location,rid:id,responseId})} onFinished={()=>{window.dispatchEvent(new CustomEvent('datco-information-requests-changed',{detail:{company:cid}}));finished('보완답변 검토가 저장되었습니다. 최신 업무 상태를 확인하세요.');}}/>}
  </>}</>}
  {page==='improvement'&&cid&&vid&&version&&<Card title="솔루션 추천·공식 개선요구 검토"><p>분석 후보 검토와 보완요청을 마친 뒤, 정확한 제출본을 구조화·기업 확인·공식 확정하여 실제 서비스 검토로 연결합니다.</p><button className="op-btn op-btn-outline" onClick={()=>navigate({page:'recommendations',cid,vid})}>이 개선요구의 구조화·서비스 추천 검토</button></Card>}
- {mvpPage&&<OperatorMvp key={session.id+page+cid+vid} page={page as MvpPage} cid={cid} vid={vid} session={session} onSelect={(cid,vid)=>navigate({page,cid,vid})} onNext={(page,cid,vid)=>navigate({page,cid,vid})}/>}
+ {mvpPage&&<OperatorMvp key={session.id+page+cid+vid} page={page as MvpPage} cid={cid} vid={vid} session={session} onDirty={onDirty} onSelect={(cid,vid)=>navigate({page,cid,vid})} onNext={(page,cid,vid)=>navigate({page,cid,vid})}/>}
  </main></div>{logout&&<div className="op-modal-backdrop"><section role="dialog" aria-label="로그아웃 확인" className="intake-card"><h2>로그아웃하시겠습니까?</h2><button className="op-btn op-btn-primary" onClick={onLogout}>로그아웃</button><button className="op-btn op-btn-outline" onClick={()=>setLogout(false)}>취소</button></section></div>}</div>;
 }

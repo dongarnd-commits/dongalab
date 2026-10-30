@@ -1,4 +1,8 @@
+import {useEffect} from 'react';
 /** URL references are navigation hints only. Each consumer validates scoped API results. */
+export function useMvpDirty(onDirty:((value:boolean)=>void)|undefined,value:boolean){
+ useEffect(()=>{onDirty?.(value);return()=>onDirty?.(false);},[onDirty,value]);
+}
 export function readMvpSelection(company:string,version:string,key:string){
  const q=new URLSearchParams(window.location.search);
  return q.get('mvp_company')===company&&q.get('mvp_version')===version?q.get('mvp_'+key)??'':'';
