@@ -2,7 +2,7 @@ import {useCallback,useEffect,useId,useRef,useState,type ReactNode} from 'react'
 import type {WorkspaceData} from '../app/_workspace/context';
 import {portalApi} from './admin-live';
 import {MvpCard,mvpChanged,type MvpPage} from './operator-mvp';
-import {readMvpSelection,writeMvpSelection} from './mvp-selection';
+import {readMvpSelection,writeMvpSelection,useMvpDirty} from './mvp-selection';
 
 type Section={heading:string;body:string;evidence_refs:Record<string,unknown>};
 type Version={id:string;ordinal:number;title:string;sections:Section[];manifest:{template_version?:string;refs?:Record<string,unknown>};content_digest:string};
@@ -16,17 +16,18 @@ function SendConfirmation({busy,onCancel,onConfirm,children}:{busy:boolean;onCan
  return <dialog className="mvp-confirm" ref={dialog} aria-labelledby={title} onCancel={e=>{e.preventDefault();if(!busy)onCancel();}}><h2 id={title}>정확한 제안서 Version을 기업에 전달하시겠습니까?</h2>{children}<p>확인 전에는 승인요청을 생성하거나 기업에 공개하지 않습니다.</p><button className="op-btn op-btn-outline" ref={cancel} disabled={busy} onClick={onCancel}>취소</button><button className="op-btn op-btn-primary" disabled={busy} onClick={onConfirm}>최종 확인·기업 검토 요청</button></dialog>;
 }
 
-export function OperatorProposals({cid,vid,page,workspace,refresh}:{cid:string;vid:string;page:MvpPage;workspace:WorkspaceData|null;refresh:()=>Promise<void>}){
+export function OperatorProposals({cid,vid,page,workspace,refresh,onDirty}:{cid:string;vid:string;page:MvpPage;workspace:WorkspaceData|null;refresh:()=>Promise<void>;onDirty:(value:boolean)=>void}){
  const [candidate,setCandidate]=useState(''),[prep,setPrep]=useState<Prep|null>(null),[proposalId,setProposalId]=useState(''),[detail,setDetail]=useState<Proposal|null>(null),[selected,setSelected]=useState(''),[title,setTitle]=useState(''),[sections,setSections]=useState<Section[]>([]),[note,setNote]=useState(''),[mode,setMode]=useState('DIRECT_APPROVER'),[recorderName,setRecorderName]=useState(''),[recorder,setRecorder]=useState(''),[confirm,setConfirm]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false);
- const gate=useRef(false),sequence=useRef(0),sendKey=useRef<string|null>(null),[sendUncertain,setSendUncertain]=useState(false);
+ const restored=useRef(false),gate=useRef(false),sequence=useRef(0),sendKey=useRef<string|null>(null),[sendUncertain,setSendUncertain]=useState(false);
  const active=detail?.versions.find(v=>v.id===selected),current=active?.ordinal===detail?.root.current_ordinal;
  const dirty=!!active&&(title!==active.title||JSON.stringify(sections)!==JSON.stringify(active.sections));
+ useMvpDirty(onDirty,dirty||!active&&!!title.trim()||!!note.trim());
  const reviewed=active&&detail?.content_reviews.filter(r=>r.version_id===active.id).at(-1)?.confirmed;
  const sent=active&&detail?.requests.some(r=>r.version_id===active.id);
  const choices=workspace?.proposals.filter(p=>p.company_id===cid&&p.improvement_version_id===vid)??[];
  function chooseVersion(v:Version,id=proposalId){setSelected(v.id);setTitle(v.title);setSections(structuredClone(v.sections));setNote('');setRecorder('');setRecorderName('');setConfirm(false);sendKey.current=null;setSendUncertain(false);writeMvpSelection(cid,vid,{proposal:id,proposal_version:v.id});}
  const load=useCallback(async(id:string,signal?:AbortSignal,restore=false)=>{const epoch=++sequence.current;const value=await portalApi<Proposal>('proposal','/'+id,undefined,signal);if(signal?.aborted||epoch!==sequence.current)return;const requested=restore?readMvpSelection(cid,vid,'proposal_version'):'';const v=requested?value.versions.find(v=>v.id===requested):value.versions.at(-1);if(!v)throw Error('저장된 정확한 제안서 Version을 찾을 수 없습니다. 대상을 다시 선택하세요.');setDetail(value);setProposalId(id);setSelected(v.id);setTitle(v.title);setSections(structuredClone(v.sections));setNote('');setRecorder('');setRecorderName('');setConfirm(false);sendKey.current=null;setSendUncertain(false);writeMvpSelection(cid,vid,{proposal:id,proposal_version:v.id});},[cid,vid]);
- useEffect(()=>{const id=readMvpSelection(cid,vid,'proposal');if(!id||!workspace?.proposals.some(p=>p.id===id&&p.company_id===cid&&p.improvement_version_id===vid))return;const controller=new AbortController();const initial=setTimeout(()=>{void load(id,controller.signal,true).catch(e=>{if(!controller.signal.aborted)setError(e instanceof Error?e.message:'제안서 복원 실패');});},0);return()=>{clearTimeout(initial);controller.abort();};},[cid,vid,workspace,load]);
+ useEffect(()=>{const id=readMvpSelection(cid,vid,'proposal');if(restored.current||!id||!workspace?.proposals.some(p=>p.id===id&&p.company_id===cid&&p.improvement_version_id===vid))return;restored.current=true;const controller=new AbortController();const initial=setTimeout(()=>{void load(id,controller.signal,true).catch(e=>{if(!controller.signal.aborted)setError(e instanceof Error?e.message:'제안서 복원 실패');});},0);return()=>{clearTimeout(initial);controller.abort();};},[cid,vid,workspace,load]);
  useEffect(()=>{if(!candidate)return;const controller=new AbortController();void portalApi<Prep>('capability','/matches/'+candidate+'/proposal-preparation',undefined,controller.signal).then(p=>{if(!controller.signal.aborted)setPrep(p);}).catch(e=>{if(!controller.signal.aborted)setError(e instanceof Error?e.message:'진입조건 조회 실패');});return()=>controller.abort();},[candidate]);
  async function run(work:()=>Promise<void>){if(gate.current)return;gate.current=true;setBusy(true);setError('');setMessage('');try{await work();}catch(e){setError(e instanceof Error?e.message:'처리 실패');}finally{gate.current=false;setBusy(false);}}
  async function create(){const r=await portalApi<{proposal_id:string}>('proposal','',{candidate_id:candidate,title,template_version:'MVP_16',idempotency_key:key()});await load(r.proposal_id);await refresh();setMessage('16개 항목의 표준 초안을 저장했습니다. 운영자 내용 검토와 기업 전달은 별도입니다.');}
