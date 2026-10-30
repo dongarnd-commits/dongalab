@@ -13,6 +13,18 @@ from app.demo import load_input
 from app.infrastructure.notice_documents import LocalPrivateFiles
 
 
+class MvpNoticeInputStore(SqlNoticeStore):
+    """Give only newly inserted test Notice inputs a distinct display title."""
+    def __init__(self, session, notice_title):
+        super().__init__(session)
+        self.notice_title = notice_title
+
+    def add(self, entity, **values):
+        if entity == 'notices':
+            values = dict(values, title=self.notice_title)
+        return super().add(entity, **values)
+
+
 def prepare():
     require_test_database()
     nonce = os.environ['DATCO_TEST_NONCE']
@@ -29,7 +41,8 @@ def prepare():
             accounts[label], ids[label] = username, account['id']
         # Only source input is prepared. The browser must request the actual Worker,
         # inspect its candidates and record the human requirement review itself.
-        notice = load_input(store, LocalPrivateFiles(Path(os.environ['DATCO_TEST_FILES'])), 'normal', external_key='TEST_MVP_UNANALYSED_' + nonce)
+        notice_store = MvpNoticeInputStore(session, 'MVP synthetic unanalysed ' + nonce)
+        notice = load_input(notice_store, LocalPrivateFiles(Path(os.environ['DATCO_TEST_FILES'])), 'normal', external_key='TEST_MVP_UNANALYSED_' + nonce)
         version = store.rows('versions', notice_id=notice['id'])[-1]
         notice_input = dict(id=notice['id'], version_id=version['id'], title=notice['title'])
     target.write_text(json.dumps(dict(accounts=accounts, ids=ids, password=password, nonce=nonce, business_number=number(), notice=notice_input)), encoding='utf-8')
