@@ -1,7 +1,7 @@
 """Published-service retrieval; lexical candidates never confirm applicability."""
 import re
 from copy import deepcopy
-from app.capability.search import search_reasons
+from app.capability.search import search_reasons, query_terms
 from app.notice.domain import Denied
 
 VERSION = 'published-solutions-v1'
@@ -21,14 +21,17 @@ FIELDS = (('as_is', 'CURRENT_STATE'), ('problem', 'PROBLEM'), ('goal', 'GOAL'),
     ('to_be', 'GOAL'), ('required_functions', 'REQUIRED_FUNCTION'), ('constraints', 'CONSTRAINT'))
 
 
-def positive_text(text):
-    # Bounded clause negation. A business problem "재고가 맞지 않고" stays searchable.
+def clauses(text):
     value = re.sub(r'제외하고', '제외,', text)
     value = re.sub(r'불필요하고', '불필요,', value)
     value = re.sub(r'필요\s*없고', '필요 없음,', value)
     value = re.sub(r'아니라', '대상 아님,', value)
-    return ' '.join(clause.strip() for clause in re.split(r'[\n,;.!?]', value)
-                    if not EXCLUDED.search(clause)).strip()
+    return re.split(r'[\n,;.!?]', value)
+
+
+def positive_text(text):
+    # A business problem "재고가 맞지 않고" is not a product exclusion.
+    return ' '.join(clause.strip() for clause in clauses(text) if not EXCLUDED.search(clause)).strip()
 
 
 def expanded(text):
@@ -41,6 +44,13 @@ def expanded(text):
 def groups_for(value):
     value = value.lower().replace(' ', '')
     return {index for index, group in enumerate(VOCABULARY) if any(word in value for word in group)}
+
+
+def excluded_groups(context):
+    texts = [context.get('original_text', '')]
+    texts.extend(value for value in context.get('structured', {}).values() if isinstance(value, str))
+    return {group for text in texts for clause in clauses(text) if EXCLUDED.search(clause)
+            for group in groups_for(clause)}
 
 
 def source_demands(context, reviewed=()):
@@ -149,6 +159,7 @@ def validate_basis(service, actor, context, basis):
 def retrieve(context, catalog, feature_reader, reviewed=()):
     demands = source_demands(context, reviewed)
     result, covered = [], set()
+    excluded = excluded_groups(context)
     for item in catalog:
         if not item.get('version_id'):
             continue
@@ -162,9 +173,18 @@ def retrieve(context, catalog, feature_reader, reviewed=()):
             if demand['kind'] == 'CONSTRAINT':
                 continue
             query = expanded(demand['text'])
-            demand_groups = groups_for(positive_text(demand['text']))
+            original_groups = groups_for(positive_text(demand['text']))
+            demand_groups = original_groups - excluded
+            if original_groups and not demand_groups:
+                continue
             if demand_groups and catalog_groups and not demand_groups & catalog_groups:
                 continue
+            for group in excluded:
+                for term in VOCABULARY[group]:
+                    query = query.replace(term, '')
+            if not demand_groups:
+                weak = ('확인', '개선', '통합', '중복', '분산', '현재', '체계적', '정리')
+                query = ' '.join(term for term in query_terms(query) if not term.startswith(weak))
             hits = search_reasons(query, item['data'], [f['data'] for _, f in features]) if query.strip() else []
             if not hits:
                 continue

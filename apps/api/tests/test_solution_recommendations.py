@@ -132,3 +132,13 @@ def test_legacy_payload_keeps_optional_fields_absent():
     data.pop('integrations')
     value = SaveComposition(data=data, idempotency_key='TEST').data.model_dump(exclude_unset=True)
     assert value == data
+
+
+def test_scope_exclusion_overrides_mentioned_problem_and_generic_actions_do_not_recommend():
+    records, features = catalog()
+    _, results, uncovered = R.retrieve(
+        context('재고가 맞지 않습니다.', constraints='재고 업무는 이번 구축에서 제외합니다.'),
+        records, features.__getitem__)
+    assert results == [] and uncovered
+    _, results, _ = R.retrieve(context('업무를 확인하고 개선하고 싶습니다.'), records, features.__getitem__)
+    assert results == []
