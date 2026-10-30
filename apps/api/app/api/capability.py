@@ -87,7 +87,7 @@ class DetailResponse(BaseModel):
 class AnalysisBasis(Command):
     source_version_id:str|None=None
     run_id:str
-    review_ids:list[str]=Field(min_length=1,max_length=500)
+    review_ids:list[str]=Field(min_length=1,max_length=100)
 class Integration(Command):
     from_capability_version_id:str
     to_capability_version_id:str
