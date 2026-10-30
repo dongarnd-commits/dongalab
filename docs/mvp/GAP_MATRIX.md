@@ -24,3 +24,9 @@
 CompanyProvider는 공식 CONFIRM·현재 입력을, proposal_basis는 정확한 ACKNOWLEDGE·Fact Proof·Approver를 요구한다. Slice2 Review만으로 충족했다고 처리하지 않는다.
 
 근거: company/provider.py, capability/application.py, capability/proposal.py, proposal/application.py, proposal/documents.py, portal/operator-intake.tsx, portal/admin.tsx, portal/company-proposals.tsx 및 대응 기존 pytest/Playwright. 감사 Agent2개 모두 소스 조사만 수행했으며 신규 실행 테스트는 아직 없다.
+
+## 통합 후 결과
+
+기능/fixture HEAD4bfdc2d 기준으로 위 Gap을 구현·연결하고 로컬 자동검증을 완료했다. Company/원본/Fact/ACK/개선요구/Slice2를 재사용했으며, 후속6메뉴·Admin4영역·상위서비스/복합구성·공고/매칭·16절문서/전달을 실제 Backend와 연결했다.
+649원천 검증, Rule/추천 고정기대, 하나의 기업 전체 계보, 전체Unit246/PG292+기존SKIP1/브라우저63PASS와 타입/빌드를 확인했다.
+외부4Provider 미설정은 정상 MVP 목표다. 전주기H01~H32/공식신청·정산·실DMP/실외부AI는 제외/미래 범위로 보존한다. 상세근거는 ACCEPTANCE/IMPLEMENTATION_REPORT와 최신 PR Checks다.

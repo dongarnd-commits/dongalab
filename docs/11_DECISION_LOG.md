@@ -203,3 +203,12 @@ Status: ACCEPTED (LIMITED). 사용자 명시 UX 통합 개선 지시에 따라 �
 Status: ACCEPTED (USER DEVELOPMENT SCOPE ONLY). 사용자는 전주기 대신 기업 개선요구→Rule/검토→서비스 단독·복합 구성→실제 Notice/Matching→16절 DOCX/PDF 제안서 전달을 이번 MVP 구현 목표로 명시 승인했다. 전주기 H01~H32와 과거 결정을 삭제하지 않고 미래 확장으로 보존한다. 대표/조직의 별도 공식 승인은 확인하지 않았다.
 
 개발 Branch/Worktree·Commit/Push·통합 Draft PR·비파괴 증분 Migration 코드/소유 격리 DB·합성 검증을 허용한다. main Merge·실서비스·공유 DB·실제 자료/계정·권한/State 정책·외부 AI/OAuth/과금은 별도 승인이다. 외부 GPT/GEMINI/CLAUDE/GROK은 모두 NOT_CONFIGURED, RULE만 실제 실행한다. MANUAL/ENSURE는 별도 실행 정책이다. 기존 11절/승인/원본을 보존하며 MVP16 템플릿은 새 불변 Version에서만 적용한다. 자세한 영향과 인수는 mvp/MASTER_DEVELOPMENT_CONTRACT.md·GAP_MATRIX.md·EXECUTION_PLAN.md·ACCEPTANCE.md를 따른다.
+
+## Decision-MVP-002 — 분석 입력과 공식 구조화의 명시 계보
+
+2026-10-30 사용자 MVP 개발 지시에 따른 비파괴 구현. 제출v1의Run·최신USE_FOR_REQUEST Review를 source_version_id와 함께 구조화v2의analysis_basis에 명시 저장한다. v2 회사ACK/운영자CONFIRM, Fact확인, MatchReview, 제안내용Review, 기업제안의사결정은 각각 기존 Guard를 유지한다.
+단일문서용 기존 AnalysisProvider와 별도 개선요구 공통결과 경계를 둔다. Rule만 실행하며 외부4종은 동일 NOT_CONFIGURED다. fg31m0012026 증분은 새 근거의 정합성만 추가하고 기존행/불변Trigger/함수설정을 보존한다. 실제 공유DB에는 실행하지 않았다.
+
+## Decision-MVP-003 — 표준 제안서의 명시 템플릿 Version
+
+기존LEGACY_11 기본과 과거파일/승인을 보존한다. 새운영자 흐름이MVP_16을 명시 선택하고, 템플릿 변경은새ProposalVersion으로 만든다. 같은별도내용검토Version에서DOCX/PDF를생성하고기존지정회사 전달/승인Guard를유지한다. 실제비용·기간·원인·효과·신청자격을자동확정하지않는다.

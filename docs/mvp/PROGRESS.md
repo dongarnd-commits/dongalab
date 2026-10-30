@@ -51,3 +51,14 @@ main Merge/HTTPS 배포/공유 DB 변경은 승인 범위가 아니다. 외부 A
 - 미분석Notice원문입력에서실제UI/Worker/사람요건검토까지신규브라우저5건모두PASS(1.7분). FileACK→Fact→Rule→구조화와MVP16전달/회사수정요청도포함.
 - 최종소스Frontend lint/TypeScript/Production build PASS(FINAL_FRONTEND_QUALITY_PASS). 새소스동결, 허용된CI오류수정외추가개발없음.
 - tests/ci_run.py에신규공고spec을focused/full모두등록. 다음은최종전체63브라우저회귀, 이후인수문서최종화/통합Push/DraftPR/최신CI. 현재전체확인전PARTIAL.
+
+## 로컬 최종 완료
+
+- 기능/fixture 동결 HEAD4bfdc2d4a4f0ba07e9ca27a5e0e2dbf65a2eacf1. 신규공고의고유제목입력은71065de에서테스트전용Store.add로분리했으며제품/기존원문/기존테스트변경0.
+- 새fixture가legacy normal제목과충돌한전체실행은소유E2E 자식테스트만PID/부모/절대경로를검증후종료했고부모finally가소유API/Web/Worker/DB/Role을정리했다. 기존서비스프로세스종료0.
+- 최종전체Playwright63 PASS/FAIL0/SKIP0,17.6분, nonce61521bb969f0; CI_OWNED_DATABASE_AND_ROLE_REMOVED와부모종료0확인.
+- BackendUnit246PASS, 전체PG292PASS/기존1SKIP, 최신MVP29PASS. Frontendlint/TypeScript/build/API타입일치/검토명령9/3포털Preview20+production404 PASS.
+- 교차검토로발견한Gov분석Body필드도수정/실제Worker브라우저검증PASS. 회사파일ACK→OPFact→Rule→v1근거의v2→회사ACK/OPCONFIRM 및Notice/Match/MVP16/기업전달/수정요청검증완료.
+- 기존공동서비스는127.0.0.1:49356(PID26564),49355(PID27060),10.10.10.145:8443(PID11532)Listen유지읽기확인. 기존main10d3d8b/dongalab6beb859 Worktree clean; 실제DB/계정/원본/서비스변경0.
+- 이문서Commit후통합Branch만Push하고DraftPR 생성/최신HEAD필수CI4+포털Preview3확인한다. 원격최종판정은PR본문/Checks와Codex완료보고가원천이다.
+- 남은단계는사용자통합인수와별도mainMerge/공유DB백업·복원·Migration/HTTPS승인이다. 외부AI4개NOT_CONFIGURED를유지하며별도지시없이는연결하지않는다.

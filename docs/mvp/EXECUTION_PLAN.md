@@ -13,3 +13,8 @@
 | 제출 | root | 증빙/통합 Draft PR | 사용자 인수 대기, main/배포 별도 승인 |
 
 main.py·API 생성 타입·CI 하네스·Migration·기준문서는 root 소유. Agent는 지정 모듈/테스트만 수정하고 공유 변경은 메시지로 조정한다. 기존 테스트 삭제/완화 금지. 외부 Blocker로 독립 개발을 중단하지 않는다.
+
+## 실행 완료 체크포인트
+
+P0~P6 구현·문서·연결을 완료했다. P7 로컬 전체 자동검증도 완료(Unit246, PG292+기존SKIP1, 전체브라우저63, Frontend/API타입/3포털Preview PASS).
+기능동결 HEAD4bfdc2d, 이후 인수문서 Commit. 다음은 통합 명시Push/DraftPR/정확최신CI 확인과 사용자 인수다. main Merge/공유DB Migration/HTTPS 적용은 별도 승인이다.
