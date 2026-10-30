@@ -17,13 +17,39 @@ from app.company.improvement_analysis import ImprovementAnalysis
 from app.capability.application import CapabilityApplication, fingerprint
 from app.infrastructure import company_schema as C, capability_schema as K, notice_schema as N
 from test_company_workflow import env, fresh, call, upload
-from test_improvement_analysis import submitted, request, finish
+from test_improvement_analysis import submitted, request
 
 pytestmark = pytest.mark.integration
 
 
 def nonce():
     return str(uuid4())
+
+
+def finish(e, vid):
+    """Run the ordinary shared queue until this exact Version's newest Job ends.
+
+    Other tests may legitimately leave queued Jobs. Do not select a target Job in
+    the production worker or mutate/retry unrelated execution records to skip it.
+    """
+    from app.company.improvement_worker import process_improvement_one
+    from app.infrastructure import improvement_schema as I
+    with e['factory']() as session:
+        a = CompanyApplication(session, e['files'])
+        manifests = a.rows(I.manifests, version_id=vid)
+        assert manifests, 'Expected a real analysis request before waiting'
+        manifest = max(manifests, key=lambda row: (row['created_at'], row['id']))
+    for _ in range(256):
+        status = call(e, 'operator', '/company/analysis-jobs/' + manifest['job_id'])
+        assert status['state'] != 'FAILED', ('Target analysis failed', status.get('error'))
+        if status['state'] in ('SUCCEEDED', 'PARTIAL'):
+            runs = call(e, 'operator', '/company/improvements/' + vid + '/analysis-runs')
+            exact = [run for run in runs if run['manifest']['id'] == manifest['id']]
+            assert exact, 'Terminal target Job must publish its own typed analysis Run'
+            return max(exact, key=lambda row: (row['run']['created_at'], row['run']['id']))
+        assert process_improvement_one(e['factory'], e['files']), (
+            'No queued work can complete the requested target', status['state'])
+    raise AssertionError('Target Job did not finish within the bounded shared-queue drain')
 
 
 def review(e, candidate, decision='USE_FOR_REQUEST', ordinal=None):
@@ -361,3 +387,18 @@ def test_new_lineage_history_refuses_migration_downgrade_without_changing_record
         assert [session.scalar(select(func.count()).select_from(table)) for table in tables] == counts
         assert connection.scalar(text("SELECT EXISTS(SELECT 1 FROM pg_trigger WHERE tgname='ck_mvp_structure_basis' AND NOT tgisinternal)"))
     assert version(e, target['id']) == frozen_target
+
+
+def test_pending_other_company_job_is_processed_without_becoming_target_version_result(env):
+    e = env
+    older = prepare_source(e, run_analysis=False)
+    old_job, _, _ = request(e, older['source']['id'])
+    target = prepare_source(e, run_analysis=False)
+    target_job, _, _ = request(e, target['source']['id'])
+    result = finish(e, target['source']['id'])
+    assert result['manifest']['job_id'] == target_job['id']
+    assert result['manifest']['version_id'] == target['source']['id']
+    assert result['manifest']['company_id'] == target['company']['id']
+    assert result['manifest']['company_id'] != older['company']['id']
+    assert call(e, 'operator', '/company/analysis-jobs/' + old_job['id'])['state'] in ('SUCCEEDED', 'PARTIAL')
+    assert call(e, 'operator', '/company/improvements/' + older['source']['id'] + '/analysis-runs')[-1]['manifest']['version_id'] == older['source']['id']
