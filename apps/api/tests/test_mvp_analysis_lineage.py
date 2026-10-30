@@ -333,3 +333,31 @@ def test_provider_status_and_not_configured_direct_requests_create_no_jobs(env):
     result = finish(e, item['source']['id'])
     assert result['run']['provider_version'].startswith('improvement-rules-')
     assert result['manifest']['data']['provider'] == 'RULE'
+
+
+def test_new_lineage_history_refuses_migration_downgrade_without_changing_records(env):
+    from alembic.operations import Operations
+    from alembic.migration import MigrationContext
+    from sqlalchemy import text
+    from v14_migration_chain import load
+    from app.infrastructure import improvement_schema as I
+
+    e = env
+    item = prepare_source(e)
+    target = structure_and_confirm(e, item)
+    frozen_target = version(e, target['id'])
+    # The operation is confined to the runner-owned DB transaction. The expected
+    # guard raises before DDL; even a missing guard causes this transaction to roll
+    # back when pytest detects the missing RuntimeError.
+    with e['factory'].begin() as session:
+        connection = session.connection()
+        before_function = connection.scalar(text("SELECT pg_get_functiondef('validate_improvement_lineage()'::regprocedure)"))
+        tables = (C.improvement_versions, I.manifests, I.details, N.candidates, N.reviews)
+        counts = [session.scalar(select(func.count()).select_from(table)) for table in tables]
+        with Operations.context(MigrationContext.configure(connection)):
+            with pytest.raises(RuntimeError, match='MVP_ANALYSIS_HISTORY_EXISTS_NO_DATA_DELETED'):
+                load('fg31m0012026_mvp_analysis_lineage.py').downgrade()
+        assert connection.scalar(text("SELECT pg_get_functiondef('validate_improvement_lineage()'::regprocedure)")) == before_function
+        assert [session.scalar(select(func.count()).select_from(table)) for table in tables] == counts
+        assert connection.scalar(text("SELECT EXISTS(SELECT 1 FROM pg_trigger WHERE tgname='ck_mvp_structure_basis' AND NOT tgisinternal)"))
+    assert version(e, target['id']) == frozen_target
