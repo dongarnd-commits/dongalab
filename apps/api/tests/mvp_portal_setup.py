@@ -9,6 +9,8 @@ from app.infrastructure.notice_store import SqlNoticeStore
 from app.infrastructure.local_auth import hash_password
 from isolation import require_test_database
 from registration_sources import number
+from app.demo import load_input
+from app.infrastructure.notice_documents import LocalPrivateFiles
 
 
 def prepare():
@@ -25,7 +27,12 @@ def prepare():
             username = 'TEST_MVP_' + label + '_' + nonce
             account = store.add('actors', username=username, role=role, password_hash=hash_password(password))
             accounts[label], ids[label] = username, account['id']
-    target.write_text(json.dumps(dict(accounts=accounts, ids=ids, password=password, nonce=nonce, business_number=number())), encoding='utf-8')
+        # Only source input is prepared. The browser must request the actual Worker,
+        # inspect its candidates and record the human requirement review itself.
+        notice = load_input(store, LocalPrivateFiles(Path(os.environ['DATCO_TEST_FILES'])), 'normal', external_key='TEST_MVP_UNANALYSED_' + nonce)
+        version = store.rows('versions', notice_id=notice['id'])[-1]
+        notice_input = dict(id=notice['id'], version_id=version['id'], title=notice['title'])
+    target.write_text(json.dumps(dict(accounts=accounts, ids=ids, password=password, nonce=nonce, business_number=number(), notice=notice_input)), encoding='utf-8')
     print('MVP_SYNTHETIC_IDENTITIES_READY')
 
 
