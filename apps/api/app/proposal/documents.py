@@ -63,7 +63,7 @@ def render(version,kind):
  template=template_version(version['manifest']);validate(version['sections'],template);title=version['title'];info='ProposalVersion '+version['id']+' / '+str(version['ordinal'])+' / '+version['content_digest']
  paragraphs=[title,info]
  for s in version['sections']:paragraphs.extend([s['heading'],s['body']])
- paragraphs+=['생성 근거 식별자',text(version['manifest']['refs'])]
+ if template=='LEGACY_11':paragraphs+=['생성 근거 식별자',text(version['manifest']['refs'])]
  if any((ord(c)<32 and c not in '\n\r\t') or 0xD800<=ord(c)<=0xDFFF or ord(c) in (0xFFFE,0xFFFF) for p in paragraphs for c in p):raise Denied('PROPOSAL_INVALID_DOCUMENT_TEXT',422)
  if kind=='DOCX':
   b=BytesIO()
@@ -106,7 +106,10 @@ def render(version,kind):
   story=[]
   for p in paragraphs:
    chosen=(title_style if p==title else heading_style if p in headings else style) if template=='MVP_16' else style
-   for line in p.splitlines() or ['']:story.extend([Paragraph(escape(line) or ' ',chosen),Spacer(1,4)])
+   for line in p.splitlines() or ['']:
+    story.append(Paragraph(escape(line) or ' ',chosen))
+    # A heading must keep with the first content paragraph, not a trailing spacer.
+    if chosen is style:story.append(Spacer(1,4))
   # Each reference gets a bounded row so long lists can flow across pages.
   rows=[[Paragraph(escape(k),style),Paragraph(escape(text(item)),style)]
         for k,value in version['manifest']['refs'].items()

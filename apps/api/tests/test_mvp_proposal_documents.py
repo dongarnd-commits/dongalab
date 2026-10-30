@@ -77,7 +77,11 @@ def test_exact_korean_sixteen_sections_version_and_content_in_real_documents(kin
         root = ET.fromstring(archive.read('word/document.xml'))
         content = ''.join(root.itertext())
     else:
-        content = ''.join(page.extract_text() for page in PdfReader(io.BytesIO(data)).pages)
+        reader = PdfReader(io.BytesIO(data))
+        content = ''.join(page.extract_text() for page in reader.pages)
+        assert all(abs(float(page.mediabox.width) - 595.28) < 1 and abs(float(page.mediabox.height) - 841.89) < 1 for page in reader.pages)
+        for page in reader.pages:
+            assert page.extract_text().strip().splitlines()[-1].strip() not in HEADINGS
     assert v['id'] in content and v['title'] in content
     for section in v['sections']:
         assert section['heading'] in content

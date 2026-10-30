@@ -138,7 +138,11 @@ def draft(manifest):
         lines(['문서 템플릿: ' + TEMPLATE, basis_note,
             '분석 후보 검토, 개선요구 공식 확인, MatchReview, 제안내용 검토, 기업 승인·재승인은 별도 기록입니다.',
             '이 문서의 기업 승인·전달 여부는 정확한 ProposalVersion의 요청·결정 이력에서 확인합니다.',
-            dump(manifest['refs'])]),
+            '구조화·확정 ImprovementVersion: ' + str(manifest['refs'].get('improvement_version_id', NEEDS_CHECK)),
+            '분석 입력 ImprovementVersion: ' + str(manifest['refs'].get('analysis_source_version_id', NEEDS_CHECK)),
+            '분석 실행: ' + str(manifest['refs'].get('analysis_run_id', NEEDS_CHECK)),
+            '분석 후보 검토: ' + ', '.join(manifest['refs'].get('analysis_review_ids', [])),
+            '정확한 원천 Version·기능·근거 식별자는 아래 출처표를 참조합니다.']),
     )
     return [dict(heading=heading, body=body, evidence_refs=manifest['refs'])
             for heading, body in zip(HEADINGS, bodies)]
