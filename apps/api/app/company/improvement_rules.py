@@ -1,7 +1,8 @@
 """Bounded deterministic rules. No model, network, invented numbers or facts."""
 import re
+from app.company.improvement_language import active_match,answer_span,classify_domains,scalar_observations
 
-VERSION = 'improvement-rules-v2'
+VERSION = 'improvement-rules-v3'
 REASONS = {
  'R02':'개선 전후 효과를 비교하려면 측정 지표·기준기간·현재값·단위를 확인해야 합니다.',
  'R03':'기업이 기대하는 개선 결과를 구체화하기 위한 확인입니다.',
@@ -31,13 +32,23 @@ def analyze(data, spans, *, incomplete=False, coverage=()):
             span=next(s for s in spans if s.get('field')==field)
             emit('STRUCTURE',field,data[field],'R01' if field in ('as_is','problem','impact') else 'R03',[span])
     for source in spans:
-        if source.get('kind') not in ('DOCUMENT','IMPROVEMENT','EVIDENCE'):continue
+        if source.get('kind') not in ('DOCUMENT','IMPROVEMENT','EVIDENCE','RESPONSE'):continue
         for line in source['quote'].splitlines():
-            m=re.fullmatch(r'\s*(현황|문제|개선 목표|필요 기능)\s*[:：]\s*(.{1,2000})\s*',line)
+            m=re.fullmatch(r'\s*(현황|현재 업무|문제|개선 목표|목표|필요 기능|요구 기능|원인 후보|원인)\s*[:：]\s*(.{1,2000})\s*',line)
             if m and not any(c['content']==m[2] for c in candidates):
-                emit('STRUCTURE',m[1],m[2],'R01' if m[1] in ('현황','문제') else 'R03',[source])
+                subject={'현재 업무':'현황','목표':'개선 목표','요구 기능':'필요 기능','원인':'원인 후보'}.get(m[1],m[1])
+                emit('STRUCTURE',subject,m[2],'R01' if subject in ('현황','문제','원인 후보') else 'R03',[source], 'INFERRED' if subject=='원인 후보' else 'DIRECT_SOURCE')
+                if subject=='원인 후보':candidates[-1]['data']['uncertainty']='기업 원문의 원인 설명 후보; 인과관계나 확정 Fact가 아님'
+    for source in spans:
+        if source.get('kind')!='IMPROVEMENT' or not classify_domains([source]):continue
+        for clause in re.split(r'[。\n;；.!?]',source['quote']):
+            clause=clause.strip()
+            if len(clause)<6 or len(clause)>2000 or any(c['content']==clause for c in candidates):continue
+            if active_match(clause,r'누락|오류|지연|중복|분리|수작업|수기|엑셀|불량|연계|자동화'):
+                emit('STRUCTURE','업무요구 후보',clause,'R01',[source],'INFERRED')
+                candidates[-1]['data']['uncertainty']='명시 업무 문장의 검토 후보; 원인/기능/해결 가능성을 자동 확정하지 않음'
     def missing(rule,subject,basis,question,present):
-        found=next((s for s in spans if re.search(present,s['quote'])),None)
+        found,answer_state=answer_span(rule,spans,present)
         scope=[dict(inspection_id=c['inspection_id'],status=c['status'],origin=c['origin'],
                     locations=c['locations'],exclude_reason=c.get('exclude_reason','')) for c in coverage]
         # Excluding a common reference explicitly bounds the search. Direct evidence
@@ -45,7 +56,7 @@ def analyze(data, spans, *, incomplete=False, coverage=()):
         unknown=[c['inspection_id'] for c in coverage if c['status']!='COMPLETE' and
                  not (c['status'] in ('EXCLUDED','NOT_SELECTED') and c['origin']=='COMMON_REFERENCE')]
         if found:
-            diagnostics.append(dict(rule=rule,outcome='FOUND',reason='지원하는 명시 라벨 확인',evidence=[found],scope=scope));return
+            diagnostics.append(dict(rule=rule,outcome=answer_state,reason='명시 라벨 또는 지원하는 동등 표현/기존 검토 답변 확인; 미정 응답을 수치로 해석하지 않음',evidence=[found],scope=scope));return
         if incomplete and not coverage:
             diagnostics.append(dict(rule=rule,outcome='UNKNOWN',reason='자료 처리 범위 불충분; 누락 판단 보류'));return
         uncertain=bool(unknown)
@@ -63,7 +74,7 @@ def analyze(data, spans, *, incomplete=False, coverage=()):
         missing('R03','개선 목표',basis,'이번 문제에서 기대하는 개선 결과를 확인해 주세요.',r'개선\s*목표\s*[:：]\s*\S+')
     for rule,subject,applicable,present,question in RULES:
         # A common document can answer a question; it cannot invent task applicability.
-        basis=next((s for s in spans if s.get('kind')=='IMPROVEMENT' and re.search(applicable,s['quote'])),None)
+        basis=next((s for s in spans if s.get('kind')=='IMPROVEMENT' and active_match(s['quote'],applicable)),None)
         if basis is None:
             diagnostics.append(dict(rule=rule,outcome='NOT_APPLICABLE',reason='명시된 적용조건 없음'));continue
         missing(rule,subject,basis,question,present)
@@ -75,6 +86,10 @@ def analyze(data, spans, *, incomplete=False, coverage=()):
             if m:values.setdefault((m[1],m[2]),{}).setdefault(m[3],span)
     for (label,context),found in values.items():
         if len(found)>1:emit('CONFLICT',label,f'{label}의 명시값이 서로 다릅니다.','R08',list(found.values()),'INFERRED',f'{label}의 적용 기준을 확인해 주세요.')
+    for (label,context,dimension),found in scalar_observations(spans).items():
+        if len(found)>1:
+            emit('CONFLICT',label,f'{label}의 같은 기간·범위·호환 단위 값이 서로 다릅니다.','R08',list(found.values()),'INFERRED',f'{context}의 {label} 적용 기준을 확인해 주세요.')
+            candidates[-1]['data']['comparison']=dict(context=context,dimension=dimension,method='EXPLICIT_DECIMAL_UNIT_COMPARISON')
     return candidates,diagnostics
 
 def validate(candidate,spans):

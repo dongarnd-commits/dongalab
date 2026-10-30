@@ -22,6 +22,9 @@ class ImprovementAnalysis:
         return v,root,submits[0]
     def sources(self,who,vid):
         a=self.a;v,r,sub=self.target(who,vid)
+        return self._sources(v,r,sub)
+    def _sources(self,v,r,sub):
+        a=self.a;vid=v['id']
         files=[]
         direct={a.get(C.evidence,l['evidence_id'])['file_id'] for l in a.rows(C.improvement_evidence,version_id=vid)}
         from app.infrastructure import company_business_schema as B
@@ -46,7 +49,18 @@ class ImprovementAnalysis:
                 if fv['id'] in linked or current:
                     eid,rid=a.fact_evidence(fv)
                     facts.append(dict(id=fv['id'],review_id=rid,evidence_id=eid,current=current,direct=fv['id'] in linked))
-        result=dict(company_id=r['company_id'],version_id=vid,submit_review_id=sub['id'],input_version_id=profile['id'],
+        answers=[]
+        for request in a.rows(B.requests,company_id=r['company_id']):
+            if request['state']!='VERIFIED' or request['improvement_version_id'] not in (None,vid):continue
+            replies=sorted(a.rows(B.responses,request_id=request['id']),key=lambda row:row['ordinal'])
+            if not replies or not replies[-1]['submitted']:continue
+            reply=replies[-1]
+            reviews=a.rows(B.request_reviews,request_id=request['id'],response_id=reply['id'],outcome='VERIFIED')
+            if not reviews:continue
+            answers.append(dict(request_id=request['id'],response_id=reply['id'],review_id=reviews[-1]['id'],
+                ordinal=reply['ordinal'],message_digest=sha256(reply['message'].encode()).hexdigest()))
+        answers.sort(key=lambda row:row['request_id'])
+        result=dict(company_id=r['company_id'],version_id=vid,submit_review_id=sub['id'],input_version_id=profile['id'],reviewed_answers=answers,
             site_version_id=site['id'],site_current_ordinal=a.get(C.sites,r['site_id'])['current_ordinal'],files=files,facts=facts,rule_version=VERSION,input_policy=INPUT_POLICY)
         return dict(result,selection_token=digest(result))
     def plan(self,src,excluded,common):
@@ -64,8 +78,10 @@ class ImprovementAnalysis:
         value={k:v for k,v in plan.items() if k not in ('selection_token','reason')}
         value['files']=[{k:v for k,v in f.items() if k not in ('parse_id','default_included')} for f in plan['files'] if f['selection']!='NOT_SELECTED']
         return digest(value)
-    def request(self,who,vid,key,token,excluded,reason,common=None,ensure=False):
+    def request(self,who,vid,key,token,excluded,reason,common=None,ensure=False,provider='RULE'):
         a=self.a;v,r,_=self.target(who,vid,True)
+        from app.company.improvement_providers import ensure_provider
+        ensure_provider(provider)
         common=common or []
         body=digest(dict(vid=vid,token=token,excluded=excluded,reason=reason,common=sorted(common),ensure=ensure))
         old=a.rows(S.receipts,actor_id=who.id,request_key=key)
@@ -75,7 +91,7 @@ class ImprovementAnalysis:
         if a.rows(N.jobs,actor_id=who.id,request_key=key):raise Denied('IDEMPOTENCY_CONFLICT',409)
         src=self.sources(who,vid)
         if src['selection_token']!=token:raise Denied('STALE_INPUT_VERSION',409)
-        plan=dict(self.plan(src,excluded,common),reason=reason);fingerprint=self.fingerprint(plan)
+        plan=dict(self.plan(src,excluded,common),reason=reason,provider=provider);fingerprint=self.fingerprint(plan)
         for m in reversed(a.rows(S.manifests,company_id=r['company_id'])):
             job=a.get(N.jobs,m['job_id'])
             if m['digest']==fingerprint and (ensure or job['state'] in ('QUEUED','PROCESSING')):
@@ -101,14 +117,18 @@ class ImprovementAnalysis:
         ctx=a.rows(S.contexts,run_id=rid)[0];m=a.get(S.manifests,ctx['manifest_id']);self.target(who,m['version_id'],lock)
         return run,ctx,m
     def freshness(self,who,rid):
-        a=self.a;run,ctx,m=self.manifest_for_run(who,rid);old=m['data'];now=self.sources(who,m['version_id']);reasons=[];warnings=[]
-        v,r,_=self.target(who,m['version_id'])
+        run,ctx,m=self.manifest_for_run(who,rid)
+        return self._freshness(run,ctx,m)
+    def _freshness(self,run,ctx,m):
+        a=self.a;old=m['data'];v=a.get(C.improvement_versions,m['version_id']);r=a.get(C.improvements,v['improvement_id'])
+        sub=a.get(C.improvement_reviews,m['submit_review_id']);now=self._sources(v,r,sub);reasons=[];warnings=[]
         submitted=[]
         for version in a.rows(C.improvement_versions,improvement_id=r['id']):
             if a.rows(C.improvement_reviews,version_id=version['id'],outcome='SUBMIT'):submitted.append(version)
         if submitted[-1]['id']!=m['version_id']:reasons.append('NEW_SUBMIT_VERSION')
         if old['input_version_id']!=now['input_version_id']:reasons.append('COMPANY_INPUT_CHANGED')
         if old['site_current_ordinal']!=now['site_current_ordinal']:reasons.append('SITE_CHANGED')
+        if old.get('reviewed_answers',[])!=now['reviewed_answers']:reasons.append('VERIFIED_ANSWER_CHANGED')
         current_facts={f['id']:f for f in now['facts']}
         if any(f['id'] not in current_facts or current_facts[f['id']]!=f for f in old['facts']):reasons.append('FACT_BASIS_CHANGED')
         if set(current_facts)-{f['id'] for f in old['facts']}:warnings.append('NEW_FACT_REVIEW_SUGGESTED')
@@ -128,6 +148,41 @@ class ImprovementAnalysis:
         if ctx['status']=='FAILED':reasons.append('ANALYSIS_FAILED')
         if old['rule_version']!=VERSION:reasons.append('RULE_CHANGED')
         return dict(usable=not reasons,reasons=sorted(set(reasons)),warnings=warnings)
+    def validate_basis(self,who,target_vid,basis,*,for_structure=False):
+        self.a.role(who,'DATCO_OPERATOR')
+        return self._validate_basis(who,target_vid,basis,for_structure=for_structure)
+    def _validate_basis(self,who,target_vid,basis,*,for_structure=False):
+        a=self.a;target=a.get(C.improvement_versions,target_vid);root=a.get(C.improvements,target['improvement_id'])
+        a.scope(who,root['company_id'])
+        if not isinstance(basis,dict) or set(basis)-{'run_id','review_ids','source_version_id'}:raise Denied('INVALID_ANALYSIS_BASIS',422)
+        ids=basis.get('review_ids',[])
+        if not ids or len(ids)>100 or len(ids)!=len(set(ids)):raise Denied('INVALID_REVIEW_SELECTION',422)
+        run=a.get(N.runs,basis.get('run_id',''))
+        if run['analysis_kind']!=KIND:raise Denied('OBJECT_NOT_FOUND',404)
+        ctx=a.rows(S.contexts,run_id=run['id'])[0];m=a.get(S.manifests,ctx['manifest_id'])
+        source=a.get(C.improvement_versions,m['version_id'])
+        if m['company_id']!=root['company_id'] or source['improvement_id']!=target['improvement_id'] or source['ordinal']>target['ordinal']:raise Denied('OBJECT_NOT_FOUND',404)
+        if basis.get('source_version_id',source['id'])!=source['id']:raise Denied('ANALYSIS_SOURCE_MISMATCH',409)
+        if source['site_ordinal']!=target['site_ordinal'] or (for_structure and a.get(C.sites,root['site_id'])['current_ordinal']!=source['site_ordinal']):raise Denied('ANALYSIS_SITE_CONTEXT_MISMATCH',409)
+        if source['id']!=target['id'] and not for_structure:
+            stored=target['data'].get('analysis_basis') or {}
+            if stored.get('run_id')!=run['id'] or stored.get('source_version_id')!=source['id'] or not set(ids).issubset(set(stored.get('review_ids',[]))):raise Denied('ANALYSIS_SOURCE_MISMATCH',409)
+        manifests=a.rows(S.manifests,version_id=source['id'])
+        runs=[a.get(N.runs,c['run_id']) for item in manifests for c in a.rows(S.contexts,manifest_id=item['id'])]
+        if not runs or sorted(runs,key=lambda row:(row['created_at'],row['id']))[-1]['id']!=run['id'] or not self._freshness(run,ctx,m)['usable']:raise Denied('STALE_ANALYSIS',409)
+        if any(item['created_at']>m['created_at'] and a.get(N.jobs,item['job_id'])['state'] in ('QUEUED','PROCESSING') for item in manifests):raise Denied('STALE_ANALYSIS',409)
+        for key in ids:
+            review=a.get(S.reviews,key);candidate=a.get(N.candidates,review['candidate_id'])
+            if candidate['run_id']!=run['id']:raise Denied('OBJECT_NOT_FOUND',404)
+            if review['decision']!='USE_FOR_REQUEST' or self.ordered(S.reviews,candidate_id=candidate['id'])[-1]['id']!=key:raise Denied('STALE_REVIEW',409)
+        return dict(run_id=run['id'],review_ids=list(ids),source_version_id=source['id'])
+    def basis_current_for_company_decision(self,who,target_vid,run_id,review_ids):
+        """Internal boolean only, called after Proposal authorization; no role impersonation."""
+        try:
+            self.a.role(who,'DATCO_OPERATOR','COMPANY_EDITOR','COMPANY_APPROVER')
+            self._validate_basis(who,target_vid,dict(run_id=run_id,review_ids=review_ids))
+            return True
+        except Denied:return False
     def job(self,who,jid):
         a=self.a;a.role(who,'DATCO_OPERATOR');j=a.get(N.jobs,jid)
         if j['kind']!=KIND:raise Denied('OBJECT_NOT_FOUND',404)

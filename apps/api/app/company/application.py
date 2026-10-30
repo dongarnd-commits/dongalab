@@ -266,6 +266,8 @@ class CompanyApplication(BusinessRecords,InformationRequests):
   return CompanyProvider(self).read(who,version_id)
  def save_improvement(self,who,cid,data,key=None,expected=0):
   self.role(who,'COMPANY_EDITOR','DATCO_OPERATOR');self.scope(who,cid,True);data=Improvement.model_validate(data).model_dump();self.site(cid,data['site_id'])
+  if data.get('analysis_basis') is None:data.pop('analysis_basis',None)
+  elif who.role!='DATCO_OPERATOR':raise Denied('ACTION_NOT_AUTHORIZED',403)
   if key:
    root=self.get(S.improvements,key,True)
    if root['company_id']!=cid:raise Denied('OBJECT_NOT_FOUND',404)
@@ -277,6 +279,9 @@ class CompanyApplication(BusinessRecords,InformationRequests):
     if data['original_text']!=previous['data']['original_text'] or data['site_id']!=root['site_id']:raise Denied('ORIGINAL_COMPANY_INPUT_IS_IMMUTABLE',409)
   else:
    self.role(who,'COMPANY_EDITOR');root=self.add(S.improvements,company_id=cid,site_id=data['site_id'],title=data['title'],current_ordinal=0,state='DRAFT')
+  if data.get('analysis_basis'):
+   from app.company.improvement_analysis import ImprovementAnalysis
+   data['analysis_basis']=ImprovementAnalysis(self).validate_basis(who,previous['id'],data['analysis_basis'],for_structure=True)
   for fid in data['fact_version_ids']:
    v,f,current=self.current_fact(fid)
    if f['company_id']!=cid or (f['site_id'] and f['site_id']!=data['site_id']):raise Denied('OBJECT_NOT_FOUND',404)

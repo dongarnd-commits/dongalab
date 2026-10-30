@@ -8,7 +8,9 @@ from sqlalchemy import update
 from app.company.application import CompanyApplication
 from app.company.improvement_analysis import ImprovementAnalysis, KIND, digest
 from app.company.documents import parse_document, DocumentError
-from app.company.improvement_rules import analyze, validate, VERSION
+from app.company.improvement_rules import validate, VERSION
+from app.company.improvement_providers import AnalysisContext,ensure_provider,execute_provider,public_result
+from app.infrastructure import company_business_schema as B
 from app.infrastructure import company_schema as C, improvement_schema as S, notice_schema as N
 from app.infrastructure.database import get_session_factory
 from app.infrastructure.notice_queue import claim
@@ -50,6 +52,7 @@ def process_improvement_one(factory=None,files=None,extractor=extract,before_pub
         with factory() as session:
             a=CompanyApplication(session,files);actor=a.get(N.actors,job['actor_id']);who=Actor(actor['id'],actor['role']);svc=ImprovementAnalysis(a)
             m=a.rows(S.manifests,job_id=job['id'])[0];v,_,_=svc.target(who,m['version_id'])
+            ensure_provider(m['data'].get('provider','RULE'))
             sources=a.rows(S.inputs,manifest_id=m['id'])
         for x in sources:
             if not x['file_id']:continue
@@ -116,6 +119,11 @@ def process_improvement_one(factory=None,files=None,extractor=extract,before_pub
             if source['evidence_id']:
                 e=a.get(C.evidence,source['evidence_id'])
                 if e['text'].strip():spans.append(dict(kind='EVIDENCE',evidence_id=e['id'],descriptor=e['descriptor'],quote=e['text'],mode=e['mode']))
+        for source in m['data'].get('reviewed_answers',[]):
+            reply=a.get(B.responses,source['response_id']);request=a.get(B.requests,source['request_id']);review=a.get(B.request_reviews,source['review_id'])
+            if request['company_id']!=m['company_id'] or request['improvement_version_id'] not in (None,m['version_id']) or reply['request_id']!=request['id'] or review['request_id']!=request['id'] or review['response_id']!=reply['id'] or review['outcome']!='VERIFIED' or not reply['submitted'] or sha256(reply['message'].encode()).hexdigest()!=source['message_digest']:
+                raise ValueError('REVIEWED_ANSWER_SCOPE_MISMATCH')
+            if reply['message'].strip():spans.append(dict(kind='RESPONSE',request_id=request['id'],response_id=reply['id'],review_id=review['id'],quote=reply['message']))
         run=a.add(N.runs,analysis_kind=KIND,attempt_id=t['id'],actor_id=who.id,provider_version=VERSION,extractor_version='company-local-parser-v1/improvement-local-ocr-v1',missing=[],conflicts=[])
         incomplete=False;limits=[];coverage=[]
         for item in prepared:
@@ -139,7 +147,8 @@ def process_improvement_one(factory=None,files=None,extractor=extract,before_pub
             coverage.append(dict(data,inspection_id=inspection['id'],origin=x['origin']))
             for e in ev:spans.append(dict(kind='DOCUMENT',evidence_id=e['id'],inspection_id=inspection['id'],file_id=x['file_id'],descriptor=e['descriptor'],page=e['page'],quote=e['text']))
             if status!='COMPLETE' and not (status in ('EXCLUDED','NOT_SELECTED') and x['origin']=='COMMON_REFERENCE'):limits.append(dict(category='PROCESSING_LIMITATION',content=f"자료 {x['data']['name']}: {status}",reason='검사하지 못한 자료를 정보부족 증거로 사용하지 않음',data=dict(subject='document',rule_id='PROCESSING',rule_version=VERSION,claim_kind='PROCESSING_STATUS',evidence=[],inspection_id=inspection['id'],uncertainty='자료 내용 전체를 판단하지 못함',question='자료를 직접 확인하거나 읽을 수 있는 자료를 보완해 주세요.')))
-        output,diagnostics=analyze(v['data'],spans,coverage=coverage)
+        result=execute_provider(m['data'].get('provider','RULE'),AnalysisContext(m['company_id'],m['version_id'],m['digest']),v['data'],spans,coverage=coverage)
+        output=list(result.candidates);diagnostics=list(result.diagnostics)
         for c in output+limits:
             c['data']['inspection_ids']=[x['id'] for x in a.rows(S.inspections,run_id=run['id'])]
             c['data']['searched_fields']=['original_text','as_is','problem','goal','to_be','required_functions','constraints','overview','process','confirmed_fact_values']
@@ -147,7 +156,8 @@ def process_improvement_one(factory=None,files=None,extractor=extract,before_pub
             candidate=a.add(N.candidates,run_id=run['id'],analysis_kind=KIND,kind=c['category'],content=c['content'],reason=c['reason'])
             a.add(S.details,candidate_id=candidate['id'],category=c['category'],data=c['data'])
         state='PARTIAL' if incomplete else 'SUCCEEDED'
-        a.add(S.contexts,run_id=run['id'],manifest_id=m['id'],status=state,diagnostics=dict(rules=diagnostics,candidate_count=len(output)+len(limits),execution_hash=digest([x['data'] for x in a.rows(S.inspections,run_id=run['id'])])))
+        structured=public_result(result);structured.pop('candidates');structured.pop('diagnostics')
+        a.add(S.contexts,run_id=run['id'],manifest_id=m['id'],status=state,diagnostics=dict(rules=diagnostics,structured_result=structured,candidate_count=len(output)+len(limits),execution_hash=digest([x['data'] for x in a.rows(S.inspections,run_id=run['id'])])))
         for table,key in ((N.jobs,job['id']),(N.attempts,t['id'])):
             values=dict(state=state,error=None)
             if table is N.jobs:values['lease_until']=None

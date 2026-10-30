@@ -196,3 +196,10 @@ Status: ACCEPTED (LIMITED). 사용자 명시 지시에 따라 동일 feature bra
 Status: ACCEPTED (LIMITED). 사용자 명시 UX 통합 개선 지시에 따라 기존 PR #16에서 운영자 목록/상세/자동 진입 분석/전체 제출본 판단만 개선한다. 최소 typed append-only 검토 테이블 추가가 승인된 범위이며 기존 CONFIRM·후보 Review·요청 불변 Trigger·권한을 우회하지 않는다. 공통파일 미선택은 관련성 제외 판단이 아니다. 테스트 후 관련 파일 Commit/Push·Draft 유지·최신 CI 확인을 수행한다. 실사용 DB Migration·HTTPS 반영·신규 Branch/PR·외부 AI·main Merge는 제외한다.
 
 상세 계약·변경 영향·실행 검증 구분: [운영자 UX 구현 보고](reviews/SLICE2_OPERATOR_UX_REPORT.md).
+
+
+## Decision-MVP-001 — 제안서 전달 중심 MVP v1.0 / 2026-10-30
+
+Status: ACCEPTED (USER DEVELOPMENT SCOPE ONLY). 사용자는 전주기 대신 기업 개선요구→Rule/검토→서비스 단독·복합 구성→실제 Notice/Matching→16절 DOCX/PDF 제안서 전달을 이번 MVP 구현 목표로 명시 승인했다. 전주기 H01~H32와 과거 결정을 삭제하지 않고 미래 확장으로 보존한다. 대표/조직의 별도 공식 승인은 확인하지 않았다.
+
+개발 Branch/Worktree·Commit/Push·통합 Draft PR·비파괴 증분 Migration 코드/소유 격리 DB·합성 검증을 허용한다. main Merge·실서비스·공유 DB·실제 자료/계정·권한/State 정책·외부 AI/OAuth/과금은 별도 승인이다. 외부 GPT/GEMINI/CLAUDE/GROK은 모두 NOT_CONFIGURED, RULE만 실제 실행한다. MANUAL/ENSURE는 별도 실행 정책이다. 기존 11절/승인/원본을 보존하며 MVP16 템플릿은 새 불변 Version에서만 적용한다. 자세한 영향과 인수는 mvp/MASTER_DEVELOPMENT_CONTRACT.md·GAP_MATRIX.md·EXECUTION_PLAN.md·ACCEPTANCE.md를 따른다.

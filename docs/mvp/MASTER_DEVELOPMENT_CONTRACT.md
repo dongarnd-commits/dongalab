@@ -25,7 +25,7 @@ main 병합, HTTPS 배포/재시작, 공유 DB Migration, 실제 기업자료/�
 | 검토 답변 | 같은 기업·대상 Request의 제출 답변 중 DATCO VERIFIED Review를 입력에 고정 | 타기업/타제출본/미검토 제외; Fact 자동승격 없음; 변경 후 stale 판별 |
 | Evidence | 필요 시 검토 답변의 명시적 계보 검증 분기 추가 | 기존 분기/제약 보존. 추가형 Migration은 root 소유, 격리 DB만 실행 |
 | 추천 | GET /capability/improvements/{vid}/recommendations | 발행 Capability·실제 FeatureRevision·현재 분석/Review만; 검색≠적용성 확정 |
-| 구성 | 기존 Composition data에 선택적 basis/integrations 및 요구별 Coverage 설명 | basis는 동일 Version의 현재 Run·USE_FOR_REQUEST Review; Legacy payload/불변 이력 유지 |
+| 구성 | 기존 Composition data에 선택적 basis/integrations 및 요구별 Coverage 설명 | basis는 동일 Root의 정확한 source Version을 구조화 Version에 명시 고정한 현재 Run·USE_FOR_REQUEST Review; Legacy payload/불변 이력 유지 |
 | 제안서 | template_version LEGACY_11(기존 기본)/MVP_16(새 UI), 불변 manifest 식별 | 과거11절/파일/승인 보존; 템플릿 전환은 새Version; 기존 Trigger 우선 유지 |
 | 관리자 | /admin/overview, /admin/access, /admin/connections 읽기 Projection | Secret/해시 제외; 기존 ADMIN grant 사용; 신규계정/Role/삭제 정책 없음 |
 | 공고 | 기존 GET /notice 유지, 별도 저장검색 Projection | LIVE/SNAPSHOT/저장조회 구분; 관련성≠자격; 공식 Requirement 사람확인 유지 |
@@ -45,3 +45,7 @@ Rule은 제한된 업무 표현/동의어·부정/제외·명시 수치/단위/�
 통합 integrate/datco-one-mvp-v1 / 별도 dongalab-mvp-v1. root는 공통 계약·분석·문서·Migration·API 등록·생성 타입·CI·통합 담당. 개발 Agent2개는 별도 Feature Worktree에서 솔루션/제안 Backend와 포털/Admin/공고를 담당한다. 공유 파일 소유권을 지킨다.
 
 EXECUTION_PLAN/PROGRESS/ACCEPTANCE에 재개 위치·근거를 기록한다. 과거 CI PASS는 출발점의 증거이며 새 MVP 완성이 아니다. 계획/구현/실행검증을 구분한다.
+
+## 제출/구조화 Version 연결 증분
+
+실제 정책은 SUBMIT v1 분석→Operator 구조화 v2→회사 ACKNOWLEDGE v2→Operator CONFIRM v2다. 상태를 완화하거나 v2에 허위 SUBMIT을 만들지 않는다. optional Improvement.data.analysis_basis={run_id,review_ids,source_version_id:v1}를 구조화 시 명시 검증·불변 저장한다. 추천/구성/제안은 분석입력 v1과 확정구조화 v2를 별도 표시한다. 동일 Company/Root/Site, source SUBMIT, 최신 Run·Review·입력 현재성을 검사하며 회사 의사결정에서는 역할 위장 없는 내부 boolean 검증을 사용한다. 기존 필드 없는 Version은 그대로 보존한다. Migration fg31m0012026은 검토답변/구조화 계보만 검증하는 function-body 증분과 Version constraint trigger를 추가한다. 기존 요청/승인 불변 Trigger 및 함수 search_path/config는 보존하며, 새 계보 이력이 있으면 downgrade를 거부한다. 공유 DB에는 실행하지 않는다.
