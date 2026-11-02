@@ -49,6 +49,7 @@ test('fresh full UI: registration, Rule/request/reply, single/composite, Notice,
   }
   // No pre-published service is injected: both test-only services are authored in UI.
   await admin.getByRole('navigation',{name:'관리자 메뉴'}).getByRole('button',{name:'기준정보·버전',exact:true}).click();
+  await admin.getByText('표준 서비스 관리',{exact:true}).click();
   for(let i=0;i<c.source_features.length;i++){
    await admin.getByRole('button',{name:'실제 기능 기반 서비스 초안 작성',exact:true}).click();
    await admin.getByLabel(c.source_features[i].name+' 서비스 기능 연결',{exact:true}).check();
@@ -164,6 +165,7 @@ test('fresh full UI: registration, Rule/request/reply, single/composite, Notice,
   await operator.screenshot({path:test.info().outputPath('fresh-reviewed-confirmed.png'),fullPage:true});
   expect((await read(company,'company/'+cid)).improvements[0].state).toBe('CONFIRMED');
   console.log('FRESH_UI_STAGE: confirmed');
+  await operator.getByText('기존 서비스 방식',{exact:true}).click();
   const service1=operator.getByRole('checkbox',{name:/TEST 재인수 서비스 1/}),service2=operator.getByRole('checkbox',{name:/TEST 재인수 서비스 2/});
   await expect(service1).toBeVisible();await service1.check();
   async function coverage(){

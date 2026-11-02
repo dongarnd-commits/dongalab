@@ -12,7 +12,7 @@ test('MVP admin uses real summaries, source catalog, existing grant and unconfig
  await expect(page.getByRole('heading',{name:'MVP 관리 업무',exact:true})).toBeVisible();
  const overview=await(await page.request.get('/api/admin/overview')).json();expect(overview.accounts).toBeGreaterThan(0);
  const nav=page.getByRole('navigation',{name:'관리자 메뉴'});await nav.getByRole('button',{name:'기준정보·버전',exact:true}).click();
- await expect(page.getByRole('heading',{name:'실제 DMP 기능·Capability Catalog',exact:true})).toBeVisible();
+ await page.getByText('표준 서비스 관리',{exact:true}).click();await expect(page.getByRole('heading',{name:'실제 DMP 기능·Capability Catalog',exact:true})).toBeVisible();
  const inventory=await(await page.request.get('/api/capability/features?limit=25')).json();await expect(page.getByText('조회된 실제 기능 '+inventory.total+'건',{exact:false})).toBeVisible();
  await nav.getByRole('button',{name:'사용자·권한',exact:true}).click();
  const before=await(await page.request.get('/api/admin/access')).json();expect(JSON.stringify(before)).not.toContain('password_hash');

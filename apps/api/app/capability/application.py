@@ -179,6 +179,9 @@ class CapabilityApplication:
         context=self.context(actor,version_id)
         return {'context':context,'candidates':self.catalog(actor,context['original_text']) if context['original_text'].strip() else []}
     def save_composition(self,actor,data,key,composition_id=None,expected_version=None):
+        from app.capability import asset_composition
+        if asset_composition.is_asset(data):
+            return asset_composition.save(self,actor,data,key,composition_id,expected_version)
         context=self.context(actor,data['improvement_version_id'],require_current=False)
         from app.capability.recommendations import validate_extensions
         validate_extensions(self,actor,context,data)
@@ -283,11 +286,14 @@ class CapabilityApplication:
         self.composition(actor,cv['composition_id'])
         def execute():
             # Do not reuse a root read before command's idempotency lock.
+            from app.capability import asset_composition
+            if asset_composition.is_asset(cv['data']): asset_composition.lock_catalog(self)
             root=self.get(S.compositions,cv['composition_id'],True)
             if root['current_ordinal']!=cv['ordinal']: raise Denied('STALE_INPUT_VERSION')
             context=self.context(actor,cv['improvement_version_id'])
             from app.capability.recommendations import validate_extensions
-            validate_extensions(self,actor,context,cv['data'])
+            if asset_composition.is_asset(cv['data']): asset_composition.validate(self,actor,context,cv['data'])
+            else: validate_extensions(self,actor,context,cv['data'])
             links=self.rows(S.composition_links,version_id=cv['id'])
             versions=[self.get(S.versions,link['capability_version_id']) for link in links]
             for capability_id in sorted({v['capability_id'] for v in versions}):
@@ -322,6 +328,8 @@ class CapabilityApplication:
         current=current and context.get('current_valid') is True
         from app.capability.recommendations import basis_current
         current=current and basis_current(self,actor,context,cv['data'])
+        from app.capability.asset_composition import current as assets_current
+        current=current and assets_current(self,cv['data'])
         # Re-read the same authority; changed Fact/condition inputs stale only this snapshot.
         if 'comparison' in snapshot['input']:
             latest=read_comparison_inputs(self.inputs,actor,context,snapshot['input']['notice'])
@@ -342,6 +350,8 @@ class CapabilityApplication:
             result=self.match(actor,candidate_id)
             # Same input-root lock order as matching and Proposal creation.
             cv=self.get(S.composition_versions,result['snapshot']['composition_version_id'])
+            from app.capability import asset_composition
+            if asset_composition.is_asset(cv['data']): asset_composition.lock_catalog(self)
             self.get(S.compositions,cv['composition_id'],True)
             for cid in sorted({self.get(S.versions,l['capability_version_id'])['capability_id'] for l in self.rows(S.composition_links,version_id=cv['id'])}):self.get(S.capabilities,cid,True)
             from app.infrastructure.notice_schema import notices

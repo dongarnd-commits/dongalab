@@ -1,3 +1,4 @@
+from app.infrastructure import dmp_asset_schema
 from app.infrastructure import company_business_schema
 from alembic import context
 from app.infrastructure.database import Base, get_engine

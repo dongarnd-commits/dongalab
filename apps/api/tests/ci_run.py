@@ -6,7 +6,7 @@ import psycopg
 from psycopg import sql
 from sqlalchemy.engine import make_url
 ROOT=Path(__file__).resolve().parents[3];API=ROOT/'apps/api';WEB=ROOT/'apps/web'
-TESTS=['test_mvp_analysis_migration.py','test_mvp_analysis_lineage.py','test_mvp_admin.py','test_mvp_notice_catalog.py','test_mvp_solution_pipeline.py','test_operator_review.py','test_improvement_analysis.py','test_operator_intake.py','test_notice_slice.py','test_notice_korean.py','test_bizinfo.py','test_confirmed_notice_reader.py','test_analysis_lineage.py','test_analysis_migration.py','test_capability_matching_comparison.py','test_matching_integrity.py','test_proposal_preparation.py','test_proposal_production.py','test_company_workflow.py','test_company_v14.py','test_registration_api.py','test_company_migration.py','test_workspace.py','test_portal_context.py']
+TESTS=['test_dmp_asset_catalog.py','test_dmp_asset_pipeline.py','test_dmp_asset_migration.py','test_mvp_analysis_migration.py','test_mvp_analysis_lineage.py','test_mvp_admin.py','test_mvp_notice_catalog.py','test_mvp_solution_pipeline.py','test_operator_review.py','test_improvement_analysis.py','test_operator_intake.py','test_notice_slice.py','test_notice_korean.py','test_bizinfo.py','test_confirmed_notice_reader.py','test_analysis_lineage.py','test_analysis_migration.py','test_capability_matching_comparison.py','test_matching_integrity.py','test_proposal_preparation.py','test_proposal_production.py','test_company_workflow.py','test_company_v14.py','test_registration_api.py','test_company_migration.py','test_workspace.py','test_portal_context.py']
 def redact_test_output(line,env):
  line=re.sub(r'(?i)(\b(?:cookie|set-cookie|authorization):\s*)[^\r\n]+',r'\1[REDACTED]',line)
  for name in ('DATABASE_URL','DATCO_E2E_PASSWORD','DATCO_COMPANY_CONTEXT','DATCO_PROPOSAL_CONTEXT','DATCO_PORTAL_CONTEXT','DATCO_HANDOFF_CONTEXT','DATCO_MVP_CONTEXT','DATCO_REACCEPTANCE_CONTEXT'):
@@ -19,7 +19,7 @@ def redact_test_output(line,env):
 
 def main():
  TESTS.insert(0,'test_improvement_migration.py')
- phase=sys.argv[1];assert phase in ('integration','proposal','e2e','slice2','full','slice2-e2e','operator-context-e2e','slice2-final-e2e','request-ux','request-ux-e2e','handoff-e2e','mvp','mvp-e2e','reacceptance-e2e','business-ux-e2e')
+ phase=sys.argv[1];assert phase in ('integration','proposal','e2e','slice2','full','slice2-e2e','operator-context-e2e','slice2-final-e2e','request-ux','request-ux-e2e','handoff-e2e','mvp','mvp-e2e','reacceptance-e2e','business-ux-e2e','asset-catalog-integration','asset-pipeline-integration','asset-solutions-e2e')
  # No fallback to DATABASE_URL or .env. CI admin only provisions this disposable service.
  url=make_url(os.environ['DATCO_CI_ADMIN_URL'])
  assert url.host in ('127.0.0.1','localhost') and url.database=='datco_ci_admin'
@@ -38,7 +38,7 @@ def main():
    for line in process.stdout:
     print(redact_test_output(line,env),end='',flush=True)
    process.wait()
-   results=out/'browser-results' if phase=='reacceptance-e2e' else WEB/'test-results'
+   results=out/'browser-results' if phase in ('reacceptance-e2e','asset-solutions-e2e') else WEB/'test-results'
    for diagnostic in results.glob('*/error-context.md'):
     original=diagnostic.read_text(encoding='utf-8')
     redacted=redact_test_output(original,env)
@@ -71,8 +71,10 @@ def main():
   if phase=='full':
    env.pop('DATCO_CI_SYNTHETIC',None)
    run([sys.executable,'-m','pytest','-m','integration','-v','--tb=short','--junitxml='+str(out/'integration.xml')])
+  elif phase=='asset-pipeline-integration':run([sys.executable,'-m','pytest','tests/test_dmp_asset_pipeline.py','-x','-v','--tb=short','--junitxml='+str(out/'integration.xml')])
+  elif phase=='asset-catalog-integration':run([sys.executable,'-m','pytest','tests/test_dmp_asset_catalog.py','tests/test_dmp_asset_migration.py','-v','--tb=short','--junitxml='+str(out/'integration.xml')])
   elif phase in ('integration','proposal','slice2','request-ux','mvp'):run([sys.executable,'-m','pytest',*[str(Path('tests')/t) for t in (['test_operator_intake.py','test_company_v14.py'] if phase=='request-ux' else ['test_mvp_analysis_migration.py','test_mvp_analysis_lineage.py','test_mvp_admin.py','test_mvp_notice_catalog.py','test_mvp_solution_pipeline.py'] if phase=='mvp' else TESTS if phase=='integration' else ['test_operator_review.py','test_improvement_analysis.py','test_improvement_migration.py'] if phase=='slice2' else ['test_proposal_production.py'])],*(['--maxfail=1'] if phase=='proposal' else []),'-v','--tb=short','--junitxml='+str(out/'integration.xml')])
-  elif phase=='reacceptance-e2e':
+  elif phase in ('reacceptance-e2e','asset-solutions-e2e'):
    api_port,web_port=port(),port()
    while web_port==api_port:web_port=port()
    origin='http://localhost:'+str(web_port)
@@ -90,7 +92,7 @@ def main():
     time.sleep(.1)
    worker=json.loads((out/'worker-ready.json').read_text());assert worker['database']==db and worker['db_user']==role
    start('web',['npm','run','dev','--','--port',str(web_port)],WEB);wait(origin)
-   run(['npm','run','test:e2e','--','tests/reacceptance-full-ui.spec.ts','--workers=1','--reporter=line','--output',str(out/'browser-results')],WEB)
+   run(['npm','run','test:e2e','--',('tests/dmp-auto-solution-full-ui.spec.ts' if phase=='asset-solutions-e2e' else 'tests/reacceptance-full-ui.spec.ts'),'--workers=1','--reporter=line','--output',str(out/'browser-results')],WEB)
   else:
    api_port,web_port=port(),port()
    while web_port==api_port:web_port=port()
@@ -120,6 +122,7 @@ def main():
    worker=json.loads((out/'worker-ready.json').read_text());assert worker['database']==db and worker['db_user']==role
    start('web',['npm','run','dev','--','--port',str(web_port)],WEB);wait(origin)
    specs=['tests/business-ux.spec.ts'] if phase=='business-ux-e2e' else ['tests/mvp-portals.spec.ts','tests/mvp-analysis-handoff.spec.ts','tests/mvp-notice-review.spec.ts'] if phase=='mvp-e2e' else ['tests/portal-handoff.spec.ts'] if phase=='handoff-e2e' else ['tests/request-ux.spec.ts'] if phase=='request-ux-e2e' else ['tests/request-ux.spec.ts','tests/operator-final-ux.spec.ts'] if phase=='slice2-final-e2e' else ['tests/company.spec.ts','tests/portal-context.spec.ts','tests/role-portals.spec.ts'] if phase=='operator-context-e2e' else ['tests/request-ux.spec.ts','tests/operator-final-ux.spec.ts','tests/operator-review.spec.ts','tests/improvement-analysis.spec.ts','tests/operator-intake.spec.ts','tests/business-ux.spec.ts'] if phase=='slice2-e2e' else ['tests/request-ux.spec.ts','tests/operator-final-ux.spec.ts','tests/operator-review.spec.ts','tests/improvement-analysis.spec.ts','tests/operator-intake.spec.ts','tests/smoke.spec.ts','tests/notice.spec.ts','tests/proposal.spec.ts','tests/company.spec.ts','tests/workspace.spec.ts','tests/company-document-first.spec.ts','tests/role-portals.spec.ts','tests/portal-context.spec.ts','tests/portal-stability.spec.ts','tests/portal-handoff.spec.ts','tests/registration.spec.ts','tests/business-ux.spec.ts','tests/mvp-portals.spec.ts','tests/mvp-analysis-handoff.spec.ts','tests/mvp-notice-review.spec.ts']
+   if phase=='e2e':specs.append('tests/dmp-assets-ui.spec.ts')
    run(['npm','run','test:e2e','--',*specs,'--workers=1','--reporter=line'],WEB)
  except Exception:
   for log in logs:log.flush()

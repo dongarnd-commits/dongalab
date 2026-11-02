@@ -11,6 +11,9 @@ def proposal_blockers(detail,service=None,actor=None):
     if latest is None or latest['outcome'] != 'PROPOSABLE':
         blockers.append('MATCH_NOT_PROPOSABLE')
     candidate = detail['candidate']
+    if service is not None:
+        from app.capability.asset_composition import promotion_blockers
+        blockers.extend(promotion_blockers(service,detail['snapshot']['input']['composition']))
     complete=False
     if service is not None and latest and latest['outcome']=='PROPOSABLE':
         from app.proposal.policy import verified_completion

@@ -30,6 +30,9 @@ def draft(manifest):
     structured = company.get('structured', {})
     caps = manifest['capability_versions']
     names = {c['id']: c['data']['service'] for c in caps}
+    asset_features = manifest.get('asset_features', [])
+    if asset_features:
+        names[None] = '검토된 DMP 기술자산 구성'
     checked = manifest.get('reviewed_analysis', [])
     basis = composition.get('basis')
     basis_note = ('분석 후보의 USE_FOR_REQUEST 검토를 출처로 활용합니다. 공식 사실·요구 확정이나 서비스 적합성 확정과 구분합니다.'
@@ -51,6 +54,20 @@ def draft(manifest):
             *['연결 기능 역할: ' + f['role'] for f in d['functions']]]))
         for label, key in (('적용조건', 'conditions'), ('선행요건', 'prerequisites'), ('제외범위', 'exclusions')):
             conditions.extend(label + ': ' + value for value in d.get(key, []))
+    selected_roles = {f['feature_revision_id']: f['role'] for f in composition.get('asset_selections', [])}
+    for feature in asset_features:
+        service_lines.append(lines([
+            feature['system_name'] + ' / ' + feature['module_name'] + ' / ' + feature['name'],
+            '기능 역할: ' + selected_roles.get(feature['revision_id'], NEEDS_CHECK),
+            '제공 검증: ' + feature['availability'],
+            '검증 근거: ' + (feature.get('availability_evidence') or NEEDS_CHECK),
+            '모듈 관계 확인: ' + feature.get('mapping_status', NEEDS_CHECK),
+            '관리 Version: ' + str(feature.get('asset_version_id') or '원천 기능 분류만 확인'),
+            *['적용조건: ' + v for v in feature.get('conditions', [])],
+            *['선행조건: ' + v for v in feature.get('prerequisites', [])]]))
+        conditions.extend('제외조건: ' + v for v in feature.get('exclusions', []))
+    if asset_features:
+        conditions.append('운영자 검토: ' + composition['asset_review_note'])
     coverage_lines, scope_lines = [], []
     status_labels = {'ADDRESSED': '구성안에서 대응', 'PARTIAL': '부분 대응', 'UNRESOLVED': '미해결'}
     for item in composition['coverage']:
@@ -64,7 +81,7 @@ def draft(manifest):
         coverage_lines.append(content)
         scope_lines.append(content)
     excluded = set(composition.get('excluded_feature_revision_ids', []))
-    active = {f['revision_id'] for cap in caps for f in cap['data']['functions']} - excluded
+    active = ({f['revision_id'] for cap in caps for f in cap['data']['functions']} | {f['feature_revision_id'] for f in composition.get('asset_selections', [])}) - excluded
     feature_lines = []
     for feature in manifest['feature_revisions']:
         if feature['id'] not in active:
@@ -80,6 +97,15 @@ def draft(manifest):
         integrations.append(lines([
             names.get(link['from_capability_version_id'], NEEDS_CHECK) + ' → ' + names.get(link['to_capability_version_id'], NEEDS_CHECK),
             '연계 데이터: ' + link['data'], '업무 흐름: ' + link['workflow'],
+            *['전제조건: ' + value for value in link.get('prerequisites', [])],
+            '불확실성·확인사항: ' + link['uncertainty']]))
+    asset_names = {f[k]: f[label] for f in asset_features for k,label in (('system_id','system_name'),('module_id','module_name'))}
+    for link in composition.get('asset_integrations', []):
+        integrations.append(lines([
+            asset_names.get(link['from_asset_id'], link['from_asset_id']) + ' → ' + asset_names.get(link['to_asset_id'], link['to_asset_id']),
+            '연계 데이터 초안: ' + link['data'], '업무 연결 초안: ' + link['workflow'],
+            '연계 검증 상태: ' + link['verification'],
+            '검증 근거: ' + (link.get('evidence_note') or NEEDS_CHECK),
             *['전제조건: ' + value for value in link.get('prerequisites', [])],
             '불확실성·확인사항: ' + link['uncertainty']]))
     if not integrations:
@@ -100,7 +126,7 @@ def draft(manifest):
         '관련성·항목별 검토는 공식 적격·지원금·선정 보장이 아닙니다. 미확인 조건과 공고 최신성을 다시 확인하세요.'])
     bodies = (
         lines(['제안 구성안: ' + composition['name'],
-            '수요기업의 확인된 개선요구와 발행 서비스·공고 원문을 연결한 검토 제안입니다.',
+            ('수요기업의 확인된 개선요구와 검토된 DMP 기술자산·공고 원문을 연결한 제안입니다.' if asset_features else '수요기업의 확인된 개선요구와 발행 서비스·공고 원문을 연결한 검토 제안입니다.'),
             '선택 서비스: ' + ', '.join(names.values()), '요약 목표: ' + goal, basis_note]),
         lines(['기업 식별: ' + company['company_id'], '사업장 식별: ' + str(company.get('site_id') or NEEDS_CHECK),
             *fact_lines] if fact_lines else ['기업 식별: ' + company['company_id'],
@@ -115,7 +141,7 @@ def draft(manifest):
         lines(feature_lines or ['실제 선택 기능의 상세 설명 확인 필요.']),
         lines(integrations),
         lines(['개선 전: ' + as_is, '개선 후 목표: ' + to_be,
-            *['등록된 연계 업무안: ' + link['workflow'] for link in composition.get('integrations', [])],
+            *['등록된 연계 업무안: ' + link['workflow'] for link in [*composition.get('integrations', []), *composition.get('asset_integrations', [])]],
             '세부 담당자·승인·데이터 처리 순서와 예외 흐름 확인 필요.']),
         lines([*scope_lines, *conditions,
             '산출물의 명세·형식·완료 및 인수 기준: 확인 필요. 원천 기능 전체가 구축범위로 확정된 것은 아닙니다.']),

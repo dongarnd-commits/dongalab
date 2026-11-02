@@ -219,3 +219,8 @@ Status: ACCEPTED (USER DEVELOPMENT SCOPE ONLY). 사용자는 전주기 대신 �
 Status: ACCEPTED (LIMITED USER DEVELOPMENT/UAT SCOPE). 사용자 명시 지시로 Rule v4의 역할별 중복 제거·원문 기반 기능 후보와 운영자 검토/3포털 UX를 보완한다. 기존 DB literal 근거 제약, Version, Company Scope, ACK/CONFIRM/PROPOSABLE, 요청·답변·승인 불변성을 바꾸지 않는다. 미확정 항목은 사람 검토 후에도 제약/한계로 보존하며 후보를 사실로 자동 승격하지 않는다.
 
 전체 회귀·최신 Draft PR #17 CI 통과 후 기존 8444 인수환경만 새 소유 DB/파일로 전환한다. 기존 네 합성 계정명/비밀번호·주소를 유지하고 기존 기업·분석·검토·원본·도구는 백업/실제 복원 검증하여 보존한다. 8443/공유 DB/Worker/Caddy/방화벽/실제 자료, main Merge, 외부 AI 호출은 승인 범위 밖이다. 실제 실행 결과는 mvp/REACCEPTANCE_REPORT.md에 통합한다.
+
+
+## Decision-MVP-005 — DMP 기술자산·자동 조합 / 2026-11-02
+
+Status: ACCEPTED (LIMITED USER DEVELOPMENT SCOPE). 사용자 첨부 지시로 관리자 기술자산/시스템 자동 초안/운영자 기업별 판단을 분리한다. 발행 Capability 0건에서도 실제 원천 기반 후보를 생성하되 제공 가능성·연계·자격·비용·기업 의사결정은 자동 확정하지 않는다. 승인된 최소 추가 Schema/API/Version/역할별 범위는 mvp/DMP_ASSET_AUTO_COMPOSITION.md에 구현 전에 기록한다. 현재 실행 8444/8443·공유 DB·기존 이력은 보존하며 실제자료 사용/새 방화벽·인증서 신뢰 변경·운영 전환/main Merge/외부 AI는 별도 승인이다. 실기업 평가는 자료·보안 승인 미제공으로 PENDING이다.

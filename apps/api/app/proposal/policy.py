@@ -41,6 +41,9 @@ def tasks(detail):
 def validate_completion(service,actor,detail,items):
  if not detail['current_valid']:raise Denied('STALE_INPUT_VERSION')
  if detail['lineage']['legacy']:raise Denied('LEGACY_ANALYSIS_REQUIRES_REANALYSIS')
+ from app.capability.asset_composition import promotion_blockers
+ blockers=promotion_blockers(service,detail['snapshot']['input']['composition'])
+ if blockers:raise Denied(blockers[0])
  if detail['candidate']['fit']=='MISMATCH' or detail['candidate']['data']['opposing_evidence']:raise Denied('CONFIRMED_ELIGIBILITY_CONFLICT')
  context=detail['snapshot']['input']['company'];b=basis(service,actor,context['company_id'],context['improvement_version_id'])
  if not b.current_valid or not b.company_confirmed or set(b.fact_version_ids)!=set(context.get('fact_version_ids',[])):raise Denied('MISSING_REQUIRED_INFORMATION')

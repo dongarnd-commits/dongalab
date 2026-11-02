@@ -2,7 +2,7 @@ from datetime import datetime
 from hashlib import sha256
 from typing import Annotated,Literal
 from fastapi import APIRouter,Depends,Request,Query
-from pydantic import BaseModel,Field
+from pydantic import BaseModel,Field,model_validator
 from sqlalchemy.orm import Session
 from app.api.notice import actor,trusted_origin,Command,errors
 from app.infrastructure.database import get_session
@@ -99,23 +99,62 @@ class Coverage(Command):
     demand_id:str|None=None
     evidence_refs:list[dict]=Field(default_factory=list,max_length=100)
     status:Literal['ADDRESSED','PARTIAL','UNRESOLVED']|None=None
-    requirement:str=Field(min_length=1,max_length=5000)
-    capability_version_id:str=Field(min_length=36,max_length=36)
+    requirement:str=Field(min_length=1,max_length=20000)
+    capability_version_id:str|None=None
     feature_revision_ids:list[str]
     role:str=Field(min_length=1,max_length=2000)
     addressed_scope:str=Field(max_length=5000)
     unaddressed_scope:str=Field(max_length=5000)
     missing_information:list[str]=Field(default_factory=list)
+class AssetSelection(Command):
+    feature_revision_id:str=Field(min_length=36,max_length=36)
+    asset_version_id:str|None=None
+    system_version_id:str|None=None
+    module_version_id:str|None=None
+    role:str=Field(min_length=1,max_length=2000)
+class AssetBasis(Command):
+    recommendation_id:str=Field(min_length=36,max_length=36)
+    alternative_id:str=Field(min_length=1,max_length=100)
+class AssetIntegration(Command):
+    from_asset_id:str=Field(min_length=1,max_length=120)
+    to_asset_id:str=Field(min_length=1,max_length=120)
+    data:str=Field(min_length=1,max_length=5000)
+    workflow:str=Field(min_length=1,max_length=5000)
+    prerequisites:list[str]=Field(default_factory=list,max_length=100)
+    verification:Literal['VERIFIED','UNVERIFIED']='UNVERIFIED'
+    evidence_note:str=Field(default='',max_length=5000)
+    uncertainty:str=Field(min_length=1,max_length=2000)
 class CompositionData(Command):
+    source_mode:Literal['CAPABILITY','DMP_ASSET']='CAPABILITY'
+    asset_basis:AssetBasis|None=None
+    asset_selections:list[AssetSelection]=Field(default_factory=list,max_length=100)
+    asset_integrations:list[AssetIntegration]=Field(default_factory=list,max_length=100)
+    asset_review_note:str=Field(default='',max_length=10000)
+    # Server recomputes these optional read-back snapshot fields when saving.
+    asset_catalog_digest:str|None=None
+    asset_features:list[dict]=Field(default_factory=list,max_length=100)
+    asset_generation_rule:str|None=None
     basis:AnalysisBasis|None=None
     integrations:list[Integration]=Field(default_factory=list,max_length=100)
     name:str=Field(min_length=1,max_length=500)
     improvement_version_id:str=Field(min_length=1,max_length=100)
-    capability_version_ids:list[str]=Field(min_length=1,max_length=100)
+    capability_version_ids:list[str]=Field(default_factory=list,max_length=100)
     excluded_feature_revision_ids:list[str]=Field(default_factory=list,max_length=649)
     coverage:list[Coverage]=Field(min_length=1,max_length=100)
     conditions:list[str]=Field(default_factory=list)
     unresolved:list[str]=Field(default_factory=list)
+    @model_validator(mode='after')
+    def valid_source(self):
+        if self.source_mode=='CAPABILITY':
+            if any(len(c.requirement)>5000 for c in self.coverage):
+                raise ValueError('LEGACY_COVERAGE_LIMIT')
+            if not self.capability_version_ids or any(c.capability_version_id is None for c in self.coverage):
+                raise ValueError('CAPABILITY_VERSION_REQUIRED')
+            if self.asset_basis or self.asset_selections or self.asset_integrations or self.asset_review_note:
+                raise ValueError('INVALID_COMPOSITION_SOURCE')
+        elif self.capability_version_ids or not self.asset_basis or not self.asset_selections or not self.asset_review_note.strip():
+            raise ValueError('INVALID_ASSET_COMPOSITION')
+        return self
 class SaveComposition(Command):
     data:CompositionData
     expected_version:str | None=None

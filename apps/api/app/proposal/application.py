@@ -21,6 +21,8 @@ class ProposalApplication:
   return root,versions,b
  def locked_match(self,actor,candidate_id):
   self.operator(actor);candidate=self.s.get(S.match_candidates,candidate_id);snap=self.s.get(S.match_snapshots,candidate['snapshot_id']);cv=self.s.get(S.composition_versions,snap['composition_version_id'])
+  from app.capability.asset_composition import is_asset,lock_catalog
+  if is_asset(cv['data']):lock_catalog(self.s)
   self.s.composition(actor,cv['composition_id']);self.s.get(S.compositions,cv['composition_id'],True)
   for cid in sorted({self.s.get(S.versions,l['capability_version_id'])['capability_id'] for l in self.s.rows(S.composition_links,version_id=cv['id'])}):self.s.get(S.capabilities,cid,True)
   self.s.get(N.notices,snap['input']['notice']['notice_id'],True);self.s.get(S.match_candidates,candidate_id,True)
@@ -31,8 +33,16 @@ class ProposalApplication:
  def manifest(self,detail,review,actor=None):
   snap=detail['snapshot'];cv=self.s.get(S.composition_versions,snap['composition_version_id']);caps=[self.s.get(S.versions,l['capability_version_id']) for l in self.s.rows(S.composition_links,version_id=cv['id'])]
   features=[self.s.get(S.revisions,l['revision_id']) for c in caps for l in self.s.rows(S.links,version_id=c['id'])]
+  from app.capability.asset_composition import is_asset
+  if is_asset(cv['data']):
+   features=[self.s.get(S.revisions,f['feature_revision_id']) for f in cv['data']['asset_selections']]
   refs=dict(company_id=snap['input']['company']['company_id'],fact_version_ids=snap['input']['company'].get('fact_version_ids',[]),improvement_version_id=cv['improvement_version_id'],capability_version_ids=[c['id'] for c in caps],feature_revision_ids=[f['id'] for f in features],composition_version_id=cv['id'],notice_version_id=snap['input']['notice']['notice_version_id'],requirement_version_id=snap['requirement_version_id'],match_snapshot_id=snap['id'],match_candidate_id=detail['candidate']['id'],match_review_id=review['id'],evidence_ids=[i['evidence']['id'] for i in snap['input']['notice']['items']])
   manifest=dict(refs=refs,input=snap['input'],notice_title=self.s.get(N.notices,snap['input']['notice']['notice_id'])['title'],capability_versions=caps,feature_revisions=features,match_review=review)
+  if is_asset(cv['data']):
+   manifest['asset_features']=cv['data']['asset_features']
+   manifest['asset_review']=dict(note=cv['data']['asset_review_note'],actor_id=cv['actor_id'],version_id=cv['id'],basis=cv['data']['asset_basis'])
+   refs.update(asset_version_ids=sorted({f[k] for f in cv['data']['asset_selections'] for k in ('asset_version_id','system_version_id','module_version_id') if f.get(k)}),
+               asset_recommendation_id=cv['data']['asset_basis']['recommendation_id'],asset_catalog_digest=cv['data']['asset_catalog_digest'])
   basis=cv['data'].get('basis')
   if basis:
    from app.capability.recommendations import validate_basis
@@ -43,6 +53,9 @@ class ProposalApplication:
   title=title.strip()
   if not title or len(title)>500:raise Denied('INVALID_REQUEST',422)
   if template not in TEMPLATES:raise Denied('INVALID_PROPOSAL_TEMPLATE',422)
+  from app.capability.asset_composition import is_asset
+  if is_asset(detail['snapshot']['input']['composition']) and template!='MVP_16':
+   raise Denied('ASSET_COMPOSITION_REQUIRES_MVP_16',422)
   manifest=self.manifest(detail,review,actor);manifest['template_version']=template
   sections=sections if sections is not None else draft(manifest)
   validate(sections,template)
@@ -189,8 +202,12 @@ class ProposalApplication:
   return self.s.command(actor,key,scope,execute)
  def fresh_inputs(self,actor,v):
   from app.proposal.policy import verified_completion
-  snap=self.s.get(S.match_snapshots,v['match_snapshot_id']);cv=self.s.get(S.composition_versions,snap['composition_version_id']);self.s.get(S.compositions,cv['composition_id'],True)
+  snap=self.s.get(S.match_snapshots,v['match_snapshot_id']);cv=self.s.get(S.composition_versions,snap['composition_version_id'])
+  from app.capability.asset_composition import is_asset,lock_catalog,current as assets_current,promotion_blockers
+  if is_asset(cv['data']):lock_catalog(self.s)
+  self.s.get(S.compositions,cv['composition_id'],True)
   current=self.s.get(S.compositions,cv['composition_id'])['current_ordinal']==cv['ordinal']
+  current=current and assets_current(self.s,cv['data']) and not promotion_blockers(self.s,cv['data'])
   analysis_basis=cv['data'].get('basis')
   if analysis_basis:
    from app.company.application import CompanyApplication

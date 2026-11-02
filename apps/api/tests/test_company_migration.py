@@ -1,4 +1,4 @@
-from v14_migration_chain import ThroughLatest,AFTER_COMPANY
+from v14_migration_chain import ThroughLatest,LATEST_COMPANY as AFTER_COMPANY
 from registration_sources import number as synthetic_business_number
 """Actual frozen migration chain, guarded schemas and non-destructive Down."""
 from uuid import uuid4

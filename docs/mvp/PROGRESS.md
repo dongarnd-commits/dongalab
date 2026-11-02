@@ -1,5 +1,23 @@
 # 진행 체크포인트
 
+## 2026-11-02 DMP 기술자산 개발 재개
+
+- 실제 Worktree dongalab-dmp-assets, Branch feat/mvp-dmp-assets-auto-composition, HEAD 2ee2640836ae1fa07bf4ccf0a34d03a4f27851e0 확인. 수정27/신규17 보존 확인.
+- 적용 Sandbox workspace-write / writable root 현재 Worktree. 고유 임시파일 쓰기·읽기·삭제 1회 성공. 기존 파일 초기화 없음.
+- 기존44파일과 tracked binary diff 및 ci/slice2/dmp-assets 실패 근거를 ignored storage/private/resume-backup-20261102-150110에 보호 복사.
+- Backend Unit 최초 제한환경 실행은 기존 OS 임시폴더 접근 및 로컬 OCR Docker 접근 때문에 실패. 새 작업 소유 basetemp와 로컬 OCR 설정으로 전체366 PASS. 코드 실패와 실행환경 실패를 구분한다.
+- 이전 PG 실패3 중 Migration2는 보존된 최신 chain 수정으로 재실행 통과. Pipeline의 기업 검토 요청503은 테스트 schema_translate_map과 unqualified frozen Trigger의 search_path 불일치로 확인. 테스트의 모든 API/Worker 트랜잭션을 소유 스키마로 고정하여 첫 Pipeline E2E PASS. 승인 Trigger/Role 정책 변경 없음.
+- 단일모듈 UI 실패는 검토 후보 '입력 중복'이 공유 검색의 약한 표현 제거 규칙에 의해 검색어0건이 된 원인. 자산 검색에만 '입력 중복/중복 입력' 구체 업무 표현을 보존하고 실제 등록 원문 전체 표현 hit를 요구하는 asset-solutions-v2로 수정. 근거 없는 재고조회·일반 중복 개선은 연결하지 않는 회귀 포함43 PASS.
+- 전체 PG/최종 Frontend/전체 Playwright/Commit/Push/Draft PR/CI 검증 진행 중. 아직 완료·인수·배포 상태 아님. main/8443/8444/기존 DB·볼륨·백업 변경 없음. 실제 기업자료·외부 AI 미사용.
+
+### DMP 재개 최종 로컬 검증
+
+- Backend367 PASS; 전체PG309 PASS/기존 저장 실제 공고 원문 opt-in1 SKIP/FAIL0 (d42cc92e73dc,813.20초); 신규 Pipeline11 PASS. 초기 재현 PG320PASS/1FAIL/1SKIP은 보존하고 Fixture search_path 수정 이후 최종 전체PG로 대체 검증했다.
+- Frontend API 타입 일치/lint/TypeScript/Production build/검토 Unit9 PASS.
+- 실제 업무 Playwright68 PASS/FAIL0/SKIP0: 전체64(e4cee315caa8,12.4분), 기존 빈 데이터 전체UI3(0ba4b33f977a,2.0분), 새0발행 자산 전체UI1(208e05926e45,2.0분). 회사 등록부터 분석·사람 검토·공식 구조화/ACK/CONFIRM·조합·공고/매칭·16절 DOCX/PDF·기업전달·수정요청까지 실제 API/Worker/DB와 연결했다.
+- Preview36 PASS(Admin20/Operator11/Company5) 및 각 품질/빌드/production404 PASS. 작업 소유 프로세스/DB/Role/컨테이너 정리 확인. 기존 main·원 개발 Worktree clean; 8443/8444는 조회 당시 미리스닝이며 서비스 조작0.
+- 변경 근거·주요 파일·인수 항목은 DMP_ASSET_AUTO_COMPOSITION.md에 통합했다. 임시 Next nonce 타입 경로는 표준으로 정리했다. Commit/명시Push/새 Draft PR과 최신HEAD CI를 다음으로 수행하며 기존 Draft PR17은 보존한다. 원격 최종 상태는 해당 PR 본문/Checks와 완료 보고를 참조한다.
+
 ## 2026-10-30 P0/P1/P2 통합 준비
 
 - 출발 main/origin main10d3d8b 일치, 기존 main·Feature·서비스 Worktree 보존.
