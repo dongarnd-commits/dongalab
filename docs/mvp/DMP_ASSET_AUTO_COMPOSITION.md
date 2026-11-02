@@ -237,6 +237,8 @@ ESLint9.39.5는 [공식 지원 정책](https://eslint.org/version-support/)상 2
 
 **실제 실행 주소·Commit·환경 식별과 준비 판정은 보호 manual-acceptance/<nonce>/RUNBOOK.md 및 evidence/preflight-*.json·browser-*.json, PR18 최종 본문을 원천으로 확인한다.** 소스/문서에 자격정보를 넣지 않는다. 사용자용 절차는 [USER_ACCEPTANCE_GUIDE.md](USER_ACCEPTANCE_GUIDE.md) 하나로 정리했으며, 사람에게 기술 점검을 반복 요청하지 않는다.
 
+55d1e5f의 최초 새 환경60fd6287627e에서 API/DB/Worker/파일 검사는 통과했으나 브라우저 로그아웃 탐색 대기가 ERR_ABORTED로 실패했다. 네 역할의 실제 로그아웃401은 별도 비민감 진단으로 확인했다. 같은 URL 조건을 기존 회귀의 toHaveURL assertion으로 확인하도록 점검 도구만 보완했다. 업무 Guard/기대값을 바꾸지 않았다. 이 최초 환경·DB·실패 근거는 중지 보존하고 보완 커밋과 일치하는 새 환경의 원본 preflight를 실행한다. 보호 preflight-failure.txt와 진단 사본은 실제자료를 포함하지 않는다.
+
 ### 실제자료 입력 전 한 번에 결정할 항목 — 제안값, 아직 미승인
 
 | 항목 | 제안값 | 현재 상태 |

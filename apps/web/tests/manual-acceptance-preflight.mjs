@@ -1,7 +1,7 @@
 // Non-sensitive loopback UAT checks. Credentials/cookies stay in memory.
 import {readFile,writeFile,readdir} from 'node:fs/promises';
 import path from 'node:path';
-import {chromium} from '@playwright/test';
+import {chromium,expect} from '@playwright/test';
 async function main(){
 const [out,phase]=process.argv.slice(2);
 const m=JSON.parse(await readFile(path.join(out,'manifest.json'),'utf8'));
@@ -31,7 +31,7 @@ try{
   await page.screenshot({path:path.join(out,'evidence','preflight-'+phase+'-'+role+'.png'),fullPage:true});
   await page.getByRole('button',{name:'로그아웃',exact:true}).click();
   if(role==='operator')await page.getByRole('dialog',{name:'로그아웃 확인'}).getByRole('button',{name:'로그아웃',exact:true}).click();
-  await page.waitForURL(/\/login/);
+  await expect(page).toHaveURL(/\/login/);
   if((await page.request.get('/api/notice/session')).status()!==401)throw Error('Logout did not revoke session');
   results.push({role,login:true,refresh:true,namespaced_secure_httponly:true,production_preview_blocked:true,logout:true,external_requests:external});
   await context.close();
