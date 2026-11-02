@@ -212,3 +212,10 @@ Status: ACCEPTED (USER DEVELOPMENT SCOPE ONLY). 사용자는 전주기 대신 �
 ## Decision-MVP-003 — 표준 제안서의 명시 템플릿 Version
 
 기존LEGACY_11 기본과 과거파일/승인을 보존한다. 새운영자 흐름이MVP_16을 명시 선택하고, 템플릿 변경은새ProposalVersion으로 만든다. 같은별도내용검토Version에서DOCX/PDF를생성하고기존지정회사 전달/승인Guard를유지한다. 실제비용·기간·원인·효과·신청자격을자동확정하지않는다.
+
+
+## Decision-MVP-004 — 1차 사용자 E2E 보완과 같은 주소 재인수 / 2026-11-02
+
+Status: ACCEPTED (LIMITED USER DEVELOPMENT/UAT SCOPE). 사용자 명시 지시로 Rule v4의 역할별 중복 제거·원문 기반 기능 후보와 운영자 검토/3포털 UX를 보완한다. 기존 DB literal 근거 제약, Version, Company Scope, ACK/CONFIRM/PROPOSABLE, 요청·답변·승인 불변성을 바꾸지 않는다. 미확정 항목은 사람 검토 후에도 제약/한계로 보존하며 후보를 사실로 자동 승격하지 않는다.
+
+전체 회귀·최신 Draft PR #17 CI 통과 후 기존 8444 인수환경만 새 소유 DB/파일로 전환한다. 기존 네 합성 계정명/비밀번호·주소를 유지하고 기존 기업·분석·검토·원본·도구는 백업/실제 복원 검증하여 보존한다. 8443/공유 DB/Worker/Caddy/방화벽/실제 자료, main Merge, 외부 AI 호출은 승인 범위 밖이다. 실제 실행 결과는 mvp/REACCEPTANCE_REPORT.md에 통합한다.

@@ -2,6 +2,7 @@
 import json
 import os
 import secrets
+import re
 from pathlib import Path
 from app.core.config import ROOT
 from app.infrastructure.database import get_session_factory
@@ -25,18 +26,29 @@ class MvpNoticeInputStore(SqlNoticeStore):
         return super().add(entity, **values)
 
 
-def prepare():
+def validate_template(template):
+    if template is None:
+        return
+    if set(template.get("accounts",{})) != {"editor","operator","admin","approver"} or not template.get("password"):
+        raise RuntimeError("SYNTHETIC_ACCOUNT_TEMPLATE_REQUIRED")
+    for label,username in template["accounts"].items():
+        if not re.fullmatch("TEST_MVP_"+label+"_[a-f0-9]{12}",username):
+            raise RuntimeError("ONLY_APPROVED_SYNTHETIC_IDENTITIES_ALLOWED")
+
+
+def prepare(template=None):
+    validate_template(template)
     require_test_database()
     nonce = os.environ['DATCO_TEST_NONCE']
     target = Path(os.environ['DATCO_MVP_READY']).resolve()
     if not target.is_relative_to((ROOT / 'storage/private/runtime').resolve()):
         raise RuntimeError('MVP_FIXTURE_PATH_REJECTED')
-    password = 'TEST-' + secrets.token_urlsafe(24)
+    password = template['password'] if template else 'TEST-' + secrets.token_urlsafe(24)
     accounts, ids = {}, {}
     with get_session_factory().begin() as session:
         store = SqlNoticeStore(session)
         for label, role in [('editor', 'COMPANY_EDITOR'), ('operator', 'DATCO_OPERATOR'), ('admin', 'DATCO_ADMIN'), ('approver', 'COMPANY_APPROVER')]:
-            username = 'TEST_MVP_' + label + '_' + nonce
+            username = template['accounts'][label] if template else 'TEST_MVP_' + label + '_' + nonce
             account = store.add('actors', username=username, role=role, password_hash=hash_password(password))
             accounts[label], ids[label] = username, account['id']
         # Only source input is prepared. The browser must request the actual Worker,
@@ -50,4 +62,14 @@ def prepare():
 
 
 if __name__ == '__main__':
-    prepare()
+    import argparse
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--accounts-template',type=Path)
+    args=parser.parse_args()
+    template=None
+    if args.accounts_template:
+        path=args.accounts_template.resolve()
+        if not path.is_relative_to((ROOT/'storage/private/runtime').resolve()):
+            raise RuntimeError('ACCOUNT_TEMPLATE_PATH_REJECTED')
+        template=json.loads(path.read_text(encoding='utf-8'))
+    prepare(template)

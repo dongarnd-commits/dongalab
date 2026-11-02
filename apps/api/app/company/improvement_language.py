@@ -17,7 +17,7 @@ def active_match(text,pattern):
         end=re.search(r'[,，;；\n。.!?]',text[match.end():])
         tail=text[match.end():match.end()+(end.start() if end else 35)][:35]
         head=re.split(r'[,，;；\n。.!?]',text[:match.start()])[-1][-12:]
-        if not re.search(NEGATIVE,tail) and not re.search(r'(?:제외|불필요)\s*[:：]?\s*$',head):return match
+        if not re.search(NEGATIVE,match.group(0)) and not re.search(NEGATIVE,tail) and not re.search(r'(?:제외|불필요)\s*[:：]?\s*$',head):return match
     return None
 
 def classify_domains(spans):
@@ -38,14 +38,32 @@ ANSWERS={
 }
 
 def answer_span(rule,spans,present):
+    desired={line.strip() for source in spans if source.get('field') in ('goal','to_be')
+             for line in source['quote'].splitlines() if line.strip()}
     for source in spans:
-        for line in source['quote'].splitlines():
-            # A desired/predicted value is not an observed baseline. Preserve the
-            # whole immutable source as Evidence while inspecting bounded lines.
+        goal_section=source.get('field') in ('goal','to_be')
+        for line in source['quote'].replace('\\n','\n').splitlines():
+            # Old composed original_text mirrors typed goals. A bare target
+            # number on the next line must never become a current measurement.
             if rule=='R02':
-                baseline=bool(re.search(r'현재|실측|측정|기준|평균|발생',line))
-                if not baseline and (source.get('field') in ('goal','to_be') or re.search(r'목표|희망|예상|추정',line)):
+                if source.get('field') in ('goal','to_be'):
                     continue
+                if re.match(r'\s*(?:희망\s*개선목표|개선\s*목표|목표|To-Be)\s*(?:\([^)]*\))?\s*[:：]?',line,re.I):
+                    goal_section=True
+                elif re.match(r'\s*(?:현재\s*문제점|현재\s*업무|현황|현재\s*(?:처리|소요|불량|재고|평균|기준|값)|현재값|실측)',line):
+                    goal_section=False
+                if goal_section or line.strip() in desired:
+                    continue
+                baseline=bool(re.search(r'현재|실측|측정|기준|평균|발생',line))
+                if not baseline and re.search(r'목표|희망|예상|추정',line):
+                    continue
+            explicit_scope = rule=='R04' and re.search(r'(?:[1-9]\d*\s*(?:개|곳)\s*(?:사업장|창고|공정|라인|부서)|(?:사업장|창고|공정|라인|부서)\s*[1-9]\d*\s*(?:개|곳))',line)
+            current_tool = rule=='R05' and source.get('field') in ('as_is','problem') and active_match(line,r'(?:엑셀|Excel|수기|스프레드시트|ERP|MES).{0,12}(?:관리|기록|사용)')
+            if explicit_scope or current_tool:
+                return source,'FOUND'
+            subject={'R06':r'예산|사업비|견적','R07':r'일정|착수|기한|납기'}.get(rule)
+            if subject and re.search(r'(?:'+subject+r').{0,35}(?:추후|별도|근거\s*확인\s*후).{0,12}(?:산정|확인|검토)',line):
+                return source,'DECLARED_UNKNOWN'
             found=re.search(present,line) or re.search(ANSWERS.get(rule,r'(?!)'),line)
             if found:
                 value=line[found.start():found.end()+12]

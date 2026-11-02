@@ -1,4 +1,5 @@
 'use client';
+import {PortalMenu} from '../../portal/portal-menu';
 import type {AdminCatalogRead} from "../../portal/admin";
 import type {PortalIdentity} from "../../portal/types";
 
@@ -6,7 +7,7 @@ import React,{useMemo,useState} from 'react';
 import {
  Activity,AlertTriangle,ArrowRight,BarChart3,Bell,BrainCircuit,Building2,CalendarRange,
  CheckCircle2,ChevronRight,ClipboardCheck,ClipboardList,Database,
- Gauge,History,Layers3,LayoutDashboard,Menu,RefreshCcw,Server,
+ Gauge,History,Layers3,LayoutDashboard,RefreshCcw,Server,
  ShieldCheck,ShieldAlert,Users,UserRound,UserRoundCog,Workflow,X,Search,
  TrendingUp,FileText,ArrowLeftRight,Info
 } from 'lucide-react';
@@ -61,7 +62,8 @@ function AlertList({alerts,onGo}:{alerts:ControlAlert[];onGo:(a:ControlAlert)=>v
  return <div className="da-alerts">{alerts.length?alerts.slice(0,8).map(a=><button type="button" key={a.id} onClick={()=>onGo(a)} className="da-alert-row"><span className={'da-alert-mark '+a.severity}/><span className="da-alert-copy"><b>{a.title}</b><small>{a.detail}</small></span><ChevronRight size={15}/></button>):<div className="da-empty-list">제공된 경보가 없습니다. 경보 수집 API 연결 여부를 확인해 주세요.</div>}</div>;
 }
 
-export default function AdminControlCenter({session,catalogRead,onLogout,renderDetails,renderLive}:{catalogRead?:AdminCatalogRead;session?:PortalIdentity;onLogout:()=>void;renderDetails:(page:Page,onNavigate:(page:Page)=>void)=>React.ReactNode;renderLive?:(screen:Screen,detail:Page|null)=>React.ReactNode}){
+export default function AdminControlCenter({session,catalogRead,onLogout,renderDetails,renderLive}:{catalogRead?:AdminCatalogRead;session?:PortalIdentity;onLogout:()=>void;renderDetails:(page:Page,onNavigate:(page:Page)=>void)=>React.ReactNode;renderLive?:(screen:Screen,detail:Page|null,onNavigate:(screen:Screen,detail?:Page|null)=>void)=>React.ReactNode}){
+ const [collapsed,setCollapsed]=useState(false);
  const [page,setPage]=useState<Screen>('overview');
  const [detail,setDetail]=useState<Page|null>(null);
  const [history,setHistory]=useState<Array<{page:Screen;detail:Page|null}>>([]);
@@ -83,19 +85,19 @@ export default function AdminControlCenter({session,catalogRead,onLogout,renderD
  const goOperator=(id:string)=>{setOperatorFilter(id);navigate('operators')};
  const goWork=(id:string)=>{setSearch(id);navigate('intake')};
  const totals=snap?.totals;
- const liveContent=renderLive?.(page,detail)??null;
- return <div className="datco-admin" lang="ko">
+ const liveContent=renderLive?.(page,detail,navigate)??null;
+ return <div className={'datco-admin portal-layout'+(collapsed?' portal-menu-collapsed':'')} lang="ko">
   <div className="da-mobile-shade" data-open={mobile} onClick={()=>setMobile(false)}/>
-  <aside className={'da-sidebar '+(mobile?'da-sidebar-open':'')}>
+  <aside id="portal-side-nav" className={'da-sidebar '+(mobile?'da-sidebar-open':'')}>
    <div className="da-brand"><span className="da-brand-logo"><Layers3 size={22}/></span><div><b>DATCO <em>ONE</em></b><small>통합 시스템 관리</small></div><button className="da-mobile-close" onClick={()=>setMobile(false)} aria-label="메뉴 닫기"><X size={18}/></button></div>
-   <nav className="da-nav" aria-label="관리자 메뉴">{groups.map(g=><div key={g.label} className="da-nav-group"><p>{g.label}</p>{g.items.map(item=><button className={'da-nav-link '+(page===item.id?'active':'')} key={item.id} onClick={()=>navigate(item.id)}><item.icon size={17}/><span>{item.name}</span>{page===item.id&&<span className="da-nav-dot"/>}</button>)}</div>)}</nav>
+   <nav className="da-nav" aria-label="관리자 메뉴">{(session?groups.map(g=>({...g,items:g.items.filter(item=>['overview','reference','users','infrastructure','ai-quality'].includes(item.id))})).filter(g=>g.items.length):groups).map(g=><div key={g.label} className="da-nav-group"><p>{g.label}</p>{g.items.map(item=><button className={'da-nav-link '+(page===item.id?'active':'')} key={item.id} onClick={()=>navigate(item.id)}><item.icon size={17}/><span>{item.name}</span>{page===item.id&&<span className="da-nav-dot"/>}</button>)}</div>)}</nav>
    <div className="da-side-bottom"><ShieldCheck size={18}/><div><b>역할별 접근통제</b><small>{session?session.role:"서버 권한 연결 전"}</small></div></div>
   </aside>
-  <div className="da-body"><header className="da-topbar"><div className="da-crumb"><button aria-label="메뉴 열기" className="da-menu-btn" onClick={()=>setMobile(true)}><Menu size={21}/></button><span>관리자 포털</span><ChevronRight size={14}/><b>{title[page].heading}</b></div><div className="da-top-actions"><button className="da-icon-btn" onClick={()=>navigate('audit')} aria-label="경보 이력 확인"><Bell size={19}/>{snap?.alerts.length? <i/>:null}</button><span className="da-top-divider"/><span className="da-user-round"><UserRound size={18}/></span><button className="da-btn da-btn-outline da-top-logout" onClick={onLogout}>{session?"로그아웃":"미리보기 종료"}</button><span className="da-user-name">{session?.name??snap?.viewer.name??'관리자 세션 확인 필요'}</span></div></header>
+  <div className="da-body"><header className="da-topbar"><div className="da-crumb"><PortalMenu collapsed={collapsed} onCollapse={()=>setCollapsed(v=>!v)} mobileOpen={mobile} onMobile={setMobile}/><span>관리자 포털</span><ChevronRight size={14}/><b>{title[page].heading}</b></div><div className="da-top-actions">{!session&&<button className="da-icon-btn" onClick={()=>navigate('audit')} aria-label="경보 이력 확인"><Bell size={19}/>{snap?.alerts.length? <i/>:null}</button>}<span className="da-top-divider"/><span className="da-user-round"><UserRound size={18}/></span><button className="da-btn da-btn-outline da-top-logout" onClick={onLogout}>{session?"로그아웃":"미리보기 종료"}</button><span className="da-user-name">{session?.name??snap?.viewer.name??'관리자 세션 확인 필요'}</span></div></header>
    <main className="da-main">
-    <div className="da-page-heading"><div><p className="da-eyebrow">{`M-${String(Object.keys(title).indexOf(page)+1).padStart(2,'0')} · ${title[page].code}`}</p><h1>{title[page].heading}</h1><p>{title[page].desc}</p></div><div className="da-heading-tools"><select className="da-select" aria-label="조회기간" value={period} onChange={e=>setPeriod(e.target.value as Period)}><option value="7d">최근 7일</option><option value="30d">최근 30일</option><option value="90d">최근 90일</option></select><button className="da-btn da-btn-outline" onClick={refresh}><RefreshCcw size={15}/>화면 새로고침</button></div></div>
-    <div className="da-detail-nav"><label>운영자 필터 <input aria-label="운영자 필터" className="da-input" value={operatorFilter} onChange={e=>setOperatorFilter(e.target.value)} placeholder="운영자 검색어"/></label><label>단계 필터 <select className="da-select" aria-label="단계 필터" value={stageFilter} onChange={e=>setStageFilter(e.target.value)}><option value="">전체 단계</option><option value="fact_review">Fact 검토</option><option value="grant_matching">지원사업 매칭</option><option value="proposal">제안서</option></select></label><button className="da-btn da-btn-outline" onClick={refresh}>필터 초기화</button><small>미연결 · 선택값만 유지</small></div>
-    {snap&&<SourceTag s={snap}/>}
+    <div className="da-page-heading"><div>{!session&&<p className="da-eyebrow">{`M-${String(Object.keys(title).indexOf(page)+1).padStart(2,'0')} · ${title[page].code}`}</p>}<h1>{title[page].heading}</h1><p>{title[page].desc}</p></div><div className="da-heading-tools">{!session&&<select className="da-select" aria-label="조회기간" value={period} onChange={e=>setPeriod(e.target.value as Period)}><option value="7d">최근 7일</option><option value="30d">최근 30일</option><option value="90d">최근 90일</option></select>}<button className="da-btn da-btn-outline" onClick={refresh}><RefreshCcw size={15}/>화면 새로고침</button></div></div>
+    {!session&&<div className="da-detail-nav"><label>운영자 필터 <input aria-label="운영자 필터" className="da-input" value={operatorFilter} onChange={e=>setOperatorFilter(e.target.value)} placeholder="운영자 검색어"/></label><label>단계 필터 <select className="da-select" aria-label="단계 필터" value={stageFilter} onChange={e=>setStageFilter(e.target.value)}><option value="">전체 단계</option><option value="fact_review">Fact 검토</option><option value="grant_matching">지원사업 매칭</option><option value="proposal">제안서</option></select></label><button className="da-btn da-btn-outline" onClick={refresh}>필터 초기화</button><small>미연결 · 선택값만 유지</small></div>}
+    {!session&&snap&&<SourceTag s={snap}/>}
     <div className="da-detail-nav"><button className="da-btn da-btn-outline" onClick={back} disabled={!history.length}>이전 화면</button><button className="da-btn da-btn-outline" onClick={()=>navigate('overview')}>관리 홈</button></div>
     {(detailMenus[page]??[]).length>0&&<nav aria-label="상세 관리 메뉴" className="da-detail-nav">{detailMenus[page]!.map(p=><button key={p.id} className={'da-btn '+(detail===p.id?'da-btn-primary':'da-btn-outline')} onClick={()=>openDetail(p.id)}>{p.label}</button>)}</nav>}
     {liveContent&&<>{page==='reference'&&session&&<p className="da-chart-footnote" role="region" aria-label="허용된 기준정보 요약">{catalogRead?.status==='ready'?<>등록 기능 레코드 <b data-testid="mvp-admin-feature-count">{catalogRead.data?.features}</b> · 발행 참조가 있는 Capability <b data-testid="mvp-admin-published-count">{catalogRead.data?.published}</b> · 기존 요약의 목록·버전·동기화 상태는 별도 미연결입니다. 실제 목록·발행 Version은 아래 연결된 관리 화면에서 조회합니다.</>:catalogRead?.status==='error'?'기준정보 메타데이터 조회 실패':'기준정보 메타데이터 조회 중'}</p>}{liveContent}</>}

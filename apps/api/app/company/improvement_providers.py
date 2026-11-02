@@ -52,8 +52,8 @@ class RuleProvider:
         from app.company.improvement_rules import analyze
         candidates, diagnostics = (self.analyzer or analyze)(data, spans, coverage=coverage, incomplete=incomplete)
         def texts(*subjects):
-            return [dict(text=c['content'], evidence=c['data']['evidence'],
-                         uncertainty=c['data']['uncertainty']) for c in candidates
+            return [dict(text=c['data'].get('function_label',c['content']), source_text=c['content'], evidence=c['data']['evidence'],
+                         uncertainty=c['data']['uncertainty'], claim_kind=c['data']['claim_kind'], rule_id=c['data']['rule_id']) for c in candidates
                     if c['category']=='STRUCTURE' and c['data']['subject'] in subjects]
         from app.company.improvement_language import classify_domains
         structure=dict(current_state=texts('as_is','현황'), problems=texts('problem','문제','업무요구 후보'),
@@ -61,7 +61,7 @@ class RuleProvider:
             required_functions=texts('required_functions','필요 기능'),
             scope_constraints=texts('constraints','적용 범위','제약사항'),
             missing_information=[dict(subject=c['data']['subject'],question=c['data'].get('question',''),
-                uncertainty=c['data']['uncertainty']) for c in candidates if c['category']!='STRUCTURE'],
+                uncertainty=c['data']['uncertainty'], claim_kind=c['data']['claim_kind'], rule_id=c['data']['rule_id']) for c in candidates if c['category']!='STRUCTURE'],
             domains=classify_domains(spans), review_status='UNREVIEWED_CANDIDATES')
         return StructuredAnalysisResult('improvement-result-v1','RULE',VERSION,context,structure,
             tuple(candidates),tuple(diagnostics),

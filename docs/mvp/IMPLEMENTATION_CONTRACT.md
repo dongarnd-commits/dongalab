@@ -55,3 +55,16 @@ USE_FOR_REQUEST는 검토 활용 기록이다. Fact 확정·개선요구 CONFIRM
 
 기존 전체 Unit/PG/Playwright와 신규 MVP 테스트를 유지한다. 합성 기업/공식 공개 공고/승인된 649 원천을 구분한다. 실제 고객자료는 Fixture로 사용하지 않는다.
 2026-10-30 공식 기업마당 GET 1회, pageIndex1/pageUnit2, 2건·totCnt1460 관찰 성공. 이는 전체수집·모든 원문 첨부·자격·가동 보장이 아니다. 키는 기존 private 설정에서 메모리로만 읽고 미출력/미복사했다. 격리 개발 private proof: mvp-live/9195b24587134e4aa4c684ad12d49d65/result.json.
+
+
+## 1차 사용자 E2E 보완 계약 (2026-11-02)
+
+- Rule은 improvement-rules-v4다. 같은 제출 Version의 as_is/problem, goal/to_be 별칭은 역할별로 묶되 원문 Evidence를 모두 유지한다. 다른 파일·검토답변·Version의 출처는 합치지 않는다.
+- STRUCTURE의 content는 실제 인용문 발췌다. 필요한 기능의 이름은 detail.function_label, 도출은 claim_kind=INFERRED 및 derivation(method/id/matched_quotes)에 두고 Backend가 대응표와 실제 원문을 검증한다. 기존 literal CHECK/Trigger는 그대로다.
+- 목표 수치와 현재 측정값을 분리하고, 이미 답변한 시스템·범위·미정 예산/일정을 반복 질문하지 않는다. 업무별 명시 표현으로 적용하며 R01~R08 외 범용 의미분석을 추가하지 않는다.
+- 요약 내용의 일괄 검토는 운영자의 의견·명시 클릭으로 미검토 STRUCTURE마다 기존 append-only Review를 기록한다. 기존 제외/추가 확인 판단은 변경하지 않는다.
+- 검토한 분석 내용을 공식 구조화 편집란으로 불러오는 동작은 저장/ACK/CONFIRM을 실행하지 않는다. 남은 확인사항과 자료 한계도 편집란에 남겨 사람이 검토한다. 필수 미해결 사항은 기존 Backend 확정 Guard가 차단한다.
+- Composition 저장의 상태별 필수 범위와 공식 확정의 저장 Version 조건을 UI에도 표시한다. Guard/권한/업무 State는 변경하지 않는다.
+- 파일 선택과 반응형 메뉴는 3포털의 공통 UI만 재사용한다. 업로드/추출/자료함/근거/Version의 기존 Backend를 유지한다.
+- 수동 재인수 도구는 레이블이 검증된 동일 Repository의 합성 인수환경에서 네 합성 계정만 읽기 검증하여 새 DB에 적용한다. 회사/Review/분석/승인 이력은 복제하지 않는다. 8443/49355/49356 포트는 거부하며 재바인딩은 중지 상태·정확 nonce 확인을 요구한다.
+- 이번 증분의 DB Schema/Migration/Trigger 변경은 없다. 기존 fg31m0012026을 새 작업 소유 DB에만 적용한다. 이전 8444 DB/파일/도구는 백업·실제 복원 검증 후 별도 보존한다.

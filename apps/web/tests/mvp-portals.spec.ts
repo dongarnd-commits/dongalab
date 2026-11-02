@@ -17,7 +17,7 @@ test('MVP admin uses real summaries, source catalog, existing grant and unconfig
  await nav.getByRole('button',{name:'사용자·권한',exact:true}).click();
  const before=await(await page.request.get('/api/admin/access')).json();expect(JSON.stringify(before)).not.toContain('password_hash');
  await page.getByLabel('접근권한 대상 계정',{exact:true}).selectOption(c.accounts.operator);await page.getByLabel('접근권한 허용 기업',{exact:true}).selectOption(c.a.id);
- await page.getByRole('button',{name:'선택한 기업 접근권한 부여',exact:true}).click();await expect(page.getByRole('status')).toContainText('기업 접근권한을 저장했습니다');
+ await expect(page.getByRole('button',{name:'선택한 기업 접근권한 부여',exact:true})).toBeDisabled();await expect(page.getByText('선택한 계정은 이미 이 기업에 접근할 수 있습니다.',{exact:true})).toBeVisible();
  const after=await(await page.request.get('/api/admin/access')).json();expect(after.memberships).toEqual(before.memberships);
  await nav.getByRole('button',{name:'서버·연동 모니터링',exact:true}).click();await expect(page.getByRole('heading',{name:'분석 실행 제공자',exact:true})).toBeVisible();
  await expect(page.getByText('NOT_CONFIGURED — 연결 미설정',{exact:true})).toHaveCount(4);
@@ -55,7 +55,10 @@ test('MVP real matching review to 16-section documents, safe native send confirm
  const prep=await(await page.request.get('/api/capability/matches/'+candidate.candidate_id+'/proposal-preparation')).json();expect(prep.review_evidence.length).toBeGreaterThan(0);
  for(const task of prep.review_tasks){await page.getByLabel(task.id+' 검토 의견',{exact:true}).fill('TEST checked exact company proof and recorded source requirement.');await page.getByLabel(task.id+' 현재 확정 근거',{exact:true}).selectOption(prep.review_evidence[0].id);}
  await page.getByLabel('매칭 전체 검토 의견',{exact:true}).fill('TEST reviewed all prerequisites without treating unknown eligibility as true.');
+ const reviewedMatch=page.waitForResponse(r=>r.request().method()==='POST'&&r.url().endsWith('/matches/'+candidate.candidate_id+'/review'));
  await page.getByRole('button',{name:'근거 검토 완료·제안 가능 판단',exact:true}).click();
+ const reviewedResponse=await reviewedMatch;expect(reviewedResponse.status(),await reviewedResponse.text()).toBe(200);
+ await expect(page.getByRole('button',{name:'동일 대상의 제안서 작성',exact:true})).toBeEnabled({timeout:30000});
  await expect(page.getByRole('status')).toContainText('항목별 근거와 제안 가능 판단을 저장했습니다');
  await page.getByRole('button',{name:'동일 대상의 제안서 작성',exact:true}).click();
  await page.getByLabel('제안서 매칭 후보',{exact:true}).selectOption(candidate.candidate_id);const title='TEST MVP16 browser '+Date.now();await page.getByLabel('표준 제안서 제목',{exact:true}).fill(title);

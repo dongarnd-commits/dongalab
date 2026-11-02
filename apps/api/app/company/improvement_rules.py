@@ -1,8 +1,9 @@
 """Bounded deterministic rules. No model, network, invented numbers or facts."""
 import re
 from app.company.improvement_language import active_match,answer_span,classify_domains,scalar_observations
+from app.company.improvement_structure import extract as extract_structure, function_derivation
 
-VERSION = 'improvement-rules-v3'
+VERSION = 'improvement-rules-v4'
 REASONS = {
  'R02':'개선 전후 효과를 비교하려면 측정 지표·기준기간·현재값·단위를 확인해야 합니다.',
  'R03':'기업이 기대하는 개선 결과를 구체화하기 위한 확인입니다.',
@@ -14,8 +15,8 @@ REASONS = {
 }
 FIELDS = {'as_is':'현황','problem':'문제','impact':'영향','goal':'개선 목표','to_be':'개선 목표','required_functions':'필요 기능','constraints':'제약사항'}
 RULES = (
- ('R02','측정 기준',r'불량|생산성|소요시간|처리시간|비용\s*절감|측정|지표',r'측정\s*기준|기준기간|현재값|기준값','측정 지표의 정의·기준기간·현재값·단위를 확인해 주세요.'),
- ('R04','적용 범위',r'공정|업무|라인|사업장|부서',r'적용\s*범위\s*[:：]|대상\s*범위\s*[:：]','이번 개선 대상과 포함·제외 범위를 확인해 주세요.'),
+ ('R02','측정 기준',r'불량|생산성|소요시간|처리시간|비용\s*절감|측정|지표|재고.{0,15}(?:불일치|일치하지|오차)',r'측정\s*기준|기준기간|현재값|기준값','측정 지표의 정의·기준기간·현재값·단위를 확인해 주세요.'),
+ ('R04','적용 범위',r'공정|업무|라인|사업장|부서|(?:창고|입출고|재고).{0,25}(?:관리|통합|구축)',r'적용\s*범위\s*[:：]|대상\s*범위\s*[:：]','이번 개선 대상과 포함·제외 범위를 확인해 주세요.'),
  ('R05','설비·시스템',r'설비|시스템|연계|구축',r'기존\s*(설비|시스템)\s*[:：]|연계\s*대상\s*[:：]','기존 설비·시스템 구성과 연계 대상·제약을 확인해 주세요.'),
  ('R06','사업비',r'예산|투자|견적|사업비',r'(예산|사업비|견적)\s*[:：]\s*\S+','검토할 예산의 산정 범위·통화·포함 비용을 확인해 주세요.'),
  ('R07','일정',r'착수|완료일|납기|일정|기한',r'(착수|완료일|일정|기한)\s*[:：]\s*\S+','희망 일정의 기준일과 선행조건을 확인해 주세요.'),
@@ -27,26 +28,17 @@ def analyze(data, spans, *, incomplete=False, coverage=()):
         candidates.append(dict(category=category,content=text,reason='원문에 명시된 현황·목표·요구사항을 구조화한 후보입니다.' if category=='STRUCTURE' else REASONS[rule],
             data=dict(subject=subject,rule_id=rule,rule_version=VERSION,claim_kind=claim,evidence=evidence,
                 uncertainty='사람 검토 필요; 확인된 기업 사실이 아님',question=question)))
-    for field,label in FIELDS.items():
-        if data.get(field,'').strip():
-            span=next(s for s in spans if s.get('field')==field)
-            emit('STRUCTURE',field,data[field],'R01' if field in ('as_is','problem','impact') else 'R03',[span])
-    for source in spans:
-        if source.get('kind') not in ('DOCUMENT','IMPROVEMENT','EVIDENCE','RESPONSE'):continue
-        for line in source['quote'].splitlines():
-            m=re.fullmatch(r'\s*(현황|현재 업무|문제|개선 목표|목표|필요 기능|요구 기능|원인 후보|원인)\s*[:：]\s*(.{1,2000})\s*',line)
-            if m and not any(c['content']==m[2] for c in candidates):
-                subject={'현재 업무':'현황','목표':'개선 목표','요구 기능':'필요 기능','원인':'원인 후보'}.get(m[1],m[1])
-                emit('STRUCTURE',subject,m[2],'R01' if subject in ('현황','문제','원인 후보') else 'R03',[source], 'INFERRED' if subject=='원인 후보' else 'DIRECT_SOURCE')
-                if subject=='원인 후보':candidates[-1]['data']['uncertainty']='기업 원문의 원인 설명 후보; 인과관계나 확정 Fact가 아님'
-    for source in spans:
-        if source.get('kind')!='IMPROVEMENT' or not classify_domains([source]):continue
-        for clause in re.split(r'[。\n;；.!?]',source['quote']):
-            clause=clause.strip()
-            if len(clause)<6 or len(clause)>2000 or any(c['content']==clause for c in candidates):continue
-            if active_match(clause,r'누락|오류|지연|중복|분리|수작업|수기|엑셀|불량|연계|자동화'):
-                emit('STRUCTURE','업무요구 후보',clause,'R01',[source],'INFERRED')
-                candidates[-1]['data']['uncertainty']='명시 업무 문장의 검토 후보; 원인/기능/해결 가능성을 자동 확정하지 않음'
+    for record in extract_structure(data, spans):
+        subject = record["subject"]
+        emit("STRUCTURE", subject, record["text"],
+             "R01" if subject in ("as_is", "problem", "impact", "원인 후보") else "R03",
+             record["evidence"], record["claim_kind"])
+        if record.get("derivation"):
+            candidates[-1]["data"]["derivation"] = record["derivation"]
+            candidates[-1]["data"]["function_label"] = record["function_label"]
+            candidates[-1]["data"]["uncertainty"] = "원문 업무 표현에서 제안한 기능 검토 후보; 실제 서비스 제공·구축 가능성 확인 필요"
+        elif subject == "원인 후보":
+            candidates[-1]["data"]["uncertainty"] = "기업 원문의 원인 설명 후보; 인과관계나 확정 사실이 아님"
     def missing(rule,subject,basis,question,present):
         found,answer_state=answer_span(rule,spans,present)
         scope=[dict(inspection_id=c['inspection_id'],status=c['status'],origin=c['origin'],
@@ -101,3 +93,7 @@ def validate(candidate,spans):
         if ev not in spans or not ev.get('quote'):raise ValueError('INVALID_ANALYSIS_EVIDENCE')
     if candidate['category']=='STRUCTURE' and not any(candidate['content'] in e['quote'] for e in candidate['data']['evidence']):
         raise ValueError('INVALID_EXTRACTED_VALUE')
+    if candidate['data'].get('derivation'):
+        inferred = candidate['data'].get('claim_kind') == 'INFERRED' and candidate['data'].get('subject') == 'required_functions'
+        if not inferred or not function_derivation(candidate['data'].get('function_label'), candidate['data']['derivation'], candidate['data']['evidence']):
+            raise ValueError('INVALID_EXTRACTED_VALUE')

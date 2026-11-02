@@ -4,7 +4,7 @@ const menus=["관리 대시보드","DMP 기능 목록","Capability 관리","서�
 async function enter(p:Page,examples=true,count?:number){await p.goto(examples?`/ui-preview/admin-fixture${count===undefined?"":`?count=${count}`}`:"/ui-preview/admin");await p.getByRole("button",{name:"미리보기 시작",exact:true}).click();}
 const tops=['통합 관제 홈','기업 접수 현황','업무 배정·재배정','운영자 업무량','전체 E2E 진행','일정·마감·간트','서버·연동 모니터링','AI 실행·품질','기준정보·버전','사용자·권한','포털 운영현황','경보·감사 이력'];
 const parent=[0,8,8,8,8,8,9,9,7,7,6,11];
-async function top(p:Page,i:number){const nav=p.getByRole('navigation',{name:'관리자 메뉴',exact:true});if(await p.locator('.da-menu-btn').isVisible()&&!(await p.locator('.da-sidebar').evaluate(e=>e.classList.contains('da-sidebar-open'))))await p.getByRole('button',{name:'메뉴 열기',exact:true}).click();await nav.getByRole('button',{name:tops[i],exact:true}).click();}
+async function top(p:Page,i:number){const nav=p.getByRole('navigation',{name:'관리자 메뉴',exact:true});if(await p.getByRole('button',{name:'메뉴 열기',exact:true}).isVisible())await p.getByRole('button',{name:'메뉴 열기',exact:true}).click();await nav.getByRole('button',{name:tops[i],exact:true}).click();}
 async function capture(p:Page,path:string){
  const style=await p.addStyleTag({content:'.datco-admin{height:auto;overflow:visible;min-height:100vh}.da-main{overflow:visible}.da-sidebar{height:100vh;position:sticky;top:0}'});
  await p.screenshot({path,fullPage:true,animations:'disabled'});await style.evaluate(e=>e.parentNode?.removeChild(e));

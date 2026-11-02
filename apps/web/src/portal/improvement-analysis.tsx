@@ -7,14 +7,14 @@ type StructuredResult={provider:string;provider_version:string;context:{company_
 type Fresh={usable:boolean;reasons:string[];warnings:string[]};
 type Evidence={kind:string;quote:string;field?:string;version_id?:string;evidence_id?:string;inspection_id?:string;file_id?:string;descriptor?:string;page?:number|null};
 type Review={id:string;actor_id?:string;request_key?:string;ordinal:number;decision:string;note:string;question:string};
-type Candidate={id:string;category:string;content:string;reason:string;data:{rule_id:string;rule_version:string;uncertainty:string;claim_kind:string;evidence:Evidence[];question?:string;search_scope?:{inspection_id:string;status:string;exclude_reason:string;locations:{page:number|null;descriptor:string}[]}[]};reviews:Review[]};
+type Candidate={id:string;category:string;content:string;reason:string;data:{rule_id:string;rule_version:string;uncertainty:string;claim_kind:string;function_label?:string;evidence:Evidence[];question?:string;search_scope?:{inspection_id:string;status:string;exclude_reason:string;locations:{page:number|null;descriptor:string}[]}[]};reviews:Review[]};
 type Input={id:string;file_id:string|null;data:{name?:string;digest?:string;included?:boolean;exclude_reason?:string};origin:string};
 type Run={diagnostics?:{structured_result?:StructuredResult};run:{id:string;created_at:string};manifest:{job_id:string;data:{input_policy?:string;common_file_ids?:string[]}};status:string;freshness:Fresh;candidates:Candidate[];inputs:Input[];inspections:{id:string;input_id:string;data:{status:string;method:string;parser_version?:string;reuse_verified?:boolean;scope_known?:boolean;error_code?:string;limitations:string[];locations:{page:number|null;descriptor:string}[]}}[]};
 type Sources={selection_token:string;files:{id:string;name:string;direct:boolean;inactive:boolean;supported:boolean;default_included:boolean;parse_id:string|null}[]};
 type DraftVersion={id:string;request_key?:string;ordinal:number;title:string;message:string;due_date:string|null;review_ids:string[]};
 type Draft={id:string;request_key?:string;company_id:string;version_id:string;run_id:string;versions:DraftVersion[];deliveries:{request_id:string}[];freshness:Fresh};
 type Job={id:string;state:string;error?:string;retry_allowed?:boolean;attempts:{id:string}[];runs:{id:string}[]};
-const categories:Record<string,string>={STRUCTURE:'구조화 후보',MISSING_INFORMATION:'부족정보 후보',CONFLICT:'충돌 후보',PROCESSING_LIMITATION:'자료처리 한계'};
+const categories:Record<string,string>={STRUCTURE:'분석 내용',MISSING_INFORMATION:'추가 확인사항',CONFLICT:'서로 다른 정보',PROCESSING_LIMITATION:'자료 처리 한계'};
 const decisions:Record<string,string>={USE_FOR_REQUEST:'요청 활용',EXCLUDE:'제외',NEEDS_CHECK:'추가 확인'};
 const reasons:Record<string,string>={NEW_SUBMIT_VERSION:'새 제출본이 있습니다.',COMPANY_INPUT_CHANGED:'분석에 사용한 기업정보가 변경되었습니다.',FACT_BASIS_CHANGED:'확인 Fact 또는 근거가 변경되었습니다.',SITE_CHANGED:'사업장 정보가 변경되었습니다.',SOURCE_CHANGED:'사용한 자료가 변경되었습니다.',NEW_ATTEMPT:'재분석 실행을 확인해 주세요.',ANALYSIS_FAILED:'분석 실패',RULE_CHANGED:'분석 규칙이 변경되었습니다.',NEW_COMMON_SOURCE_REVIEW_SUGGESTED:'새 공통자료가 있습니다. 이번 과제와의 관련성 재검토가 필요합니다.',NEWER_WORKING_VERSION:'새 작성본이 있습니다. 이 결과는 선택한 제출본 기준입니다.'};
 Object.assign(reasons,{VERIFIED_ANSWER_CHANGED:'검토 완료된 기업 답변이 변경되었습니다. 새 답변을 포함하여 재분석해 주세요.',REVIEW_CHANGED:'선택한 후보의 검토가 변경되었습니다. 최신 검토로 초안을 다시 구성해 주세요.',NEW_FACT_REVIEW_SUGGESTED:'새 확인 Fact가 있습니다. 이번 과제와의 관련성 재검토가 필요합니다.'});
@@ -32,8 +32,8 @@ function AnalysisConfirmation({busy,onCancel,children}:{busy:boolean;onCancel:()
 function CandidateReview({candidate:c,disabled,selected,edit,commonNote,onSelect,onEdit,onReview}:{candidate:Candidate;disabled:boolean;selected:boolean;edit:{note?:string;question?:string};commonNote:string;onSelect:(selected:boolean)=>void;onEdit:(edit:{note?:string;question?:string})=>void;onReview:(c:Candidate,decision:string,note:string,question:string)=>void}){
  const latest=c.reviews.at(-1),question=edit.question??latest?.question??c.data.question??'',note=edit.note??'';
  return <article className="intake-candidate" data-candidate-id={c.id}>
- <div className="intake-candidate-heading"><label><input type="checkbox" aria-label={c.content+' 보완항목 선택'} checked={selected} disabled={disabled} onChange={e=>onSelect(e.target.checked)}/><strong>{c.content}</strong></label><span>{categories[c.category]}</span></div>
- <p className="intake-question">{question||'시스템 질문이 없습니다. 필요하면 개별 질문을 작성하세요.'}</p>
+ <div className="intake-candidate-heading"><label><input type="checkbox" aria-label={c.content+' 보완항목 선택'} checked={selected} disabled={disabled} onChange={e=>onSelect(e.target.checked)}/><strong>{c.data.function_label??c.content}</strong></label><span>{categories[c.category]}</span></div>
+ {question&&<p className="intake-question">{question}</p>}
  {c.category==='PROCESSING_LIMITATION'&&<p className="intake-limit">미검사·처리 한계입니다. 실제 정보 부재를 뜻하지 않습니다.</p>}
  {latest&&<p className="intake-review-state">최근 검토: {decisions[latest.decision]} · {latest.note}</p>}
  <details><summary>근거·개별 검토</summary><p>{c.reason}</p><p>{c.data.uncertainty} · {c.data.claim_kind==='DIRECT_SOURCE'?'원문에 명시된 후보':'검토가 필요한 후보'}</p>
@@ -45,12 +45,12 @@ function CandidateReview({candidate:c,disabled,selected,edit,commonNote,onSelect
  <details><summary>검토 이력</summary>{c.reviews.map(r=><p key={r.id}>검토 {r.ordinal} · {decisions[r.decision]} · {r.note}</p>)}</details></details></article>;
 }
 
-function StructuredSummary({result}:{result:StructuredResult}){
- const sections:Record<string,string>={current_state:'현재 업무·현황',problems:'핵심 문제',cause_candidates:'원인 후보 · 인과관계 확인 필요',goals:'개선목표',required_functions:'필요 업무·시스템 기능',scope_constraints:'범위·제약조건'};
- return <details className="intake-result-summary"><summary>요구사항 분석 구조와 한계</summary><p>{result.provider} · {result.provider_version} · 사람 검토 전 후보</p>{Object.entries(sections).map(([field,label])=>{const values=result.structure[field];return <section key={field}><h4>{label}</h4>{Array.isArray(values)&&values.length?values.map((v,i)=><p key={i}>{v.text} · {v.uncertainty}</p>):<p>이 규칙·검사 범위에서 구조화한 후보 없음 · 필요하면 운영자 추가 확인</p>}</section>;})}{result.limitations.map((text,i)=><p key={i}>{text}</p>)}<details><summary>정확한 분석 입력</summary><p>기업: {result.context.company_id}</p><p>제출 Version: {result.context.improvement_version_id}</p><p>입력 Digest: {result.context.input_digest}</p></details></details>;
+function StructuredSummary({result,submittedTexts}:{result:StructuredResult;submittedTexts:string[]}){
+ const sections:Record<string,string>={current_state:'현재 업무·현황',problems:'핵심 문제',goals:'개선목표',required_functions:'필요한 기능 후보',scope_constraints:'범위·제약조건'};
+ return <section className="intake-result-summary" aria-label="요구사항 분석 요약"><h3>요구사항 분석 요약</h3><p>제출 원문을 바탕으로 정리한 검토용 내용입니다. 필요한 기능은 실제 제공 가능한 서비스와 구분합니다.</p>{Object.entries(sections).map(([field,label])=>{const original=result.structure[field],values=Array.isArray(original)?original.filter(v=>!submittedTexts.some(text=>text.trim()===v.text.trim())):[];return <section key={field}><h4>{label}</h4>{values.length?values.map((v,i)=><div key={i}><p className="intake-text">{v.text}</p>{field==='required_functions'&&<small>{v.claim_kind==='DIRECT_SOURCE'?'기업이 명시한 요구':'업무 표현에서 제안한 기능 · 운영자 확인 필요'}</small>}</div>):<p>{Array.isArray(original)&&original.length?'위 제출내용에 표시한 '+label+'과 같습니다. 원문·근거는 상세에서 확인할 수 있습니다.':'검사한 원문에서 별도로 구분된 내용이 없습니다.'}</p>}</section>;})}<details><summary>분석 방법·원인 설명·정확한 입력</summary><p>{result.provider} · {result.provider_version}</p>{Array.isArray(result.structure.cause_candidates)&&result.structure.cause_candidates.map((v,i)=><p key={i}>{v.text} · 원문에 기록된 원인 설명이며 인과관계 확인이 필요합니다.</p>)}{result.limitations.map((text,i)=><p key={i}>{text}</p>)}<p>기업: {result.context.company_id}</p><p>제출 Version: {result.context.improvement_version_id}</p><p>입력 Digest: {result.context.input_digest}</p></details></section>;
 }
 
-export function ImprovementAnalysisPanel({cid,vid,actorId,company,title,submissionOrdinal,requests,autoStart,onRequests,onFinished,onDirty,onDraftActive}:{cid:string;vid:string;actorId:string;company:string;title:string;submissionOrdinal:number;onFinished:(message:string)=>void;requests:boolean;autoStart:boolean;onRequests:()=>void;onDirty:(dirty:boolean)=>void;onDraftActive:(active:boolean)=>void}){
+export function ImprovementAnalysisPanel({cid,vid,actorId,company,title,submissionOrdinal,submittedTexts=[],requests,autoStart,onRequests,onFinished,onDirty,onDraftActive}:{cid:string;vid:string;actorId:string;company:string;title:string;submissionOrdinal:number;submittedTexts?:string[];onFinished:(message:string)=>void;requests:boolean;autoStart:boolean;onRequests:()=>void;onDirty:(dirty:boolean)=>void;onDraftActive:(active:boolean)=>void}){
  const [providers,setProviders]=useState<Provider[]>([]),[provider,setProvider]=useState('RULE');
  const [sources,setSources]=useState<Sources|null>(null),[common,setCommon]=useState<string[]>([]),[excluded,setExcluded]=useState<Record<string,string>>({});
  const [runs,setRuns]=useState<Run[]>([]),[runId,setRunId]=useState(''),[drafts,setDrafts]=useState<Draft[]>([]),[draft,setDraft]=useState<Draft|null>(null);
@@ -130,12 +130,13 @@ export function ImprovementAnalysisPanel({cid,vid,actorId,company,title,submissi
  return <div data-testid="improvement-analysis">{error&&<p role="alert">{error}</p>}
  {!requests&&<><section className="intake-card"><h2>Rule 기반 사전 분석 결과</h2><p>Rule 기반 검토 후보입니다. 분석 성공은 정보의 완전성이나 공식 확정을 뜻하지 않습니다.</p>
  <p role="status">{processing?'분석 중':job?.state==='FAILED'?'분석 실패':run?'분석 결과 도착':'분석 준비 중'}{job?.error&&' · '+job.error}</p>
+ {run?.diagnostics?.structured_result&&<StructuredSummary result={run.diagnostics.structured_result} submittedTexts={submittedTexts}/>}
  {run&&<dl className="intake-analysis-summary" aria-label="시스템 분석 요약"><div><dt>분석 결과</dt><dd>{run.status==='SUCCEEDED'?'완료':run.status==='PARTIAL'?'부분 완료':'실패'}</dd></div><div><dt>추가 확인 후보</dt><dd>{missing.length}건</dd></div><div><dt>정보 충돌 후보</dt><dd>{conflicts.length}건</dd></div><div><dt>자료 처리 한계</dt><dd>{limits.length||run.status==='PARTIAL'?'있음':'해당 후보 없음'}</dd></div></dl>}{run&&<><p>{run.freshness.usable?'현재 입력에 활용 가능한 분석':'과거 분석 · 현재 활용 제한'}</p>{[...run.freshness.reasons,...run.freshness.warnings].map(r=><p key={r}>{reasons[r]??r}</p>)}
- {!run.candidates.length&&<p>이 규칙·검사 범위에서 생성된 후보가 없습니다. 완전한 정보나 적격을 의미하지 않습니다.</p>} <section aria-label="핵심 추가 확인사항"><h3>핵심 추가 확인사항 · {missing.length}건</h3>{missing.map(candidateRow)}{!missing.length&&<p>이 규칙·검사 범위에서 생성된 부족정보 후보가 없습니다.</p>}</section>
+ {!run.candidates.length&&<p>이 규칙·검사 범위에서 생성된 후보가 없습니다. 완전한 정보나 적격을 의미하지 않습니다.</p>} <section aria-label="핵심 추가 확인사항"><h3>핵심 추가 확인사항 · {missing.length}건</h3>{missing.map(candidateRow)}{!missing.length&&<p>검사한 범위에서 제안된 추가 질문이 없습니다. 정보가 충분하다는 확정은 아닙니다.</p>}</section>
  {!!conflicts.length&&<section aria-label="정보 충돌"><h3>정보 충돌 · {conflicts.length}건</h3>{conflicts.map(candidateRow)}</section>}
  {!!limits.length&&<section aria-label="미검사·자료 처리 한계"><h3>미검사·자료 처리 한계 · {limits.length}건</h3><p>읽지 못한 자료를 정보가 없다는 근거로 판단하지 않습니다.</p>{limits.map(candidateRow)}</section>}
- {run.diagnostics?.structured_result&&<StructuredSummary result={run.diagnostics.structured_result}/>}
- <details className="intake-structure"><summary>원문 구조화 후보 · {structures.length}건</summary>{structures.map(candidateRow)}</details>
+
+ <details className="intake-structure"><summary>분석 내용별 근거·검토 · {structures.length}건</summary>{structures.map(candidateRow)}</details>
 </>}
 {job?.retry_allowed&&<button className="op-btn op-btn-outline" disabled={busy||processing} onClick={()=>void action(async()=>{const j=await companyRequest<Job>('/analysis-jobs/'+job.id+'/retry',{idempotency_key:commandKey('retry'),expected_attempt:job.attempts.length});if(alive.current){setJob(j);setRunId('');delete requestKeys.current.retry;changed();}})}>같은 입력 재시도</button>}
  <details className="intake-analysis-details"><summary>상세 분석·근거·실행 이력</summary>
@@ -148,9 +149,14 @@ export function ImprovementAnalysisPanel({cid,vid,actorId,company,title,submissi
 
  </>}</details></section>
  <section className="intake-card"><h2>검토 판단 및 후속 조치</h2><p>명시적으로 저장한 판단만 이력과 대시보드에 반영합니다. 공식 CONFIRM이나 기업 Fact 확정이 아닙니다.</p>{whole?.projection.latest&&<p data-testid="submission-latest">{whole.projection.current?'현재 검토 판단':'과거 검토 · 재검토 필요'} · {whole.projection.latest.actor_name} · {new Date(whole.projection.latest.created_at).toLocaleString('ko-KR')} · {whole.projection.latest.note}</p>}
- <p>선택한 보완항목 {selectionCount}건 · 선택만으로 Review를 저장하지 않습니다. 선택 해제는 기존 검토의 제외 판단이 아닙니다.</p><label>운영자 검토 의견<textarea aria-label="운영자 검토 의견" maxLength={5000} value={note} disabled={busy} onChange={e=>setNote(e.target.value)}/></label>
- <p>공통 의견은 새로 ‘요청 활용’으로 저장할 선택 항목에 적용됩니다. 기존 최신 Review는 재사용하며, 개별 변경은 펼쳐보기에서 입력하세요. 여러 Review는 순차 저장하므로 중간 실패 시 일부만 저장될 수 있습니다.</p>
+ <p>검토 완료는 제출내용에 대한 판단 기록입니다. 기업 보완요청은 별도 초안을 작성·확인한 후 발송하며, 정식 요구사항의 기업 확인·공식 확정은 다음 단계에서 진행합니다.</p>
+ {!!structures.some(c=>!c.reviews.length)&&<button className="op-btn op-btn-outline" disabled={disabled||!note.trim()} onClick={()=>void action(async()=>{for(const c of structures.filter(c=>!c.reviews.length)){await recordReview(c,'USE_FOR_REQUEST',note.trim(),'');commands.current.clear('review:'+c.id);}await load();})}>요약 내용 확인 · 미검토 내용의 검토 기록 저장</button>}
+ {!note.trim()&&<p>판단을 저장하려면 아래 운영자 검토 의견을 입력하세요.</p>}
+ <p>선택한 보완항목 {selectionCount}건 · 선택만으로 검토 의견을 저장하지 않습니다. 선택 해제는 기존 검토의 제외 판단이 아닙니다.</p><label>운영자 검토 의견<textarea aria-label="운영자 검토 의견" maxLength={5000} value={note} disabled={busy} onChange={e=>setNote(e.target.value)}/></label>
+ <p>공통 의견은 새로 ‘요청 활용’으로 저장할 선택 항목에 적용됩니다. 기존 검토 의견은 유지합니다. 개별 변경은 항목을 펼쳐 입력하세요. 저장 도중 오류가 나면 완료된 기록을 다시 조회한 뒤 이어서 진행하세요.</p>
  <div className="intake-actions"><button className="op-btn op-btn-primary" disabled={disabled||!note.trim()||!selectionCount} onClick={()=>void action(prepareDraft)}>보완요청 작성</button><button className="op-btn op-btn-outline" disabled={!sources||!whole||busy||!note.trim()||!!run&&disabled} onClick={()=>void action(()=>judge('NEEDS_CHECK'))}>추가 확인 필요 — 판단 보류</button><button className="op-btn op-btn-outline" disabled={disabled||!note.trim()} onClick={()=>void action(()=>judge('COMPLETED'))}>검토 완료 — 추가 보완요청 없음</button></div>
+ {!selectionCount&&<p>보완요청 작성: 기업에 질문할 항목을 선택하고 검토 의견을 입력하세요.</p>}
+ {disabled&&<p>현재 입력에 활용 가능한 최신 분석이 도착한 뒤 검토를 저장할 수 있습니다. 과거 결과는 열람만 가능합니다.</p>}
  <button className="op-btn op-btn-outline" disabled={busy} onClick={()=>void action(load)}>저장 결과 다시 확인</button>
  {recovered&&<p role="status">해당 요청 키의 검토 판단이 서버에 저장된 것을 확인했습니다.<button className="op-btn op-btn-outline" disabled={busy} onClick={()=>{onDirty(false);onFinished(`검토 판단 저장이 확인되었습니다. ${company} · 제출본 v${submissionOrdinal} · 현재 업무 상태: ${whole?.projection.label}`);}}>확인한 결과로 목록 복귀</button></p>}
  {!!drafts.length&&<details><summary>저장된 분석 초안 이어보기</summary>{drafts.map(d=><button className="op-btn op-btn-outline" key={d.id} disabled={busy} onClick={()=>void action(async()=>{const current=await companyRequest<Draft>('/analysis-drafts/'+d.id);if(alive.current){open(current);onRequests();}})}>{d.versions.at(-1)?.title} · v{d.versions.at(-1)?.ordinal}</button>)}</details>}
