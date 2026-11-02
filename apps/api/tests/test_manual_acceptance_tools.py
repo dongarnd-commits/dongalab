@@ -128,3 +128,13 @@ def test_ci_diagnostics_redact_request_secrets_and_preserve_failure():
         assert value not in result
     assert result.count("[REDACTED]")==3
     assert redact_test_output("FAIL required check",{})=="FAIL required check"
+
+
+def test_account_source_cli_imports_api_without_inherited_pythonpath(tmp_path):
+    import os, subprocess, sys
+    tests=Path(__file__).resolve().parent
+    code="import sys;from pathlib import Path;sys.path.insert(0,"+repr(str(tests))+");import manual_acceptance as uat\ntry:uat.source_accounts(Path('not-an-owned-source'))\nexcept RuntimeError as error:\n assert str(error)=='ACCOUNT_SOURCE_NOT_OWNED_UAT'\nelse:raise AssertionError('invalid source accepted')"
+    env=dict(os.environ,DATABASE_URL="postgresql+psycopg://unused:unused@127.0.0.1:1/unused")
+    env.pop("PYTHONPATH",None)
+    result=subprocess.run([sys.executable,"-B","-c",code],cwd=tmp_path,env=env,capture_output=True,text=True)
+    assert result.returncode==0,result.stderr

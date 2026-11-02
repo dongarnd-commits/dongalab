@@ -168,6 +168,8 @@ def source_accounts(directory):
     from sqlalchemy.engine import make_url
     from hashlib import pbkdf2_hmac
     from hmac import compare_digest
+    # CLI callers start at the repository root, before child env PYTHONPATH exists.
+    sys.path.insert(0,str(API))
     from mvp_portal_setup import validate_template
     path=Path(directory).resolve()
     if not re.fullmatch(r"[a-f0-9]{12}",path.name) or path.parent.name!="manual-acceptance":
