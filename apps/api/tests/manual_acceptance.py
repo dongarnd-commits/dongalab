@@ -58,7 +58,7 @@ def load(nonce):
 
 
 def head():
-    return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+    return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, encoding="utf-8").strip()
 
 
 def environment(m):
@@ -162,6 +162,14 @@ def protect_port(port):
         raise RuntimeError("PROTECTED_SERVICE_PORT")
 
 
+
+def repository_common_dir(project):
+    # Git emits UTF-8 paths even when the Windows console uses another codepage.
+    value=Path(subprocess.check_output(["git","rev-parse","--git-common-dir"],
+                                      cwd=project,text=True,encoding="utf-8").strip())
+    return (value if value.is_absolute() else project/value).resolve()
+
+
 def source_accounts(directory):
     """Read-only verification of THIS repo's labelled synthetic UAT identities."""
     import psycopg
@@ -181,10 +189,7 @@ def source_accounts(directory):
             or source["role"]!="datco_test_role_"+path.name
             or source["container"]!="datco-mvp-uat-"+path.name):
         raise RuntimeError("ACCOUNT_SOURCE_OWNERSHIP_MISMATCH")
-    def common(project):
-        value=Path(subprocess.check_output(["git","rev-parse","--git-common-dir"],cwd=project,text=True).strip())
-        return (value if value.is_absolute() else project/value).resolve()
-    if common(project)!=common(ROOT):
+    if repository_common_dir(project)!=repository_common_dir(ROOT):
         raise RuntimeError("ACCOUNT_SOURCE_REPOSITORY_MISMATCH")
     resource=inspect_label("container",source["container"],source["nonce"])
     mappings=resource["NetworkSettings"]["Ports"].get("5432/tcp") or []

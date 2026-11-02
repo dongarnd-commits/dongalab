@@ -138,3 +138,13 @@ def test_account_source_cli_imports_api_without_inherited_pythonpath(tmp_path):
     env.pop("PYTHONPATH",None)
     result=subprocess.run([sys.executable,"-B","-c",code],cwd=tmp_path,env=env,capture_output=True,text=True)
     assert result.returncode==0,result.stderr
+
+
+def test_repository_common_dir_from_non_utf8_cli(tmp_path):
+    import os,subprocess,sys
+    tests=Path(__file__).resolve().parent
+    code="import sys;sys.path.insert(0,"+repr(str(tests))+");import manual_acceptance as uat;result=uat.repository_common_dir(uat.ROOT);assert result.is_dir();assert result.name=='.git'"
+    env=dict(os.environ,PYTHONUTF8="0",PYTHONIOENCODING="utf-8")
+    env.pop("PYTHONPATH",None)
+    result=subprocess.run([sys.executable,"-B","-c",code],cwd=tmp_path,env=env,capture_output=True,encoding="utf-8")
+    assert result.returncode==0,result.stderr
