@@ -124,6 +124,12 @@ PostgreSQL SKIP은 DATCO_TEST_STORED_KO=1과 저장된 실제 공고 원문이 �
 
 모든 최종 소유 테스트 DB/Role/컨테이너 및 API/Worker/Web/Preview 프로세스는 각 runner가 정리했다. 기존 main과 원 개발 Worktree는 clean임을 읽기 확인했다. 8443/8444 Listener는 조회 당시 관찰되지 않았고 해당 서비스 시작·중지·재시작은 수행하지 않았다. 기존 DB·볼륨·백업을 변경하지 않았다. 임시 Next.js nonce 타입 경로는 Commit 전 원래 표준 생성 경로로 정리했다.
 
+### 최신 HEAD CI에서 발견한 시각 입력 회귀
+
+최초 Push c7c31d4의 CI41402991396은 Backend/PostgreSQL/Frontend/3포털 Preview 6개 Job SUCCESS였으나 기존 Playwright 제안 승인근거 테스트에서 63 PASS/1 FAIL이었다. `2026-11-02T07:04:00`을 datetime-local에 입력할 때 Chromium은 초00을 생략한 표준 값을 반환하고 Playwright가 원래 문자열과 다르다고 Malformed value를 반환했다. 실패 로그는 ignored runtime/dmp-assets/ci-playwright-41402991396.log로 보존했다.
+
+테스트 helper가 초00만 표준 분 단위 표현으로 정규화하며 실제 승인 시각은 바꾸지 않는다. 실제 Chromium에서 초00/정각/일반 초의 동일 시각 보존을 검증하는 회귀를 추가했다. `slice2_local.py proposal-e2e`의 제안서/승인 업무 포함3 PASS(52.5초), TypeScript/대상 ESLint PASS. 제품 코드·State·승인 시각의 Backend Guard 변경은 없다. 기존 로컬68 PASS와 후속 집중3 PASS는 중복 시나리오가 있으므로 합산하지 않는다. 최신 원격 전체 회귀는 신규 경계값을 포함한65개 및 빈 데이터UI3/자산UI1을 실행한다. 최종 원격 결과는 PR18 최신 HEAD Checks를 참조한다.
+
 ### 주요 변경 파일과 책임
 
 | 영역 | 파일·책임 |

@@ -18,6 +18,13 @@
 - Preview36 PASS(Admin20/Operator11/Company5) 및 각 품질/빌드/production404 PASS. 작업 소유 프로세스/DB/Role/컨테이너 정리 확인. 기존 main·원 개발 Worktree clean; 8443/8444는 조회 당시 미리스닝이며 서비스 조작0.
 - 변경 근거·주요 파일·인수 항목은 DMP_ASSET_AUTO_COMPOSITION.md에 통합했다. 임시 Next nonce 타입 경로는 표준으로 정리했다. Commit/명시Push/새 Draft PR과 최신HEAD CI를 다음으로 수행하며 기존 Draft PR17은 보존한다. 원격 최종 상태는 해당 PR 본문/Checks와 완료 보고를 참조한다.
 
+### 원격 CI 시각 입력 회귀 보완
+
+- c7c31d4 Commit/Feature Push/Draft PR18 생성. 기존 PR17/main 보존. GitHub 연결 도구의 쓰기권한403은 기존 Git 인증을 메모리에서만 사용한 동일 Repository API로 처리했다. Secret 출력/저장0.
+- 최초 CI41402991396의 6Job SUCCESS, Playwright63 PASS/1 FAIL. 초00에서 datetime-local이 문자열을 정규화하는 Playwright 입력 오류이며 제품 승인 Guard 오류가 아니다. 실패 로그를 보호 저장했다.
+- 제안서 테스트에 동일 시각의 표준 표현 helper와 실제 Chromium의 초00/정각/일반 초 회귀 추가. 기존 두 제안서 업무 포함 집중3 PASS, TypeScript/ESLint PASS. 테스트 전용 proposal-e2e 실행 모드를 추가했으며 기본 전체 회귀는 유지한다.
+- 후속 Commit/Push 후 PR18 최신 HEAD의 전체7Job을 재검증한다. 사용자 최종 인수/운영 반영은 계속 대기 상태다.
+
 ## 2026-10-30 P0/P1/P2 통합 준비
 
 - 출발 main/origin main10d3d8b 일치, 기존 main·Feature·서비스 Worktree 보존.
