@@ -24,6 +24,52 @@ def initial_counts():
     return counts
 
 
+def write_launchers(out, nonce):
+    python = str(ROOT / "apps/api/.venv/Scripts/python.exe")
+    script = str(ROOT / "apps/api/tests/manual_acceptance.py")
+    for filename, action in (("START", "start"), ("STOP", "stop"), ("STATUS", "status")):
+        (out / (filename + ".cmd")).write_text('@echo off\r\nchcp 65001 >nul\r\n"' + python + '" -B "' + script + '" ' + action + " --nonce " + nonce + "\r\npause\r\n", encoding="utf-8", newline="")
+    (out / "CLEANUP.cmd").write_text('@echo off\r\nchcp 65001 >nul\r\necho DESTRUCTIVE: removes ONLY this isolated acceptance database. Stop first.\r\n"' + python + '" -B "' + script + '" cleanup --nonce ' + nonce + ' --confirm-prompt\r\npause\r\n', encoding="utf-8", newline="")
+
+
+def prepare_review_environment(out, context, manifest, counts):
+    if manifest["host"] != "127.0.0.1" or context.get("notice") is not None or counts.get("notices", 0):
+        raise RuntimeError("PREPARATION_MUST_HAVE_NO_DEMO_NOTICE")
+    (out / "CREDENTIALS.txt").write_text(
+        "LOCAL PRIVATE — 격리 시험계정. 실제 고객 계정 아님. Git/PR/채팅 복사 금지.\n"
+        + "\n".join(label + ": " + username for label, username in context["accounts"].items())
+        + "\npassword: " + context["password"] + "\n", encoding="utf-8")
+    (out / "inputs/TEST-private-sentinel.txt").write_text(
+        "TEST NON-SENSITIVE ENVIRONMENT CHECK ONLY\n이 자료는 실제 기업자료가 아니며 분석 정답이나 추천 결과를 포함하지 않습니다.\n", encoding="utf-8")
+    (out / "evidence/issues.csv").write_text("ID,묶음,확인결과,관련Version,증빙경로,비고\n", encoding="utf-8-sig")
+    guide = ROOT / "docs/mvp/USER_ACCEPTANCE_GUIDE.md"
+    (out / "RUNBOOK.md").write_text(f"""# DATCO ONE 별도 로컬 인수 준비
+
+- 주소: {manifest['origin']}/login — 이 PC의 loopback 전용. 방화벽 개방·8443/8444 전환 없음.
+- 환경: {context['nonce']}, 실행 Commit: {manifest['head']}.
+- 계정은 CREDENTIALS.txt에서 로컬 확인. 4개 격리 시험 역할이며 실제 임직원 권한을 만들지 않았습니다.
+- 승인 해시를 유지한 DMP 원천649개를 재사용합니다. 관리 릴리스·연계/적용 근거는 자동 검증하지 않습니다.
+- 처음 생성한 상태는 기업/분석/검토/조합/제안0건, 공고0건입니다. 환경 점검용 TEST 자료가 이후 남을 수 있습니다.
+- 실제 동아테크놀로지 자료의 검색·복사·분석·업로드는 아직 승인되지 않았습니다. 사용자 승인 자료를 사용자가 직접 입력한 후 독립 평가합니다.
+- 제품 외부 AI4종은 미설정이며 외부 AI 호출·고객자료 송신을 하지 않습니다.
+- 공고가 없거나 자격이 미확인되면 기존 매칭/제안 Guard의 차단이 정상입니다. DEMO 공고로 인수를 통과시키지 않습니다.
+- 기술 점검 결과는 evidence/의 자동 preflight 보고에 기록합니다. 사용자에게 이 기술 검증을 반복 요청하지 않습니다.
+- initial/resumed preflight는 실제자료 입력 전 빈 환경과 TEST sentinel만 대상으로 합니다. 실제자료 입력 후 재실행·자동 화면 캡처하지 않습니다.
+- 사용자 절차는 [{guide.name}]({guide.as_posix()}) 한 곳을 따릅니다. 회사자료 일치 / DMP 제공범위 / 고객 사용성·문서의 세 묶음만 판단합니다.
+
+## 안전한 중지·재개·복구
+
+STATUS.cmd로 상태 확인, STOP.cmd로 이 환경만 중지합니다. DB·파일·계정·이력은 보존되고 START.cmd로 동일 환경을 재개합니다.
+비정상 FAILED/STARTING 상태에서는 임의 PID 종료나 재생성을 하지 않고 보호 로그를 담당자가 확인합니다.
+실행 Commit이 달라지면 START가 차단됩니다. 기존8443/8444 환경으로 재바인딩하지 않습니다.
+CLEANUP.cmd는 소유 DB 볼륨을 제거하는 별도 파괴 작업이므로 인수 중 실행하지 않습니다. 실제자료 보존·삭제·백업 정책 승인 전에는 사용하지 않습니다.
+이 환경의 TLS 공개 인증서는 public-root.crt와 fingerprint를 확인합니다. 시스템 신뢰 저장소를 자동 변경하지 않습니다.
+실제자료 입력 전 승인사항(자료범위·접근자·보존·삭제/백업)은 통합 보고서에 모아두었습니다. 실기업 평가·최종 인수는 아직 대기입니다.
+""", encoding="utf-8")
+    write_launchers(out, context["nonce"])
+    print("LOCAL_PREPARATION_INPUTS_READY: source_features=649; companies/notices/results=0")
+
+
 def prepare(nonce, inventory):
     require_test_database()
     out = owned(nonce)
@@ -39,6 +85,10 @@ def prepare(nonce, inventory):
         assert result["feature_count"] == 649
     counts = initial_counts()
     write(out / "initial-counts.json", counts)
+    manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+    if manifest.get("preparation"):
+        prepare_review_environment(out, context, manifest, counts)
+        return
     company = "TEST 합성제조 재고업무 " + nonce
     as_is = "물류 창고 1개 사업장의 입출고를 Excel로 수기 기록하여 재고 차이가 발생한다. 최근 한 달 재고 오차율은 8%이며 입출고 담당자가 월말 실사로 측정한다. 바코드 리더기 2대를 사용하고 재고 이력을 Excel에 기록한다."
     to_be = "입출고 이력과 재고 데이터를 연동하여 월 재고 오차율을 2% 이하로 낮추고, 입출고 이력 관리 기능과 재고 조회 기능을 사용하려고 한다. 사업비와 일정은 근거 확인 후 별도 산정한다."
@@ -155,11 +205,7 @@ def prepare(nonce, inventory):
 - 기존 Caddy·방화벽·DB·원본 PDF·계정·서비스 프로세스는 변경하지 않습니다.
 """
     (out / "RUNBOOK.md").write_text(readme, encoding="utf-8")
-    python = str(ROOT / "apps/api/.venv/Scripts/python.exe")
-    script = str(ROOT / "apps/api/tests/manual_acceptance.py")
-    for filename, action in (("START", "start"), ("STOP", "stop"), ("STATUS", "status")):
-        (out / (filename + ".cmd")).write_text('@echo off\r\nchcp 65001 >nul\r\n"' + python + '" -B "' + script + '" ' + action + " --nonce " + nonce + "\r\npause\r\n", encoding="utf-8",newline="")
-    (out / "CLEANUP.cmd").write_text('@echo off\r\nchcp 65001 >nul\r\necho DESTRUCTIVE: removes ONLY this isolated acceptance database. Stop first.\r\n"' + python + '" -B "' + script + '" cleanup --nonce ' + nonce + ' --confirm-prompt\r\npause\r\n', encoding="utf-8",newline="")
+    write_launchers(out, nonce)
     print("SYNTHETIC_INPUTS_READY: companies/reviews/results/approvals=0; source_features=649")
 
 

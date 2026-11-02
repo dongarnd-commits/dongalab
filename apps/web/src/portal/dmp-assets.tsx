@@ -1,3 +1,4 @@
+import {PortalErrorMessage} from './portal-feedback';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {portalApi} from './admin-live';
 
@@ -18,7 +19,7 @@ const Box=({title,children}:{title:string;children:React.ReactNode})=><section c
 export function DmpAssets(){
  const [catalog,setCatalog]=useState<Inventory|null>(null),[kind,setKind]=useState<AssetKind>('FEATURE'),[q,setQ]=useState(''),[system,setSystem]=useState(''),[module,setModule]=useState(''),[status,setStatus]=useState(''),[page,setPage]=useState(1);
  const [detail,setDetail]=useState<Detail|null>(null),[editing,setEditing]=useState(false),[formKind,setFormKind]=useState<AssetKind>('FEATURE'),[parent,setParent]=useState(''),[sourceFeature,setSourceFeature]=useState<string|null>(null),[draft,setDraft]=useState<AssetData>(empty);
- const [baseline,setBaseline]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
+ const [baseline,setBaseline]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState<string|Error>(''),[message,setMessage]=useState('');
  const gate=useRef(false),command=useRef<{signature:string;key:string}|null>(null);
  const dirty=editing&&JSON.stringify({draft,parent})!==baseline;
  useEffect(()=>{const prevent=(event:BeforeUnloadEvent)=>{if(dirty)event.preventDefault();};window.addEventListener('beforeunload',prevent);return()=>window.removeEventListener('beforeunload',prevent);},[dirty]);
@@ -27,9 +28,9 @@ export function DmpAssets(){
   const value=await portalApi<Inventory>('capability','/assets?'+params,undefined,signal);
   if(!signal?.aborted)setCatalog(value);
  },[kind,q,system,module,status,page]);
- useEffect(()=>{const controller=new AbortController();const timer=setTimeout(()=>{void load(controller.signal).catch(e=>{if(!controller.signal.aborted)setError(e instanceof Error?e.message:'기술자산 조회 실패');});},0);return()=>{clearTimeout(timer);controller.abort();};},[load]);
+ useEffect(()=>{const controller=new AbortController();const timer=setTimeout(()=>{void load(controller.signal).catch(e=>{if(!controller.signal.aborted)setError(e instanceof Error?e:'기술자산 조회 실패');});},0);return()=>{clearTimeout(timer);controller.abort();};},[load]);
  const canLeave=()=>!dirty||window.confirm('저장하지 않은 기술자산 변경을 버리고 이동할까요?');
- async function act(work:()=>Promise<void>){if(gate.current)return;gate.current=true;setBusy(true);setError('');setMessage('');try{await work();}catch(e){setError(e instanceof Error?e.message:'처리 결과를 확인하지 못했습니다. 다시 조회하여 저장 여부를 확인하세요.');}finally{gate.current=false;setBusy(false);}}
+ async function act(work:()=>Promise<void>){if(gate.current)return;gate.current=true;setBusy(true);setError('');setMessage('');try{await work();}catch(e){setError(e instanceof Error?e:'처리 결과를 확인하지 못했습니다. 다시 조회하여 저장 여부를 확인하세요.');}finally{gate.current=false;setBusy(false);}}
  async function open(id:string){if(!canLeave())return;await act(async()=>{const value=await portalApi<Detail>('capability','/assets/'+encodeURIComponent(id));setDetail(value);setEditing(false);});}
  function start(nextKind:AssetKind,item?:AssetItem){
   if(!canLeave())return;
@@ -70,7 +71,7 @@ export function DmpAssets(){
  {!catalog&&!error&&<p role="status">기술자산을 조회하고 있습니다.</p>}
  {catalog&&<><p>검색 결과 {catalog.total}건</p><div className="da-table-scroll"><table className="da-table"><thead><tr><th>기술자산</th><th>시스템·모듈</th><th>제공 상태</th><th>관리</th></tr></thead><tbody>{catalog.items.map(item=><tr key={item.id} data-asset-id={item.id}><td><strong>{item.name}</strong><p>{item.external_id}</p><p>{item.description??item.data.description}</p></td><td>{item.system_name} · {item.module_name}{item.mapping_status==='SOURCE_CLASSIFICATION'&&<p>원천 분류 · 모듈 관계 확인 필요</p>}</td><td>{assetStatusLabel[item.availability]??'제공 확인 필요'}</td><td><button className="da-btn da-btn-outline" disabled={busy} onClick={()=>void open(item.id)}>기술자산 상세·이력</button></td></tr>)}</tbody></table></div>{!catalog.items.length&&<p>조건에 맞는 기술자산이 없습니다. 검색 조건을 바꾸거나 확인된 기술자산을 등록하세요.</p>}<div className="da-detail-nav"><button className="da-btn da-btn-outline" disabled={busy||page<=1} onClick={()=>setPage(page-1)}>이전 기술자산 페이지</button><span>{page} / {Math.max(1,Math.ceil(catalog.total/catalog.limit))} 페이지</span><button className="da-btn da-btn-outline" disabled={busy||page*catalog.limit>=catalog.total} onClick={()=>setPage(page+1)}>다음 기술자산 페이지</button></div></>}
  </Box>
- {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
+ {error&&<PortalErrorMessage error={error}/>}{message&&<p role="status">{message}</p>}
  {detail&&!editing&&<Box title={detail.current.name+' · 기술자산 상세'}><p>{detail.current.description??detail.current.data.description}</p><p>{assetStatusLabel[detail.current.availability]} · {detail.current.availability_evidence||'제공 검증 근거 미등록'}</p>{detail.current.source_current===false&&<p role="alert">상위 구성이나 원천이 변경되어 이전 제공 검증을 현재 상태에 사용할 수 없습니다. 새 버전에서 근거를 다시 검토해 주세요.</p>}<p>역할: {detail.current.data.role||'확인 필요'}</p><p>적용 업무: {detail.current.data.business_areas?.join(' · ')||'확인 필요'}</p><p>해결할 문제: {detail.current.data.problems?.join(' · ')||'확인 필요'}</p><p>적용조건: {detail.current.data.conditions?.join(' · ')||'확인 필요'}</p><p>선행조건: {detail.current.data.prerequisites?.join(' · ')||'확인 필요'}</p><p>제외조건: {detail.current.data.exclusions?.join(' · ')||'명시된 조건 없음'}</p><p>릴리스: {detail.current.data.release||'등록되지 않음'}</p>{(detail.current.relations??detail.current.data.relations).map((r,i)=><p key={i}>기술자산 관계: {catalog?.systems.concat(catalog.modules).find(t=>t.id===r.target_node_id)?.name??'대상 상세 확인 필요'} · {r.verified?'검증 근거 있음':'미검증·재확인 필요'} · {r.condition}</p>)}<button className="da-btn da-btn-primary" disabled={busy} onClick={()=>start(detail.current.kind,detail.current)}>{detail.current.version_id?'기술자산 새 버전 작성':detail.current.kind==='FEATURE'?'이 원천 기능을 관리 등록':'이 원천 분류로 '+kindLabel[detail.current.kind]+' 등록'}</button>
  <details><summary>원천과 변경 이력</summary><p>관리 이력 {detail.versions.length}건 · 원천 이력 {detail.source_revisions.length}건</p>{detail.versions.map(v=><section key={v.id}><h4>관리 v{v.ordinal} · {v.data.name}</h4><p>{new Date(v.created_at).toLocaleString('ko-KR')} · {assetStatusLabel[v.data.availability]}</p><p>{v.data.description}</p><p>{v.data.availability_evidence}</p><p>변경 식별: {v.id} · {v.digest}</p></section>)}{detail.source_revisions.map(v=><section key={v.id}><h4>보존된 원천 r{v.ordinal}</h4><p>{String(v.data.name??'')} · {String(v.data.origin??'')}</p><p>{v.id} · {v.digest}</p></section>)}</details></Box>}
  {editing&&<Box title={kindLabel[formKind]+' 기술자산 '+(detail?.current.version_id?'새 버전':'등록')}><form onSubmit={e=>{e.preventDefault();void save();}}>

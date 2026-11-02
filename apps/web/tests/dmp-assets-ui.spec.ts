@@ -28,6 +28,14 @@ test('administrator manages real DMP hierarchy and revisions without changing th
  await saved(page,'/api/capability/assets/'+feature.id+'/versions');const after=await(await page.request.get('/api/capability/assets/'+feature.id)).json();expect(after.versions).toHaveLength(2);expect(after.versions[0]).toEqual(first.versions[0]);expect(after.current.availability).toBe('RETIRED');
  await page.getByLabel('기술자산 검색',{exact:true}).fill(after.current.external_id);await page.getByLabel('기술자산 제공 상태',{exact:true}).selectOption('RETIRED');await expect(assets.locator('tr[data-asset-id="'+feature.id+'"]')).toContainText(name);await expect(assets.locator('tr[data-asset-id="'+feature.id+'"]')).toContainText('사용 중단');
  const originalAfter=await(await page.request.get('/api/capability/features?limit=1')).json();expect(originalAfter.import).toEqual(original.import);expect(originalAfter.total).toBe(original.total);expect(originalAfter.items).toEqual(original.items);
+ // A real concurrent append makes this UI draft stale. Keep the error visible,
+ // with its exact server reason available only when the operator needs it.
+ await page.getByRole('button',{name:'기술자산 새 버전 작성',exact:true}).click();
+ const concurrent=await page.request.post('/api/capability/assets/'+feature.id+'/versions',{headers:{Origin:origin()},data:{data:{...after.current.data,release:'TEST concurrent append'},expected_version:after.current.version_id,idempotency_key:crypto.randomUUID()}});expect(concurrent.ok(),await concurrent.text()).toBe(true);
+ await page.getByLabel('개발·배포 릴리스',{exact:true}).fill('TEST stale UI draft');
+ const staleSaving=page.waitForResponse(r=>r.request().method()==='POST'&&new URL(r.url()).pathname==='/api/capability/assets/'+feature.id+'/versions');await page.getByRole('button',{name:'기술자산 저장',exact:true}).click();expect((await staleSaving).status()).toBe(409);
+ const alert=page.getByRole('alert');await expect(alert).toContainText('입력 내용이 변경되었습니다. 현재 저장본을 다시 조회해 주세요.');await expect(alert.locator('code')).toBeHidden();await alert.getByText('담당자 확인용 오류 정보',{exact:true}).click();await expect(alert.locator('code')).toHaveText('STALE_INPUT_VERSION');
+ await page.screenshot({path:test.info().outputPath('asset-stale-save-error.png'),fullPage:true});
  const operatorContext=await browser.newContext({baseURL:origin()}),operator=await operatorContext.newPage();await login(operator,'operator');const denied=await operator.request.post('/api/capability/assets',{headers:{Origin:origin()},data:{kind:'SYSTEM',data:{name:'TEST forbidden'},idempotency_key:crypto.randomUUID()}});expect(denied.status()).toBe(403);await operatorContext.close();
  const editorContext=await browser.newContext({baseURL:origin()}),editor=await editorContext.newPage();await login(editor,'editor');expect((await editor.request.get('/api/capability/assets')).status()).toBe(403);await editorContext.close();
 });

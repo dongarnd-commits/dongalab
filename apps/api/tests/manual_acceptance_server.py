@@ -24,4 +24,5 @@ collection_api.application = lambda s: CollectionApplication(SqlNoticeStore(s), 
 
 @app.get("/__test/identity")
 def test_identity():
-    return dict(identity, nonce=os.environ["DATCO_TEST_NONCE"])
+    return dict(identity, nonce=os.environ["DATCO_TEST_NONCE"],
+                head=os.environ.get("DATCO_ACCEPTANCE_HEAD"), files=str(files.root))

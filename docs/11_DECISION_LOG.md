@@ -224,3 +224,9 @@ Status: ACCEPTED (LIMITED USER DEVELOPMENT/UAT SCOPE). 사용자 명시 지시�
 ## Decision-MVP-005 — DMP 기술자산·자동 조합 / 2026-11-02
 
 Status: ACCEPTED (LIMITED USER DEVELOPMENT SCOPE). 사용자 첨부 지시로 관리자 기술자산/시스템 자동 초안/운영자 기업별 판단을 분리한다. 발행 Capability 0건에서도 실제 원천 기반 후보를 생성하되 제공 가능성·연계·자격·비용·기업 의사결정은 자동 확정하지 않는다. 승인된 최소 추가 Schema/API/Version/역할별 범위는 mvp/DMP_ASSET_AUTO_COMPOSITION.md에 구현 전에 기록한다. 현재 실행 8444/8443·공유 DB·기존 이력은 보존하며 실제자료 사용/새 방화벽·인증서 신뢰 변경·운영 전환/main Merge/외부 AI는 별도 승인이다. 실기업 평가는 자료·보안 승인 미제공으로 PENDING이다.
+
+## Decision-MVP-006 — 선택 변경 후 등록 연계 검사와 별도 인수 준비 / 2026-11-02
+
+Status: ACCEPTED (LIMITED USER FOCUSED VERIFICATION SCOPE). PR18의 단독 대안에서 모듈 추가·타 시스템 교체 시 원래 대안의 연계만 검사하여 고객 전달까지 진행하는 결함을 실제 시험으로 재현했다. 기존 필수 연계·의존성 검사에 최종 선택 모듈 쌍의 등록 INTEGRATION 선택지 검사를 적용한다. 정확한 등록 Version·조건·Evidence 검증, 미검증 초안 저장과 PROPOSABLE의 구분은 유지한다. Schema/API/Role/State 변경은 없다.
+
+등록 관계가 없는 모듈 쌍의 독립성/미등록 필수 연계는 현재 자료만으로 확정할 수 없으며 새 all-pairs 연결 의무나 면제 정책을 도입하지 않는다. 실제 제공 담당자의 범위·근거 확인과 필요 시 정책 결정은 남는다. 승인 원본649개를 재사용하는 별도 loopback 지속형 준비 도구만 추가하고 기존8443/8444·DB·볼륨·계정·백업은 전환하지 않는다. 실제자료·개별 계정·보존/삭제·백업 정책은 별도 승인 대기이며 가짜 공고·기업별 추천 정답을 준비하지 않는다. 실제 실행/시험 근거와 승인 제안은 mvp/DMP_ASSET_AUTO_COMPOSITION.md에 통합한다.

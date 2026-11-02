@@ -9,7 +9,7 @@ async function login(page:Page,username:string,password:string,portal='operator'
 
 test('MVP admin uses real summaries, source catalog, existing grant and unconfigured external status',async({page})=>{
  test.setTimeout(90000);const c=context();await login(page,c.accounts.admin,c.password,'admin');
- await expect(page.getByRole('heading',{name:'MVP 관리 업무',exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'관리 업무 안내',exact:true})).toBeVisible();
  const overview=await(await page.request.get('/api/admin/overview')).json();expect(overview.accounts).toBeGreaterThan(0);
  const nav=page.getByRole('navigation',{name:'관리자 메뉴'});await nav.getByRole('button',{name:'기준정보·버전',exact:true}).click();
  await page.getByText('표준 서비스 관리',{exact:true}).click();await expect(page.getByRole('heading',{name:'실제 DMP 기능·Capability Catalog',exact:true})).toBeVisible();
@@ -20,9 +20,9 @@ test('MVP admin uses real summaries, source catalog, existing grant and unconfig
  await expect(page.getByRole('button',{name:'선택한 기업 접근권한 부여',exact:true})).toBeDisabled();await expect(page.getByText('선택한 계정은 이미 이 기업에 접근할 수 있습니다.',{exact:true})).toBeVisible();
  const after=await(await page.request.get('/api/admin/access')).json();expect(after.memberships).toEqual(before.memberships);
  await nav.getByRole('button',{name:'서버·연동 모니터링',exact:true}).click();await expect(page.getByRole('heading',{name:'분석 실행 제공자',exact:true})).toBeVisible();
- await expect(page.getByText('NOT_CONFIGURED — 연결 미설정',{exact:true})).toHaveCount(4);
+ await expect(page.getByText('연결 미설정',{exact:true})).toHaveCount(4);
  expect((await page.request.get('/api/company/'+c.a.id)).status()).toBe(403);
- await page.reload();await expect(page.getByRole('heading',{name:'MVP 관리 업무',exact:true})).toBeVisible();
+ await page.reload();await expect(page.getByRole('heading',{name:'관리 업무 안내',exact:true})).toBeVisible();
 });
 
 test('MVP operator keeps six menus, exact historical input and cross-company guards without automatic mutations',async({page})=>{

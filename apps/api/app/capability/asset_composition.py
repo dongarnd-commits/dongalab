@@ -261,6 +261,36 @@ def save(service, actor, data, key, composition_id=None, expected_version=None):
     return service.command(actor, key, ["DMP_ASSET_COMPOSITION", composition_id, expected_version, original], execute)
 
 
+def _registered_integration_options(features, parents):
+    """Known interface choices between the final selected module groups.
+
+    The original alternative is not the final selection after feature additions
+    or module replacement. Reuse the generator's registered-relation projection,
+    but do not synthesize its unknown spanning links here: an unregistered pair
+    does not establish either a required interface or an independent exemption.
+    Multiple registered directions/interfaces remain choices for the same pair.
+    """
+    from app.capability.asset_solutions import _relations
+    modules = {}
+    aliases = {}
+    for feature in features:
+        modules.setdefault(feature["module_id"], []).append(feature)
+        owner = feature.get("id") or feature["feature_id"]
+        aliases[owner] = {owner, feature["feature_id"]}
+    keys = sorted(modules)
+    requirements = []
+    for index, left in enumerate(keys):
+        for right in keys[index + 1:]:
+            relations = [*_relations(modules[left], modules[right], parents),
+                         *_relations(modules[right], modules[left], parents)]
+            options = {(alias, relation["target_node_id"])
+                for relation in relations if relation["kind"] == "INTEGRATION"
+                for alias in aliases.get(relation["from_asset_id"], {relation["from_asset_id"]})}
+            if options:
+                requirements.append(frozenset(options))
+    return requirements
+
+
 def promotion_blockers(service, data):
     if not is_asset(data):
         return []
@@ -284,6 +314,13 @@ def promotion_blockers(service, data):
         blockers.append("ASSET_INTEGRATION_REVIEW_REQUIRED")
     source = catalog(service)
     parents = {p["id"]: p for p in [*source.get("systems", []), *source.get("modules", [])]}
+    # A single-module alternative has no original pairs. Adding/replacing a
+    # module must nevertheless review a known registered interface in the final
+    # selection. validate() already checks exact version/evidence for VERIFIED
+    # links; an explicit UNVERIFIED working draft is still allowed to save.
+    if any(not options.intersection(actual_pairs)
+           for options in _registered_integration_options(features, parents)):
+        blockers.append("ASSET_INTEGRATION_REVIEW_REQUIRED")
     relation_sets = [f.get("relations", []) for f in features]
     relation_sets.extend(p.get("relations", p.get("data", {}).get("relations", []))
                          for key,p in parents.items() if key in selected_ids)

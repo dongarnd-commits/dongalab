@@ -65,7 +65,7 @@ def environment(m):
     out = owned(m["nonce"])
     # Do not inherit fixture flags, live-provider credentials or another DB.
     env = {k: v for k, v in os.environ.items()
-           if not k.startswith(("DATCO_", "OPENAI_", "ANTHROPIC_", "GEMINI_", "GOOGLE_API_", "BIZINFO_"))
+           if not k.startswith(("DATCO_", "OPENAI_", "ANTHROPIC_", "GEMINI_", "GOOGLE_API_", "BIZINFO_", "GROK_", "XAI_", "AZURE_OPENAI_"))
            and k not in ("DATABASE_URL", "API_ORIGIN", "CAPABILITY_API_ORIGIN", "WEB_ORIGIN")}
     env.update(DATABASE_URL=m["url"], DATCO_TEST_DATABASE=m["db"],
                DATCO_TEST_DB_ROLE=m["role"], DATCO_TEST_NONCE=m["nonce"],
@@ -82,6 +82,11 @@ def environment(m):
                DATCO_OCR_DOCKER_IMAGE="datco-local-ocr:pr14-v1",
                XDG_DATA_HOME=str(out / "caddy-data"),
                XDG_CONFIG_HOME=str(out / "caddy-config"))
+    if m.get("preparation"):
+        for key in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy",
+                    "DEBUG", "PWDEBUG", "NODE_OPTIONS"):
+            env.pop(key, None)
+        env.update(DATCO_ACCEPTANCE_HEAD=m["head"], DATCO_ACCEPTANCE_PREPARATION="1")
     return env
 
 
@@ -134,6 +139,7 @@ https://{m["host"]}:{m["https_port"]} {{
         respond @private 404
         header {{
             X-DATCO-Acceptance "{m["nonce"]}"
+            X-DATCO-Acceptance-Head "{m["head"]}"
             X-Robots-Tag "noindex, nofollow"
             Referrer-Policy "no-referrer"
         }}
@@ -160,6 +166,22 @@ https://{m["host"]}:{m["https_port"]} {{
 def protect_port(port):
     if not 1024 <= port <= 65535 or port in (8443, 49355, 49356):
         raise RuntimeError("PROTECTED_SERVICE_PORT")
+
+
+def validate_preparation(host, port, preparation):
+    if preparation and (host != "127.0.0.1" or port in (8443, 8444, 49355, 49356)):
+        raise RuntimeError("PREPARATION_REQUIRES_SEPARATE_LOOPBACK_PORT")
+    if not preparation and host != "10.10.10.145":
+        raise RuntimeError("EXPLICIT_LOCAL_LAN_ADDRESS_REQUIRED")
+
+
+def require_clean_source():
+    # Compare normalized tracked content, not a stale autocrlf/stat-cache marker.
+    dirty = any(subprocess.run(command, cwd=ROOT, stdout=subprocess.DEVNULL,
+                               stderr=subprocess.DEVNULL).returncode
+                for command in (["git", "diff", "--quiet"], ["git", "diff", "--cached", "--quiet"]))
+    if dirty or subprocess.check_output(["git", "ls-files", "--others", "--exclude-standard", "-z"], cwd=ROOT).strip():
+        raise RuntimeError("PREPARATION_REQUIRES_COMMITTED_SOURCE")
 
 
 
@@ -244,8 +266,10 @@ def create(args):
     from sqlalchemy.engine import URL
     import psycopg
     from psycopg import sql
-    if args.host != "10.10.10.145":
-        raise RuntimeError("EXPLICIT_LOCAL_LAN_ADDRESS_REQUIRED")
+    preparation = getattr(args, "preparation", False)
+    validate_preparation(args.host, args.https_port, preparation)
+    if preparation:
+        require_clean_source()
     protect_port(args.https_port)
     available(args.host, args.https_port)
     template,source=(source_accounts(args.accounts_from) if getattr(args,"accounts_from",None) else (None,None))
@@ -269,7 +293,8 @@ def create(args):
              origin=f"https://{args.host}:{args.https_port}",
              db="datco_test_" + nonce, role="datco_test_role_" + nonce,
              container="datco-mvp-uat-" + nonce, volume="datco-mvp-uat-pg-" + nonce,
-             caddy=str(Path(args.caddy).resolve()), admin_password=secrets.token_urlsafe(32))
+             caddy=str(Path(args.caddy).resolve()), admin_password=secrets.token_urlsafe(32),
+             preparation=preparation)
     m["url"] = URL.create("postgresql+psycopg", username=m["role"],
                          password=secrets.token_urlsafe(32), host="127.0.0.1",
                          port=pg, database=m["db"]).render_as_string(hide_password=False)
@@ -314,7 +339,8 @@ def create(args):
     print("ISOLATED_POSTGRES_READY", flush=True)
     run(m, [sys.executable, "-m", "alembic", "upgrade", "head"])
     run(m, [sys.executable, "-m", "alembic", "check"])
-    run(m, [sys.executable, "tests/mvp_portal_setup.py", *(["--accounts-template",str(out/"account-template.json")] if template else [])])
+    run(m, [sys.executable, "tests/mvp_portal_setup.py", *(["--accounts-template",str(out/"account-template.json")] if template else []),
+            *(["--no-notice-fixture"] if preparation else [])])
     run(m, [sys.executable, "tests/manual_acceptance_seed.py", "--nonce", nonce,
             "--inventory", str(Path(args.inventory).resolve())])
     config = WEB / (".next/datco-config-" + nonce) / "tsconfig.json"
@@ -354,6 +380,8 @@ def serve(m):
     out = owned(m["nonce"])
     if head() != m["head"]:
         raise RuntimeError("SOURCE_HEAD_CHANGED_REBUILD_REQUIRES_REVIEW")
+    if m.get("preparation"):
+        require_clean_source()
     inspect_label("container", m["container"], m["nonce"])
     children, logs = [], []
     def spawn(label, command, cwd):
@@ -363,16 +391,20 @@ def serve(m):
                         stdout=log, stderr=subprocess.STDOUT, creationflags=HIDDEN))
     try:
         run(m, ["docker", "start", m["container"]])
+        wait_postgres_tcp(m)
         for port in (m["api_port"], m["web_port"]):
             available("127.0.0.1", port)
         available(m["host"], m["https_port"])
         ready = out / "worker-ready.json"
         ready.unlink(missing_ok=True)
         spawn("api", [sys.executable, "-m", "uvicorn", "manual_acceptance_server:app",
-                      "--host", "127.0.0.1", "--port", str(m["api_port"])], API)
+                      "--host", "127.0.0.1", "--port", str(m["api_port"]),
+                      *(["--no-access-log"] if m.get("preparation") else [])], API)
         identity = wait_url("http://127.0.0.1:" + str(m["api_port"]) + "/__test/identity", children)
         if identity["database"] != m["db"] or identity["db_user"] != m["role"] or identity["nonce"] != m["nonce"]:
             raise RuntimeError("API_IDENTITY_MISMATCH")
+        if m.get("preparation") and (identity.get("head") != m["head"] or Path(identity.get("files", "")).resolve() != out / "files"):
+            raise RuntimeError("API_BUILD_OR_FILE_IDENTITY_MISMATCH")
         spawn("worker", [sys.executable, "tests/isolated_worker.py"], API)
         until = time.monotonic() + 45
         while not ready.exists():
@@ -382,6 +414,8 @@ def serve(m):
         worker = json.loads(ready.read_text(encoding="utf-8"))
         if worker["database"] != m["db"] or worker["db_user"] != m["role"]:
             raise RuntimeError("WORKER_IDENTITY_MISMATCH")
+        if m.get("preparation") and (worker.get("head") != m["head"] or worker.get("nonce") != m["nonce"] or Path(worker.get("files", "")).resolve() != out / "files"):
+            raise RuntimeError("WORKER_BUILD_OR_FILE_IDENTITY_MISMATCH")
         spawn("web", ["node", "node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1",
                       "--port", str(m["web_port"])], WEB)
         wait_url("http://127.0.0.1:" + str(m["web_port"]), children)
@@ -426,6 +460,7 @@ def main():
     parser.add_argument("--caddy")
     parser.add_argument("--inventory")
     parser.add_argument("--accounts-from", type=Path)
+    parser.add_argument("--preparation", action="store_true", help="Separate loopback environment with no DEMO notice or business results")
     parser.add_argument("--confirm")
     parser.add_argument("--confirm-prompt", action="store_true")
     args = parser.parse_args()
@@ -479,6 +514,7 @@ def main():
         if state["phase"]!="STOPPED" or args.confirm!=args.nonce:
             raise RuntimeError("STOP_AND_EXPLICIT_NONCE_CONFIRMATION_REQUIRED")
         protect_port(args.https_port)
+        validate_preparation(m["host"], args.https_port, m.get("preparation", False))
         available(m["host"],args.https_port)
         inspect_label("container",m["container"],args.nonce)
         previous=m["origin"]

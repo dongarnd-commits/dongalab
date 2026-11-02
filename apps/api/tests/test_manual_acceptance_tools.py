@@ -47,6 +47,55 @@ def test_environment_drops_live_keys_and_success_fixture_flags(monkeypatch):
     assert "manual-acceptance" in env["DATCO_TEST_FILES"]
 
 
+@pytest.mark.parametrize("host,port", [("127.0.0.1", 8443), ("127.0.0.1", 8444),
+                                      ("0.0.0.0", 18445), ("10.10.10.145", 18445)])
+def test_preparation_cannot_bind_existing_or_network_services(host, port):
+    with pytest.raises(RuntimeError, match="PREPARATION_REQUIRES_SEPARATE_LOOPBACK_PORT"):
+        uat.validate_preparation(host, port, True)
+
+
+def test_preparation_is_loopback_namespaced_and_has_exact_build_identity(monkeypatch):
+    m = {**sample(), "host": "127.0.0.1", "https_port": 18445,
+         "origin": "https://127.0.0.1:18445", "preparation": True}
+    uat.validate_preparation(m["host"], m["https_port"], True)
+    blocked = ("XAI_API_KEY", "GROK_API_KEY", "AZURE_OPENAI_API_KEY", "HTTPS_PROXY", "DEBUG", "PWDEBUG", "NODE_OPTIONS")
+    for key in blocked:
+        monkeypatch.setenv(key, "MUST_NOT_PROPAGATE")
+    env = uat.environment(m)
+    assert env["DATCO_ACCEPTANCE_HEAD"] == m["head"]
+    assert env["DATCO_ACCEPTANCE_PREPARATION"] == "1"
+    assert all(key not in env for key in blocked)
+    config = uat.caddy_config(m)
+    assert "bind 127.0.0.1" in config and "X-DATCO-Acceptance-Head" in config
+    assert "respond @private 404" in config and "datco_uat_" + m["nonce"] in config
+    assert ":8443" not in config and ":8444" not in config
+
+
+def test_preparation_refuses_uncommitted_source(monkeypatch):
+    from types import SimpleNamespace
+    monkeypatch.setattr(uat.subprocess, "run", lambda *a, **k: SimpleNamespace(returncode=1))
+    monkeypatch.setattr(uat.subprocess, "check_output", lambda *a, **k: b"")
+    with pytest.raises(RuntimeError, match="PREPARATION_REQUIRES_COMMITTED_SOURCE"):
+        uat.require_clean_source()
+
+
+def test_preparation_guide_never_requires_demo_notice_or_seeded_analysis(tmp_path):
+    from manual_acceptance_seed import prepare_review_environment
+    for name in ("inputs", "evidence"):
+        (tmp_path / name).mkdir()
+    m = {**sample(), "host": "127.0.0.1", "origin": "https://127.0.0.1:18445"}
+    context = dict(nonce=m["nonce"], notice=None, accounts={"editor": "TEST_MVP_editor_" + m["nonce"]},
+                   password="TEST_UNIT_NOT_LIVE")
+    prepare_review_environment(tmp_path, context, m, {"notices": 0})
+    guide = (tmp_path / "RUNBOOK.md").read_text(encoding="utf-8")
+    assert "USER_ACCEPTANCE_GUIDE.md" in guide and "공고0건" in guide
+    assert "TEST_UNIT_NOT_LIVE" not in guide
+    assert not (tmp_path / "inputs/TEST-service-authoring-examples.json").exists()
+    assert (tmp_path / "STOP.cmd").exists() and (tmp_path / "CREDENTIALS.txt").exists()
+    with pytest.raises(RuntimeError, match="PREPARATION_MUST_HAVE_NO_DEMO_NOTICE"):
+        prepare_review_environment(tmp_path, context, m, {"notices": 1})
+
+
 def test_gateway_is_separate_and_namespaces_cookie():
     config = uat.caddy_config(sample())
     assert "admin off" in config and "skip_install_trust" in config

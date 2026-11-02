@@ -19,7 +19,7 @@ def redact_test_output(line,env):
 
 def main():
  TESTS.insert(0,'test_improvement_migration.py')
- phase=sys.argv[1];assert phase in ('integration','proposal','e2e','slice2','full','slice2-e2e','operator-context-e2e','slice2-final-e2e','request-ux','request-ux-e2e','handoff-e2e','mvp','mvp-e2e','reacceptance-e2e','business-ux-e2e','asset-catalog-integration','asset-pipeline-integration','proposal-e2e','asset-solutions-e2e')
+ phase=sys.argv[1];assert phase in ('integration','proposal','e2e','slice2','full','slice2-e2e','operator-context-e2e','slice2-final-e2e','request-ux','request-ux-e2e','handoff-e2e','mvp','mvp-e2e','reacceptance-e2e','business-ux-e2e','asset-catalog-integration','asset-pipeline-integration','asset-649-integration','proposal-e2e','asset-solutions-e2e')
  # No fallback to DATABASE_URL or .env. CI admin only provisions this disposable service.
  url=make_url(os.environ['DATCO_CI_ADMIN_URL'])
  assert url.host in ('127.0.0.1','localhost') and url.database=='datco_ci_admin'
@@ -71,6 +71,7 @@ def main():
   if phase=='full':
    env.pop('DATCO_CI_SYNTHETIC',None)
    run([sys.executable,'-m','pytest','-m','integration','-v','--tb=short','--junitxml='+str(out/'integration.xml')])
+  elif phase=='asset-649-integration':run([sys.executable,'-m','pytest','tests/test_dmp_asset_649_acceptance.py','-v','--tb=short','--junitxml='+str(out/'integration.xml')])
   elif phase=='asset-pipeline-integration':run([sys.executable,'-m','pytest','tests/test_dmp_asset_pipeline.py','-x','-v','--tb=short','--junitxml='+str(out/'integration.xml')])
   elif phase=='asset-catalog-integration':run([sys.executable,'-m','pytest','tests/test_dmp_asset_catalog.py','tests/test_dmp_asset_migration.py','-v','--tb=short','--junitxml='+str(out/'integration.xml')])
   elif phase in ('integration','proposal','slice2','request-ux','mvp'):run([sys.executable,'-m','pytest',*[str(Path('tests')/t) for t in (['test_operator_intake.py','test_company_v14.py'] if phase=='request-ux' else ['test_mvp_analysis_migration.py','test_mvp_analysis_lineage.py','test_mvp_admin.py','test_mvp_notice_catalog.py','test_mvp_solution_pipeline.py'] if phase=='mvp' else TESTS if phase=='integration' else ['test_operator_review.py','test_improvement_analysis.py','test_improvement_migration.py'] if phase=='slice2' else ['test_proposal_production.py'])],*(['--maxfail=1'] if phase=='proposal' else []),'-v','--tb=short','--junitxml='+str(out/'integration.xml')])

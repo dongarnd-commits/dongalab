@@ -1,5 +1,20 @@
 # 지속 실행 수동 인수환경
 
+> PR18 현재 작업은 아래 **별도 loopback 준비 모드**를 사용한다. 나머지 PR17/8444 전환 절은 이전 합성 LAN 인수의 보존 기록이며 이번 서비스 전환 지시가 아니다. 사용자용 인수 절차는 USER_ACCEPTANCE_GUIDE.md 하나를 따른다.
+
+## PR18 별도 loopback 준비 모드
+
+initial/resumed preflight는 실제자료 입력 전의 빈 환경·알려진 TEST sentinel만 확인한다. 실제자료가 들어간 뒤 다시 실행하거나 화면을 자동 캡처하지 않는다. 추가 기업/파일·업무 결과가 있으면 준비 probe를 차단한다.
+
+- manual_acceptance.py create에 --preparation --host 127.0.0.1 --https-port <비점유 새 포트>를 명시한다.8443/8444 및 보호 서비스 포트는 거부한다. 기존 확인된 Caddy 실행 파일을 읽기/실행 재사용하며 기존 설정·CA·프로세스는 편집하지 않는다.
+- 기존 레이블/nonce/DB Role/볼륨/파일/쿠키 분리 및 안전 STOP/START를 재사용한다. 정확한 승인 해시의 원본649개를 import하고 --no-notice-fixture로 합성 공고도 만들지 않는다. 기업별 분석·검토·추천·제안 결과를 seed하지 않는다.
+- 새 준비 환경은 커밋된 내용이어야 한다. 현재 HEAD와 tracked staged/unstaged 내용 및 미추적 소스가 다르면 거부한다. Next 자동 생성 파일의 동등한 줄바꿈/stat 차이는 실제 내용 비교로 구분한다.
+- 환경 준비 뒤 manual_acceptance_preflight.py --nonce <nonce> --phase initial로 API/DB/Worker/files/head와 비민감 sentinel을 검증한다. STOP→START 후 --phase resumed로 같은 자료 digest를 확인한다. 브라우저4역할 로그인/F5/로그아웃과 접근/다운로드 차단·세션 namespace·production404도 자동 확인한다. 실제 승인자는 기존 '/'로 진입하며 Operator 업무를 상속하지 않는다.
+- API access log는 준비 모드에서 끈다. Node 브라우저 실패는 고정 오류문구만 출력한다. 비밀번호·쿠키·sentinel 로그/Git 검사와 최종 proof는 브라우저 성공 후 기록한다. 기존 Proxy/Live/AI 키를 자식에 상속하지 않으며 제품 외부 AI4종 미설정을 확인한다. 시스템 전역 네트워크 차단을 추가한 것은 아니다.
+- 실제 생성 주소·실행 SHA·공개 TLS CA/fingerprint·자격 안내·START/STATUS/STOP은 해당 보호 RUNBOOK에 기록한다. 자격은 CREDENTIALS.txt에서만 로컬 확인한다. 별도의 실제 사용자 계정·자료 권한은 보류하고 TEST4역할로 환경을 확인한다.
+- 새 방화벽/인증서 전역 신뢰 등록·기존8443/8444 전환·기존 DB/계정/볼륨/백업 변경을 하지 않는다. 실제자료 입력·보존·삭제/백업·개별 접근자 승인안은 DMP_ASSET_AUTO_COMPOSITION.md에 모았다.
+- 공고0은 의도된 준비 상태다. 실제 공식 공고·자격 근거가 없으면 매칭/정식 제안 인수를 보류하며 DEMO로 대체하지 않는다. 실제자료는 사용자가 승인 후 직접 제품에 입력하고 Codex 원문 열람과 혼동하지 않는다.
+
 PR #17 최초 기능 HEAD는 0048e49af8162aab7665c6ef7aab91c7ef51f2ca다. 보완 코드/검증은 REACCEPTANCE_REPORT, 실제 실행 HEAD/주소는 보호 폴더 RUNBOOK과 manifest를 확인한다. PR은 Draft로 유지한다.
 기준: 00_PROJECT_BASELINE, 01_SYSTEM_ARCHITECTURE, MVP IMPLEMENTATION_CONTRACT 및 USER_ACCEPTANCE_GUIDE.
 이 도구는 합성자료 인수환경만 준비한다. 제품 API/권한/Schema/State/업무 로직과 기존 테스트는 변경하지 않는다.
@@ -24,7 +39,7 @@ ACL은 현재 Windows 사용자와 SYSTEM만 허용한다. 비밀번호/토큰�
 일반 DATABASE_URL/.env로 fallback하지 않으며 Live 키/성공 fixture flags를 상속하지 않는다.
 기업마당 키는 비어 있고 외부 AI는 NOT_CONFIGURED다. 실제 고객자료/계정을 복제하지 않는다.
 
-## 준비와 사용자 접근
+## PR17 보존 기록 — 아래 8444 준비·전환 명령은 PR18에서 실행 금지
 설치된 .venv, Node/Docker, 승인된 649개 입력, 확인한 Caddy 실행 파일을 사용한다.
 ~~~powershell
 & apps/api/.venv/Scripts/python.exe -B apps/api/tests/manual_acceptance.py create --host 10.10.10.145 --https-port 8444 --caddy <실행파일> --inventory _local_inputs/dmp_features_649.json

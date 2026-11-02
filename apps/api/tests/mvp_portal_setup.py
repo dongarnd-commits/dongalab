@@ -36,7 +36,7 @@ def validate_template(template):
             raise RuntimeError("ONLY_APPROVED_SYNTHETIC_IDENTITIES_ALLOWED")
 
 
-def prepare(template=None):
+def prepare(template=None, *, notice_fixture=True):
     validate_template(template)
     require_test_database()
     nonce = os.environ['DATCO_TEST_NONCE']
@@ -53,10 +53,12 @@ def prepare(template=None):
             accounts[label], ids[label] = username, account['id']
         # Only source input is prepared. The browser must request the actual Worker,
         # inspect its candidates and record the human requirement review itself.
-        notice_store = MvpNoticeInputStore(session, 'MVP synthetic unanalysed ' + nonce)
-        notice = load_input(notice_store, LocalPrivateFiles(Path(os.environ['DATCO_TEST_FILES'])), 'normal', external_key='TEST_MVP_UNANALYSED_' + nonce)
-        version = store.rows('versions', notice_id=notice['id'])[-1]
-        notice_input = dict(id=notice['id'], version_id=version['id'], title=notice['title'])
+        notice_input = None
+        if notice_fixture:
+            notice_store = MvpNoticeInputStore(session, 'MVP synthetic unanalysed ' + nonce)
+            notice = load_input(notice_store, LocalPrivateFiles(Path(os.environ['DATCO_TEST_FILES'])), 'normal', external_key='TEST_MVP_UNANALYSED_' + nonce)
+            version = store.rows('versions', notice_id=notice['id'])[-1]
+            notice_input = dict(id=notice['id'], version_id=version['id'], title=notice['title'])
     target.write_text(json.dumps(dict(accounts=accounts, ids=ids, password=password, nonce=nonce, business_number=number(), notice=notice_input)), encoding='utf-8')
     print('MVP_SYNTHETIC_IDENTITIES_READY')
 
@@ -65,6 +67,7 @@ if __name__ == '__main__':
     import argparse
     parser=argparse.ArgumentParser()
     parser.add_argument('--accounts-template',type=Path)
+    parser.add_argument('--no-notice-fixture',action='store_true')
     args=parser.parse_args()
     template=None
     if args.accounts_template:
@@ -72,4 +75,4 @@ if __name__ == '__main__':
         if not path.is_relative_to((ROOT/'storage/private/runtime').resolve()):
             raise RuntimeError('ACCOUNT_TEMPLATE_PATH_REJECTED')
         template=json.loads(path.read_text(encoding='utf-8'))
-    prepare(template)
+    prepare(template, notice_fixture=not args.no_notice_fixture)

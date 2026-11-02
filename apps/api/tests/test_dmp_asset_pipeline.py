@@ -521,3 +521,132 @@ def test_missing_registered_dependency_cannot_be_cleared_by_reviewing_coverage_o
     notice = reviewed_notice(e, monkeypatch)
     matched = matching(e, saved, notice)
     propose_review(e, item, matched, status=409)
+
+
+@pytest.mark.parametrize("selection_change", ["ADD_SAME_SYSTEM", "REPLACE_OTHER_SYSTEM"])
+def test_selection_change_rechecks_registered_integration_before_proposal(
+        pipeline_env, monkeypatch, selection_change):
+    """Changing a single-module draft must not inherit an empty interface check.
+
+    Both possible document modules belong to the very same generated Run. The
+    source metadata, availability and interface evidence are synthetic and are
+    registered through the normal administrator API before analysis.
+    """
+    e = pipeline_env
+    system = create_asset(e, "SYSTEM", asset_data("TEST selection ERP"))
+    other_system = create_asset(e, "SYSTEM", asset_data("TEST selection collaboration"))
+    stock_module = create_asset(e, "MODULE", asset_data("TEST selection stock"), system)
+    document_modules = [
+        create_asset(e, "MODULE", asset_data("TEST selection local documents"), system),
+        create_asset(e, "MODULE", asset_data("TEST selection other documents"), other_system),
+    ]
+    relations = [dict(target_node_id=module["id"], target_version_id=module["version_id"],
+        kind="INTEGRATION", condition="TEST exact record identifier exchange " + str(index),
+        verified=True, evidence="TEST explicitly reviewed synthetic interface " + str(index))
+        for index, module in enumerate(document_modules)]
+    stock_module = revise_asset(e, stock_module, relations=relations)
+    stock = create_asset(e, "FEATURE", asset_data("TEST selection 입출고 재고 현황",
+        description="TEST 입출고 기록과 재고 수량 및 재고 현황 조회"), stock_module)
+    documents = [create_asset(e, "FEATURE", asset_data("TEST selection 문서 기안 " + str(index),
+        description="TEST 전자결재 문서 기안과 문서 조회"), module)
+        for index, module in enumerate(document_modules)]
+    item, target = prepared(e, document_goal=True)
+    run = generated(e, target)
+    single = next(alt for alt in run["data"]["alternatives"]
+        if len(alt["modules"]) == 1 and alt["modules"][0]["id"] == stock_module["id"])
+    assert single["topology_kind"] == "SINGLE_MODULE"
+    assert single["integrations"] == []
+    chosen_document = documents[selection_change == "REPLACE_OTHER_SYSTEM"]
+    selected_versions = {stock["version_id"], chosen_document["version_id"]}
+    selected = [feature for feature in run["data"]["candidates"]
+                if feature["asset_version_id"] in selected_versions]
+    assert len(selected) == 2
+    data = composition_data(run, single)
+    data["asset_selections"] = [dict(feature_revision_id=feature["revision_id"],
+        asset_version_id=feature["asset_version_id"], system_version_id=feature["system_version_id"],
+        module_version_id=feature["module_version_id"], role="TEST operator changed the selected module")
+        for feature in selected]
+    for coverage in data["coverage"]:
+        coverage["feature_revision_ids"] = [feature["revision_id"] for feature in selected
+                                          if coverage["demand_id"] in feature["demand_ids"]]
+        assert coverage["feature_revision_ids"]
+        coverage.update(status="ADDRESSED", role="TEST reviewed final selected source role",
+            addressed_scope="TEST checked source functions for this exact synthetic requirement",
+            unaddressed_scope="", missing_information=[])
+    data["unresolved"] = []
+    data["asset_review_note"] = "TEST final source and scope reviewed; interface review has not been supplied"
+    assert data["asset_integrations"] == []
+    saved = save_composition(e, data)  # An unverified working draft is permitted.
+    notice = reviewed_notice(e, monkeypatch)
+    matched = matching(e, saved, notice)
+    response = e["clients"]["operator"].post("/capability/matches/" + matched["candidate_id"] + "/review",
+        json=dict(outcome="PROPOSABLE", note="TEST reviewed scope; no interface evidence supplied",
+            completion_items=completion_items(e, item, matched), idempotency_key=nonce()),
+        headers={"Origin": get_settings().web_origin})
+    if response.status_code == 200:
+        # This branch records the real pre-fix consequence, rather than assuming
+        # a PROPOSABLE receipt necessarily means document delivery is possible.
+        created = call(e, "operator", "/proposal", dict(candidate_id=matched["candidate_id"],
+            title="TEST integration omission risk proof", template_version="MVP_16", idempotency_key=nonce()))
+        version_id = created["version_id"]
+        call(e, "operator", "/proposal/versions/" + version_id + "/review",
+             dict(confirmed=True, note="TEST risk proof content review", idempotency_key=nonce()))
+        document = call(e, "operator", "/proposal/versions/" + version_id + "/export",
+                        dict(kind="PDF", idempotency_key=nonce()))
+        sent = call(e, "operator", "/proposal/versions/" + version_id + "/approval",
+                    dict(idempotency_key=nonce()))
+        print("SELECTION_CHANGE_PRE_FIX_BYPASS", selection_change,
+              dict(proposable=response.status_code, proposal=created["proposal_id"],
+                   pdf=document["id"], delivered=sent["id"]))
+    assert response.status_code == 409, response.text
+    assert response.json()["reason"] == "ASSET_INTEGRATION_REVIEW_REQUIRED"
+    assert count(e, P.versions) == 0 and count(e, P.requests) == 0
+    # Supplying an explicit but unverified review remains a saved draft, not a
+    # customer-proposable configuration.
+    module_index = selection_change == "REPLACE_OTHER_SYSTEM"
+    relation = relations[module_index]
+    link = dict(from_asset_id=stock_module["id"], to_asset_id=document_modules[module_index]["id"],
+        data="TEST selected record identifiers", workflow="TEST stock record to document workflow",
+        prerequisites=[relation["condition"]], verification="UNVERIFIED",
+        evidence_note="TEST pending interface review", uncertainty="TEST interface is not reviewed")
+    data["asset_integrations"] = [link]
+    unverified = save_composition(e, data, saved)
+    unverified_match = matching(e, unverified, notice)
+    blocked = propose_review(e, item, unverified_match, status=409)
+    assert blocked["reason"] == "ASSET_INTEGRATION_UNVERIFIED"
+    link.update(verification="VERIFIED", evidence_note=relation["evidence"])
+    corrected = save_composition(e, data, unverified)
+    corrected_match = matching(e, corrected, notice)
+    propose_review(e, item, corrected_match)
+    reviewed_proposal = call(e, "operator", "/proposal", dict(candidate_id=corrected_match["candidate_id"],
+        title="TEST final selected interface reviewed", template_version="MVP_16", idempotency_key=nonce()))
+    version_id = reviewed_proposal["version_id"]
+    call(e, "operator", "/proposal/versions/" + version_id + "/review",
+         dict(confirmed=True, note="TEST corrected interface and proposal reviewed", idempotency_key=nonce()))
+    output = call(e, "operator", "/proposal/versions/" + version_id + "/export",
+                  dict(kind="PDF", idempotency_key=nonce()))
+    call(e, "operator", "/proposal/versions/" + version_id + "/approval", dict(idempotency_key=nonce()))
+    assert e["clients"]["approver"].get("/proposal/files/" + output["id"] + "/download").status_code == 200
+    assert count(e, P.requests) == 1
+
+
+def test_selection_change_registered_interface_options_do_not_infer_all_pairs():
+    from app.capability.asset_composition import _registered_integration_options
+    def feature(key, module):
+        return dict(id="TEST_ASSET_" + key, feature_id="TEST_RAW_" + key,
+                    module_id=module, system_id="TEST_SYSTEM", relations=[])
+    a, b, c = feature("A", "TEST_MODULE_A"), feature("B", "TEST_MODULE_B"), feature("C", "TEST_MODULE_C")
+    parents = {
+        "TEST_SYSTEM": dict(id="TEST_SYSTEM", relations=[]),
+        "TEST_MODULE_A": dict(id="TEST_MODULE_A", relations=[
+            dict(kind="INTEGRATION", target_node_id="TEST_MODULE_B")]),
+        "TEST_MODULE_B": dict(id="TEST_MODULE_B", relations=[
+            dict(kind="INTEGRATION", target_node_id="TEST_MODULE_A")]),
+        "TEST_MODULE_C": dict(id="TEST_MODULE_C", relations=[]),
+    }
+    # Either registered direction can be explicitly reviewed; they are choices,
+    # rather than two universally obligatory interfaces. An undocumented third
+    # module does not fabricate an all-pairs integration contract.
+    assert _registered_integration_options([a, b, c], parents) == [frozenset({
+        ("TEST_MODULE_A", "TEST_MODULE_B"), ("TEST_MODULE_B", "TEST_MODULE_A")})]
+    assert _registered_integration_options([a, c], parents) == []

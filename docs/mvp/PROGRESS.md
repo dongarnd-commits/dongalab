@@ -1,5 +1,16 @@
 # 진행 체크포인트
 
+## PR18 집중 검증·사용성·실기업 인수 준비 (출발 c62e2d3)
+
+- 요청 HEAD와 실제 Branch/HEAD가 일치하고 clean. 기존 결과/실패 보호 로그와 PR17/18 관계를 보존하며 범위를 좁혀 진행한다.
+- Backend 실제 PG/API에서 단독 대안 후 다른 모듈 추가·타 시스템 교체 모두 누락 등록 연계로 PROPOSABLE/PDF/기업 전달200이 재현됐다. 최종 선택의 알려진 등록 인터페이스 선택지와 기존 필수 연계/의존성을 검사하도록 최소 수정. red2건 보호, green집중5 PASS(96.22초,b588543f7b33). 미검증 초안 저장은 유지한다. 등록 없는 관계의 독립/필수 판단을 새 정책으로 확정하지 않는다.
+- 실제 원본649개는 해시 일치·불변. 신규 독립 PG2 PASS(20.26초,87eaeef67582), 합성2원천 UI와 별도. 과거 제공 주장 AVAILABLE/USER_CONFIRMED_2026-10-14는 존재하지만 현재 관리 릴리스·등록 연계 증빙은 없고 자동 VERIFIED0이다.
+- 실제 3포털 전후 UI: 기준70e341cd953b, 보완2bf586ec64c7의 전체UI1 PASS(2.9분). 설명 펼치기3+닫기1→0, 재무취소2→1, 저장 연도 범위 안내 추가. 8개 판단과 input50/change44는 감소 확인 안 됨. 합성 선택 변경3경로의 UI 차단/API409도 확인. 마지막 소규모 표시/동시수정 오류 시험은 최종 전체회귀에 포함한다.
+- 전체Unit374 PASS, 준비 도구 최종 집중36 PASS. 전체PG314 PASS/기존 저장 실공고 opt-in1 SKIP/FAIL0(e61124331711). 신규649개/선택 변경 시험은 모두 실행. Frontend API타입/lint/tsc/Unit9/build PASS. 전체Playwright65+빈 데이터3+자산 전체UI1=69 PASS/FAIL0/SKIP0. Preview20+11+5=36 PASS와 각production404 통과. 무거운 로컬 검증 순차 실행 완료.
+- 기존 수동환경 도구에 별도 --preparation loopback 모드, 원본649만 import/공고0/결과0, source·DB·files 식별과 비민감 preflight를 준비했다. 운영자 로그아웃 확인창·DB 재개 준비 대기·진단/Proxy 변수 제거·실제자료 입력 후 preflight 금지를 보완했다. 환경 생성/실측과 최신 CI는 동결한 최종 커밋과 일치시켜 수행하며 자격/실측은 보호 RUNBOOK 및 PR18 최종 본문이 원천이다. 실제 기업자료 검색/복제/입력/분석 및 새 실제 계정은 미실행이다.
+- npm 전체 moderate18은 개발도구의 단일 minimatch 권고 전파이며 production omit감사0. 실제 업로드→lint/typegen 경로는 발견하지 못했으나 전역 안전 선언은 아니다. ESLint EOL/플러그인 호환 업그레이드가 별도 남는다. force업데이트/Lock변경 없음.
+- 통합 DMP 보고서와 기존 USER_ACCEPTANCE_GUIDE를 갱신했다. 사용자 판단은 자료·문제/목표, 실제 제공/해결범위, 고객 사용성/문서3묶음만 남긴다. 실제자료 승인안은 통합 보고서의 단일 표에 모았다.
+
 ## 2026-11-02 DMP 기술자산 개발 재개
 
 - 실제 Worktree dongalab-dmp-assets, Branch feat/mvp-dmp-assets-auto-composition, HEAD 2ee2640836ae1fa07bf4ccf0a34d03a4f27851e0 확인. 수정27/신규17 보존 확인.

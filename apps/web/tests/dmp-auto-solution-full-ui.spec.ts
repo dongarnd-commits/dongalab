@@ -10,12 +10,28 @@ async function login(page:Page,c:ReturnType<typeof data>,role:string){
  await expect(page).toHaveURL(/\/portal\/(company|operator|admin)/);
 }
 async function menu(page:Page,label:string){await page.locator('aside').getByRole('button',{name:label,exact:true}).click();}
+type WorkEvent={kind:string;label:string};
+async function observeOperatorWork(page:Page){
+ await page.evaluate(()=>{
+  const target=window as unknown as {__datcoUsabilityEvents:WorkEvent[]};target.__datcoUsabilityEvents=[];
+  for(const kind of ['click','change','input'])document.addEventListener(kind,event=>{
+   const element=event.target instanceof Element?event.target:null;
+   const control=element?.closest('button,summary,input,select,textarea');
+   if(!control||control.getAttribute('type')==='password')return;
+   const label=control.getAttribute('aria-label')??(control.tagName==='SUMMARY'||control.tagName==='BUTTON'?control.textContent?.trim():control.closest('label')?.textContent?.trim());
+   target.__datcoUsabilityEvents.push({kind,label:(label??control.tagName).slice(0,150)});
+  },true);
+ });
+}
+async function operatorWork(page:Page){return page.evaluate(()=>(window as unknown as {__datcoUsabilityEvents:WorkEvent[]}).__datcoUsabilityEvents);}
 test('fresh DMP full UI: zero published capabilities, verified assets, generated composition and reviewed company proposal',async({browser})=>{
  test.setTimeout(720000);const c=data(),contexts=await Promise.all([0,1,2].map(()=>browser.newContext({baseURL:origin()})));
  const [company,operator,admin]=await Promise.all(contexts.map(context=>context.newPage()));
+ const usability:Record<string,unknown>={source:'SYNTHETIC_BROWSER_ONLY',scope:'Observed actions are the test operator workflow, not a human time/quality study.'};
  for(const page of [company,operator,admin])page.on('dialog',d=>d.accept());
  try{
   await login(admin,c,'admin');const initial=await read(admin,'admin/overview');expect(initial.companies).toBe(0);expect(initial.published_capabilities).toBe(0);
+  await admin.screenshot({path:test.info().outputPath('usability-admin-default.png'),fullPage:true});
 
   await login(company,c,'editor');expect((await read(company,'company')).length).toBe(0);await menu(company,'기업정보 등록 시작');
   await company.getByLabel('최초 등록 PDF 선택',{exact:true}).setInputFiles(c.registration_document);
@@ -35,6 +51,11 @@ test('fresh DMP full UI: zero published capabilities, verified assets, generated
   await expect(company.getByText('선택한 파일 2개',{exact:false})).toBeVisible();
   await company.getByRole('button',{name:'재무자료 분석',exact:true}).click();
   await expect(company.getByRole('button',{name:'재무정보 저장',exact:true})).toBeVisible({timeout:60000});
+  const financeDialog=company.getByRole('dialog');
+  usability.finance={yearsInDraft:await financeDialog.getByLabel('작성할 내역',{exact:true}).locator('option').allTextContents(),saveScopeNoticeVisible:await financeDialog.getByTestId('finance-save-scope').count()>0,cancelControls:await financeDialog.getByRole('button',{name:/^(편집창 닫기|입력 취소)$/}).count()};
+  await expect(financeDialog.getByTestId('finance-save-scope')).toContainText('2023년, 2024년');
+  expect((usability.finance as {cancelControls:number}).cancelControls).toBe(1);
+  await company.screenshot({path:test.info().outputPath('usability-company-finance.png'),fullPage:true});
   const savingFinance=company.waitForResponse(r=>new URL(r.url()).pathname==='/api/company/'+cid+'/profile'&&r.request().method()==='POST');
   await company.getByRole('button',{name:'재무정보 저장',exact:true}).click();expect((await savingFinance).ok()).toBe(true);
   await company.reload();const finances=(await read(company,'company/'+cid)).inputs.at(-1).data.financials;
@@ -225,6 +246,22 @@ test('fresh DMP full UI: zero published capabilities, verified assets, generated
   await expect(auto.getByRole('button',{name:'검토한 기술자산 조합 저장',exact:true})).toBeDisabled();
   expect((await read(operator,'workspace')).compositions).toEqual([]);
   await operator.reload();await expect(operator.getByLabel('기술자산 조합 이름',{exact:true})).toHaveValue(alternative.name);
+  await observeOperatorWork(operator);
+  let featureReadOpens=0,featureReadCloses=0;
+  const selectedSummary=auto.getByRole('table',{name:'선택 기능 요약'});
+  if(await selectedSummary.count()){
+   for(const feature of alternative.features)await expect(selectedSummary.getByText(feature.description,{exact:true})).toBeVisible();
+  }else{
+   await auto.getByText('기능 추가·제외·모듈 교체',{exact:true}).click();featureReadOpens++;
+   for(const feature of alternative.features){const item=auto.getByRole('checkbox',{name:feature.name+' 구성 포함',exact:true}).locator('..');await item.getByText('기능 원천·근거',{exact:true}).click();featureReadOpens++;await expect(item.getByText(feature.description,{exact:true})).toBeVisible();}
+   await auto.getByText('기능 추가·제외·모듈 교체',{exact:true}).click();featureReadCloses++;
+  }
+  usability.assetReview={coverageRows:alternative.coverage.length,selectedFeatures:alternative.features.length,featureDescriptionDisclosureOpens:featureReadOpens,featureDescriptionDisclosureCloses:featureReadCloses,defaultPositiveJargonVisible:await auto.getByText(/기업 요구의 양성 업무 표현/).isVisible(),mixedCompletionOption:await auto.getByRole('option',{name:'해결범위 검토 완료 · 제공 검증 필요',exact:true}).count()};
+  await expect(selectedSummary).toBeVisible();expect(featureReadOpens).toBe(0);expect(featureReadCloses).toBe(0);
+  await expect(auto.getByText(/기업 요구의 양성 업무 표현/)).toBeHidden();
+  await expect(auto.getByRole('option',{name:'해결범위 검토 완료 · 제공 검증 필요',exact:true})).toHaveCount(0);
+  await operator.screenshot({path:test.info().outputPath('usability-operator-review.png'),fullPage:true});
+  await selectedSummary.screenshot({path:test.info().outputPath('usability-selected-functions.png')});
   for(let index=0;index<alternative.coverage.length;index++){
    const n=index+1,row=alternative.coverage[index];
    await operator.getByLabel('자산 해결범위 '+n+' 수행 역할',{exact:true}).fill(row.role+' · TEST 합성 제공 근거와 동일 창고 범위를 운영자가 확인');
@@ -241,6 +278,8 @@ test('fresh DMP full UI: zero published capabilities, verified assets, generated
   await expect(operator.getByRole('button',{name:'검토한 기술자산 조합 저장',exact:true})).toBeEnabled();
   await operator.getByRole('button',{name:'검토한 기술자산 조합 저장',exact:true}).click();const savedAssetResponse=await savingAsset;expect(savedAssetResponse.ok(),await savedAssetResponse.text()).toBe(true);const composite=await savedAssetResponse.json();
   await expect(operator.getByRole('status').filter({hasText:'검토한 기술자산 조합 v1을 저장'})).toBeVisible();
+  usability.operatorEvents=await operatorWork(operator);
+  const workProof=test.info().outputPath('synthetic-usability-observation.json');await writeFile(workProof,JSON.stringify(usability,null,2));await test.info().attach('synthetic-usability-observation',{path:workProof,contentType:'application/json'});
   const history=await read(operator,'capability/compositions/'+composite.id);
   expect(history.versions).toHaveLength(1);expect(history.versions[0].data.source_mode).toBe('DMP_ASSET');expect(history.versions[0].data.capability_version_ids).toEqual([]);
   expect(history.versions[0].data.asset_basis).toEqual({recommendation_id:generated.id,alternative_id:alternative.id});
@@ -248,6 +287,7 @@ test('fresh DMP full UI: zero published capabilities, verified assets, generated
   expect(history.versions[0].data.asset_integrations).toEqual([]);
   expect((await read(admin,'admin/overview')).published_capabilities).toBe(0);expect(capabilityWrites).toEqual([]);
   await operator.reload();await expect(operator.getByRole('button',{name:'검토한 기술자산 조합 새 버전 저장',exact:true})).toBeVisible();
+  const savedAssetReviewUrl=operator.url();
   const afterReload=await read(operator,'capability/compositions/'+composite.id);expect(afterReload.versions[0]).toEqual(history.versions[0]);
   console.log('ASSET_FULL_UI_STAGE: generated_prefilled_reviewed_composition');
   await operator.getByRole('button',{name:'이 조합의 지원사업 검토·매칭',exact:true}).click();
@@ -318,5 +358,73 @@ test('fresh DMP full UI: zero published capabilities, verified assets, generated
   const final=await read(operator,'proposal/'+proposal.proposal_id);expect(final.decisions[0].outcome).toBe('REVISION_REQUEST');expect(final.files).toHaveLength(2);expect(final.versions[0].id).toBe(proposal.version_id);
   await company.screenshot({path:test.info().outputPath('full-ui-company-revision.png'),fullPage:true});
   await operator.screenshot({path:test.info().outputPath('full-ui-delivered-proposal.png'),fullPage:true});
+  // A real catalog release change keeps history readable but invalidates new
+  // work. Business guidance is visible; the exact reason is still inspectable.
+  const released=await read(admin,'capability/assets/'+assetFeatures[0].id);
+  const revisingRelease=await admin.request.post('/api/capability/assets/'+assetFeatures[0].id+'/versions',{headers:{Origin:origin()},data:{data:{...released.current.data,release:'TEST-usability-next-release',availability_evidence:'TEST explicit synthetic release review; no actual delivery assertion.'},expected_version:released.current.version_id,idempotency_key:crypto.randomUUID()}});
+  expect(revisingRelease.ok(),await revisingRelease.text()).toBe(true);
+  await operator.goto(savedAssetReviewUrl);
+  await expect(operator.getByText('기술자산 목록이나 제공 정보가 변경되었습니다. 새 추천을 생성해 주세요.',{exact:true})).toBeVisible();
+  const rawReason=operator.getByText('ASSET_CATALOG_CHANGED',{exact:true});await expect(rawReason).toBeHidden();
+  await operator.getByText('변경·차단 사유의 상세 기록',{exact:true}).click();await expect(rawReason).toBeVisible();
+  usability.staleReason={businessMessageVisible:true,rawCodeHiddenByDefault:true,rawCodePreservedInDisclosure:true};
+  await writeFile(workProof,JSON.stringify(usability,null,2));
+  // Separate risk fixture: two additional administrator-declared SYNTHETIC
+  // features. The original two-source import and usability proof stay intact.
+  const riskProof:{source:string;originalImportFeatures:number;additionalSyntheticFeatures:number;usesReal649:boolean;phases:{phase:string;compositionVersion:string;candidate:string;blockers:string[];apiReason:string}[]}={source:'SYNTHETIC_SELECTION_CHANGE_EXTENSION',originalImportFeatures:2,additionalSyntheticFeatures:2,usesReal649:false,phases:[]};
+  const riskData=(name:string)=>({name,description:'TEST 창고 입출고 이력과 재고 수량 조회 및 입력 중복 확인을 위한 합성 시험 기능.',role:'TEST 창고 기록·조회',business_areas:['재고 관리','입출고 관리'],problems:['재고 불일치','중복 입력 감소'],release:'TEST-risk-1',availability:'VERIFIED',availability_evidence:'TEST exact synthetic release evidence, not an actual delivery assurance.'});
+  async function adminCommand(path:string,body:unknown){const response=await admin.request.post('/api/capability'+path,{headers:{Origin:origin()},data:body});expect(response.ok(),await response.text()).toBe(true);return response.json();}
+  let moduleB!:{id:string},moduleC!:{id:string},featureB!:{id:string},featureC!:{id:string};
+  const moduleBName='TEST UI 위험 B 모듈 '+c.nonce,moduleCName='TEST UI 위험 C 모듈 '+c.nonce,featureBName='TEST UI 위험 B 재고 기능 '+c.nonce,featureCName='TEST UI 위험 C 재고 기능 '+c.nonce;
+  await test.step('registered-interface fixture uses ordinary admin transitions and explicit parent rebases',async()=>{
+   moduleB=await adminCommand('/assets',{kind:'MODULE',parent_id:assetSystem.id,data:riskData(moduleBName),idempotency_key:crypto.randomUUID()});
+   const systemC=await adminCommand('/assets',{kind:'SYSTEM',data:riskData('TEST UI 위험 C 시스템 '+c.nonce),idempotency_key:crypto.randomUUID()});
+   moduleC=await adminCommand('/assets',{kind:'MODULE',parent_id:systemC.id,data:riskData(moduleCName),idempotency_key:crypto.randomUUID()});
+   const parent=await read(admin,'capability/assets/'+assetModule.id);
+   await adminCommand('/assets/'+assetModule.id+'/versions',{data:{...parent.current.data,relations:[moduleB,moduleC].map(target=>({target_node_id:target.id,kind:'INTEGRATION',condition:'TEST selected module interface requires actual verification',verified:false,evidence:''}))},expected_version:parent.current.version_id,idempotency_key:crypto.randomUUID()});
+   for(const originalFeature of assetFeatures){const current=await read(admin,'capability/assets/'+originalFeature.id);await adminCommand('/assets/'+originalFeature.id+'/versions',{data:{...current.current.data,availability_evidence:'TEST explicitly rebased to the new synthetic parent release.'},expected_version:current.current.version_id,idempotency_key:crypto.randomUUID()});}
+   featureB=await adminCommand('/assets',{kind:'FEATURE',parent_id:moduleB.id,data:riskData(featureBName),idempotency_key:crypto.randomUUID()});
+   featureC=await adminCommand('/assets',{kind:'FEATURE',parent_id:moduleC.id,data:riskData(featureCName),idempotency_key:crypto.randomUUID()});
+   const unchanged=await read(admin,'capability/features?limit=100');expect(unchanged.import).toEqual(originalImport.import);expect(unchanged.items.filter((item:{id:string})=>originalImport.items.some((original:{id:string})=>original.id===item.id))).toEqual(originalImport.items);
+  });
+  let riskRun:typeof generated,riskReviewUrl='';
+  await test.step('same-Run single alternative accepts a second module as an unverified draft',async()=>{
+   const generatingRisk=operator.waitForResponse(r=>r.request().method()==='POST'&&new URL(r.url()).pathname==='/api/capability/improvements/'+v2.id+'/asset-solutions');
+   await operator.getByRole('button',{name:'자동 추천 구성안 생성',exact:true}).click();const response=await generatingRisk;expect(response.ok()).toBe(true);riskRun=await response.json();
+   expect(riskRun.data.candidates.map((f:{id:string})=>f.id)).toEqual(expect.arrayContaining([featureB.id,featureC.id]));
+   const single=riskRun.data.alternatives.find((a:{modules:{id:string}[]})=>a.modules.length===1&&a.modules[0].id===assetModule.id);expect(single).toBeTruthy();
+   await operator.locator('article[data-alternative-id="'+single.id+'"]').getByRole('button',{name:'이 구성안 검토',exact:true}).click();
+   await operator.getByText('기능 추가·제외·모듈 교체',{exact:true}).click();await operator.getByRole('checkbox',{name:featureBName+' 구성 포함',exact:true}).check();
+   await expect(operator.getByTestId('asset-selection-review-notice')).toBeVisible();
+  });
+  async function saveRiskScope(name:string){
+   const count=await operator.getByLabel(/^자산 해결범위 \d+ 수행 역할$/).count();expect(count).toBeGreaterThan(0);
+   for(let index=1;index<=count;index++){await operator.getByLabel('자산 해결범위 '+index+' 설명',{exact:true}).fill('TEST 합성 창고의 기록·조회 범위를 사람이 확인했으나 모듈 연계는 미검증입니다.');await operator.getByLabel('자산 해결범위 '+index+' 제외·미해결 범위',{exact:true}).fill('');await operator.getByLabel('자산 해결범위 '+index+' 추가 확인사항',{exact:true}).fill('');await operator.getByLabel('자산 해결범위 '+index+' 해결 상태',{exact:true}).selectOption('ADDRESSED');}
+   await operator.getByLabel('기술자산 조합 이름',{exact:true}).fill(name);await operator.getByLabel('자산 구성 미해결 사항',{exact:true}).fill('');await operator.getByLabel('기술자산 조합 검토 의견',{exact:true}).fill('TEST scope-only review must not promote missing or unverified selected-module interfaces.');await operator.getByRole('checkbox',{name:'기술자산 조합 근거·제공상태·연계 검토',exact:true}).check();
+   const saving=operator.waitForResponse(r=>r.request().method()==='POST'&&/\/api\/capability\/compositions(?:\/[^/]+\/versions)?$/.test(new URL(r.url()).pathname));
+   await operator.getByRole('button',{name:/^검토한 기술자산 조합 (?:새 버전 )?저장$/,exact:true}).click();const response=await saving;expect(response.ok(),await response.text()).toBe(true);const saved=await response.json();riskReviewUrl=operator.url();return saved;
+  }
+  async function assertBlockedRisk(saved:{version_id:string},phase:string,expectedReason:string){
+   await operator.getByRole('button',{name:'이 조합의 지원사업 검토·매칭',exact:true}).click();await operator.locator('tr[data-notice-id="'+c.notice.id+'"]').getByRole('button',{name:'이 공고 원문·요건 검토',exact:true}).click();
+   await operator.getByLabel('매칭 공고 요건 Version',{exact:true}).selectOption(requirement.id);await operator.getByLabel('매칭 서비스 조합 Version',{exact:true}).selectOption(saved.version_id);
+   const matchingRisk=operator.waitForResponse(r=>r.request().method()==='POST'&&new URL(r.url()).pathname==='/api/capability/matches');await operator.getByRole('button',{name:'선택한 3개 입력으로 매칭 후보 생성',exact:true}).click();const response=await matchingRisk;expect(response.ok(),await response.text()).toBe(true);const candidate=await response.json();
+   const preparation=await read(operator,'capability/matches/'+candidate.candidate_id+'/proposal-preparation');expect(preparation.policy_blockers).toContain(expectedReason);
+   for(const task of preparation.review_tasks){await operator.getByLabel(task.id+' 검토 의견',{exact:true}).fill('TEST all scope notes cannot replace registered integration evidence.');await operator.getByLabel(task.id+' 현재 확정 근거',{exact:true}).selectOption(preparation.review_evidence[0].id);}
+   await operator.getByLabel('매칭 전체 검토 의견',{exact:true}).fill('TEST attempt review despite missing interface evidence.');await expect(operator.getByRole('button',{name:'근거 검토 완료·제안 가능 판단',exact:true})).toBeDisabled();await expect(operator.getByRole('button',{name:'동일 대상의 제안서 작성',exact:true})).toBeDisabled();
+   const denied=await operator.request.post('/api/capability/matches/'+candidate.candidate_id+'/review',{headers:{Origin:origin()},data:{outcome:'PROPOSABLE',note:'TEST direct API attempt despite UI blocking',completion_items:preparation.review_tasks.map((task:{id:string;notice_evidence_id?:string})=>({task_id:task.id,decision:'CONFIRMED',note:'TEST exact same evidence review',proof_ids:[preparation.review_evidence[0].id],notice_evidence_id:task.notice_evidence_id??null})),idempotency_key:crypto.randomUUID()}});expect(denied.status()).toBe(409);const denial=await denied.json();expect(denial.reason).toBe(expectedReason);
+   riskProof.phases.push({phase,compositionVersion:saved.version_id,candidate:candidate.candidate_id,blockers:preparation.policy_blockers,apiReason:denial.reason});await operator.screenshot({path:test.info().outputPath('selection-risk-'+phase+'.png'),fullPage:true});
+  }
+  await test.step('missing same-system registered interface blocks PROPOSABLE after scope-only edits',async()=>{const saved=await saveRiskScope('TEST UI missing selected interface '+c.nonce);await assertBlockedRisk(saved,'missing-same-system','ASSET_INTEGRATION_REVIEW_REQUIRED');});
+  await test.step('explicit UNVERIFIED link still saves draft but cannot become a customer proposal',async()=>{
+   await operator.goto(riskReviewUrl);await expect(operator.getByRole('button',{name:'검토한 기술자산 조합 새 버전 저장',exact:true})).toBeVisible();await operator.getByRole('button',{name:'추가 연계 검토 항목',exact:true}).click();
+   await operator.getByLabel('자산 연계 1 from_asset_id',{exact:true}).selectOption(assetModule.id);await operator.getByLabel('자산 연계 1 to_asset_id',{exact:true}).selectOption(moduleB.id);
+   const saved=await saveRiskScope('TEST UI unverified selected interface '+c.nonce);await assertBlockedRisk(saved,'unverified-same-system','ASSET_INTEGRATION_UNVERIFIED');
+  });
+  await test.step('other-system module replacement rechecks the final registered interface',async()=>{
+   await operator.goto(riskReviewUrl);await expect(operator.getByRole('button',{name:'검토한 기술자산 조합 새 버전 저장',exact:true})).toBeVisible();await operator.getByText('기능 추가·제외·모듈 교체',{exact:true}).click();
+   const replacing=operator.getByLabel(moduleBName+' 교체 모듈',{exact:true});await replacing.selectOption(moduleC.id);await replacing.locator('..').locator('..').getByRole('button',{name:'선택 모듈로 교체',exact:true}).click();await expect(operator.getByTestId('asset-selection-review-notice')).toBeVisible();
+   const saved=await saveRiskScope('TEST UI replaced other-system module '+c.nonce);await assertBlockedRisk(saved,'missing-other-system','ASSET_INTEGRATION_REVIEW_REQUIRED');
+  });
+  const riskPath=test.info().outputPath('synthetic-selection-change-risk.json');await writeFile(riskPath,JSON.stringify(riskProof,null,2));await test.info().attach('synthetic-selection-change-risk',{path:riskPath,contentType:'application/json'});
  }finally{await Promise.all(contexts.map(context=>context.close()));}
 });

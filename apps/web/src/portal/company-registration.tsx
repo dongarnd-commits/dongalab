@@ -87,7 +87,7 @@ if(current.documents.some(d=>!actual.files.some(f=>f.id===d.fileId&&(!d.digest||
  {draft.mode==='documents'?<BusinessCard title="사업자등록 서류 업로드"><p>사업자등록증 또는 사업자등록증명원 PDF 중 하나만 있어도 됩니다.</p>
  <FileSelection label="최초 등록 PDF 선택" accept=".pdf,application/pdf" files={draft.documents.map(d=>d.file)} disabled={locked||!!draft.created} maxFiles={2} hint="사업자등록증·사업자등록증명원 PDF" onFiles={add} onRemove={index=>update({documents:draft.documents.filter((_,i)=>i!==index),error:''})}/><div className="mt-4 flex flex-wrap items-center gap-3" aria-label="서류 작업">
  <button className={primary} disabled={locked||!!draft.created||!draft.documents.length} onClick={()=>void analyze()}>문서 분석</button>
- <button className={secondary} disabled={locked||!!draft.created||!draft.documents.length} onClick={()=>update({documents:[],error:''})}>선택 취소</button>
+ <button className={secondary} disabled={locked||!!draft.created||!draft.documents.length} onClick={()=>update({documents:[],error:''})}>선택한 서류 모두 비우기</button>
  <button className={secondary} disabled={locked||!!draft.created} onClick={()=>update({mode:'direct',error:''})}>직접 입력으로 진행</button></div>
  {draft.documents.map((doc,i)=><article className="mt-4" key={i}><p>{doc.file.name}{doc.analyzed&&!doc.error?' · 분석 완료':''}</p>{doc.error&&<p role="alert">{doc.error}</p>}</article>)}
  {busy&&<div role="status"><p>문서를 읽고 있습니다. 잠시 기다려 주세요.</p><button className={secondary} onClick={()=>{request.current?.abort();setBusy(false);update({error:'분석을 취소했습니다. 직접 입력으로 진행할 수 있습니다.'});}}>분석 취소</button></div>}
