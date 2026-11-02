@@ -84,7 +84,21 @@ class DetailResponse(BaseModel):
     versions:list[dict]
     assessments:list[dict]=Field(default_factory=list)
     capability_versions:list[dict]=Field(default_factory=list)
+class AnalysisBasis(Command):
+    source_version_id:str|None=None
+    run_id:str
+    review_ids:list[str]=Field(min_length=1,max_length=100)
+class Integration(Command):
+    from_capability_version_id:str
+    to_capability_version_id:str
+    data:str=Field(min_length=1,max_length=5000)
+    workflow:str=Field(min_length=1,max_length=5000)
+    prerequisites:list[str]=Field(default_factory=list,max_length=100)
+    uncertainty:str=Field(min_length=1,max_length=2000)
 class Coverage(Command):
+    demand_id:str|None=None
+    evidence_refs:list[dict]=Field(default_factory=list,max_length=100)
+    status:Literal['ADDRESSED','PARTIAL','UNRESOLVED']|None=None
     requirement:str=Field(min_length=1,max_length=5000)
     capability_version_id:str=Field(min_length=36,max_length=36)
     feature_revision_ids:list[str]
@@ -93,6 +107,8 @@ class Coverage(Command):
     unaddressed_scope:str=Field(max_length=5000)
     missing_information:list[str]=Field(default_factory=list)
 class CompositionData(Command):
+    basis:AnalysisBasis|None=None
+    integrations:list[Integration]=Field(default_factory=list,max_length=100)
     name:str=Field(min_length=1,max_length=500)
     improvement_version_id:str=Field(min_length=1,max_length=100)
     capability_version_ids:list[str]=Field(min_length=1,max_length=100)
@@ -177,13 +193,18 @@ def publish(capability_id:str,body:Publish,session:Annotated[Session,Depends(get
 @router.get('/improvements/{version_id}/candidates',response_model=CandidateSearch,responses=errors(401,403,404,503))
 def candidates(version_id:str,session:Annotated[Session,Depends(get_session)],who=Depends(actor)):
     return application(session).candidates(who,version_id)
+@router.get('/improvements/{version_id}/recommendations',response_model=dict,responses=errors(401,403,404,409,503))
+def recommendations(version_id:str,session:Annotated[Session,Depends(get_session)],who=Depends(actor)):
+    from app.capability.recommendations import recommendations as retrieve
+    return retrieve(application(session),who,version_id)
+
 @router.post('/compositions',response_model=Receipt,dependencies=[Depends(trusted_origin)],responses=errors(401,403,404,409,422,503))
 def compose(body:SaveComposition,session:Annotated[Session,Depends(get_session)],who=Depends(actor)):
-    result=application(session).save_composition(who,body.data.model_dump(),body.idempotency_key)
+    result=application(session).save_composition(who,body.data.model_dump(exclude_unset=True),body.idempotency_key)
     session.commit(); return result
 @router.post('/compositions/{composition_id}/versions',response_model=Receipt,dependencies=[Depends(trusted_origin)],responses=errors(401,403,404,409,422,503))
 def revise(composition_id:str,body:SaveComposition,session:Annotated[Session,Depends(get_session)],who=Depends(actor)):
-    result=application(session).save_composition(who,body.data.model_dump(),body.idempotency_key,composition_id,body.expected_version)
+    result=application(session).save_composition(who,body.data.model_dump(exclude_unset=True),body.idempotency_key,composition_id,body.expected_version)
     session.commit(); return result
 @router.get('/compositions/{composition_id}',response_model=DetailResponse,responses=errors(401,403,404,503))
 def composition(composition_id:str,session:Annotated[Session,Depends(get_session)],who=Depends(actor)):

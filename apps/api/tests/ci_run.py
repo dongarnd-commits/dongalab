@@ -1,15 +1,25 @@
 """CI-only provisioning: ephemeral loopback PostgreSQL, never normal settings DB."""
-import os,sys,json,secrets,subprocess,signal,time,urllib.request,socket
+import os,sys,json,secrets,subprocess,signal,time,urllib.request,socket,re
 from pathlib import Path
 from uuid import uuid4
 import psycopg
 from psycopg import sql
 from sqlalchemy.engine import make_url
 ROOT=Path(__file__).resolve().parents[3];API=ROOT/'apps/api';WEB=ROOT/'apps/web'
-TESTS=['test_operator_review.py','test_improvement_analysis.py','test_operator_intake.py','test_notice_slice.py','test_notice_korean.py','test_bizinfo.py','test_confirmed_notice_reader.py','test_analysis_lineage.py','test_analysis_migration.py','test_capability_matching_comparison.py','test_matching_integrity.py','test_proposal_preparation.py','test_proposal_production.py','test_company_workflow.py','test_company_v14.py','test_registration_api.py','test_company_migration.py','test_workspace.py','test_portal_context.py']
+TESTS=['test_mvp_analysis_migration.py','test_mvp_analysis_lineage.py','test_mvp_admin.py','test_mvp_notice_catalog.py','test_mvp_solution_pipeline.py','test_operator_review.py','test_improvement_analysis.py','test_operator_intake.py','test_notice_slice.py','test_notice_korean.py','test_bizinfo.py','test_confirmed_notice_reader.py','test_analysis_lineage.py','test_analysis_migration.py','test_capability_matching_comparison.py','test_matching_integrity.py','test_proposal_preparation.py','test_proposal_production.py','test_company_workflow.py','test_company_v14.py','test_registration_api.py','test_company_migration.py','test_workspace.py','test_portal_context.py']
+def redact_test_output(line,env):
+ line=re.sub(r'(?i)(\b(?:cookie|set-cookie|authorization):\s*)[^\r\n]+',r'\1[REDACTED]',line)
+ for name in ('DATABASE_URL','DATCO_E2E_PASSWORD','DATCO_COMPANY_CONTEXT','DATCO_PROPOSAL_CONTEXT','DATCO_PORTAL_CONTEXT','DATCO_HANDOFF_CONTEXT','DATCO_MVP_CONTEXT','DATCO_REACCEPTANCE_CONTEXT'):
+  secret=env.get(name,'')
+  if name.endswith('_CONTEXT') and secret:
+   try:secret=json.loads(secret).get('password','')
+   except (ValueError,AttributeError):pass
+  if secret:line=line.replace(secret,'[REDACTED]')
+ return line
+
 def main():
  TESTS.insert(0,'test_improvement_migration.py')
- phase=sys.argv[1];assert phase in ('integration','proposal','e2e','slice2','full','slice2-e2e','operator-context-e2e','slice2-final-e2e','request-ux','request-ux-e2e','handoff-e2e')
+ phase=sys.argv[1];assert phase in ('integration','proposal','e2e','slice2','full','slice2-e2e','operator-context-e2e','slice2-final-e2e','request-ux','request-ux-e2e','handoff-e2e','mvp','mvp-e2e','reacceptance-e2e','business-ux-e2e')
  # No fallback to DATABASE_URL or .env. CI admin only provisions this disposable service.
  url=make_url(os.environ['DATCO_CI_ADMIN_URL'])
  assert url.host in ('127.0.0.1','localhost') and url.database=='datco_ci_admin'
@@ -21,7 +31,20 @@ def main():
  made_db=made_role=False;children=[];logs=[]
  def run(command,cwd=API):
   if os.name=='nt' and command[0]=='npm':command=['cmd.exe','/c','npm.cmd',*command[1:]]
-  subprocess.run(command,cwd=cwd,env=env,check=True)
+  if 'test:e2e' in command:
+   # Playwright transport errors include request headers. Never publish a
+   # synthetic session cookie/authorization value in CI diagnostics.
+   process=subprocess.Popen(command,cwd=cwd,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,encoding='utf-8',errors='replace')
+   for line in process.stdout:
+    print(redact_test_output(line,env),end='',flush=True)
+   process.wait()
+   results=out/'browser-results' if phase=='reacceptance-e2e' else WEB/'test-results'
+   for diagnostic in results.glob('*/error-context.md'):
+    original=diagnostic.read_text(encoding='utf-8')
+    redacted=redact_test_output(original,env)
+    if redacted!=original:diagnostic.write_text(redacted,encoding='utf-8')
+   if process.returncode:raise subprocess.CalledProcessError(process.returncode,command)
+  else:subprocess.run(command,cwd=cwd,env=env,check=True)
  def port():
   with socket.socket() as s:s.bind(('127.0.0.1',0));return s.getsockname()[1]
  def wait(address):
@@ -48,7 +71,26 @@ def main():
   if phase=='full':
    env.pop('DATCO_CI_SYNTHETIC',None)
    run([sys.executable,'-m','pytest','-m','integration','-v','--tb=short','--junitxml='+str(out/'integration.xml')])
-  elif phase in ('integration','proposal','slice2','request-ux'):run([sys.executable,'-m','pytest',*[str(Path('tests')/t) for t in (['test_operator_intake.py','test_company_v14.py'] if phase=='request-ux' else TESTS if phase=='integration' else ['test_operator_review.py','test_improvement_analysis.py','test_improvement_migration.py'] if phase=='slice2' else ['test_proposal_production.py'])],*(['--maxfail=1'] if phase=='proposal' else []),'-v','--tb=short','--junitxml='+str(out/'integration.xml')])
+  elif phase in ('integration','proposal','slice2','request-ux','mvp'):run([sys.executable,'-m','pytest',*[str(Path('tests')/t) for t in (['test_operator_intake.py','test_company_v14.py'] if phase=='request-ux' else ['test_mvp_analysis_migration.py','test_mvp_analysis_lineage.py','test_mvp_admin.py','test_mvp_notice_catalog.py','test_mvp_solution_pipeline.py'] if phase=='mvp' else TESTS if phase=='integration' else ['test_operator_review.py','test_improvement_analysis.py','test_improvement_migration.py'] if phase=='slice2' else ['test_proposal_production.py'])],*(['--maxfail=1'] if phase=='proposal' else []),'-v','--tb=short','--junitxml='+str(out/'integration.xml')])
+  elif phase=='reacceptance-e2e':
+   api_port,web_port=port(),port()
+   while web_port==api_port:web_port=port()
+   origin='http://localhost:'+str(web_port)
+   env.update(WEB_ORIGIN=origin,API_ORIGIN='http://127.0.0.1:'+str(api_port),CAPABILITY_API_ORIGIN='http://127.0.0.1:'+str(api_port),DATCO_E2E_BASE_URL=origin,DATCO_E2E_SERVER_READY='1',DATCO_TEST_DIST_DIR='.next/datco-e2e-'+nonce)
+   run([sys.executable,'tests/reacceptance_setup.py'])
+   env['DATCO_REACCEPTANCE_CONTEXT']=(out/'fresh-ready.json').read_text(encoding='utf-8')
+   config=WEB/('.next/datco-config-'+nonce)/'tsconfig.json';config.parent.mkdir(parents=True,exist_ok=True)
+   config.write_text(json.dumps({'extends':'../../tsconfig.json','compilerOptions':{'paths':{'@/*':[str(WEB/'src/*')]}},'include':[str(WEB/'next-env.d.ts'),str(WEB/'src/**/*.ts'),str(WEB/'src/**/*.tsx'),str(WEB/'tests/**/*.ts'),str(WEB/env['DATCO_TEST_DIST_DIR']/'types/**/*.ts')],'exclude':[str(WEB/'node_modules')]}))
+   start('api',[sys.executable,'-m','uvicorn','fresh_browser_server:app','--host','127.0.0.1','--port',str(api_port)],API)
+   identity=wait(env['API_ORIGIN']+'/__test/identity');assert identity['database']==db and identity['db_user']==role and identity['nonce']==nonce
+   start('worker',[sys.executable,'tests/isolated_worker.py'],API)
+   deadline=time.monotonic()+45
+   while not (out/'worker-ready.json').exists():
+    if children[-1].poll() is not None or time.monotonic()>deadline:raise RuntimeError('FRESH_WORKER_NOT_READY')
+    time.sleep(.1)
+   worker=json.loads((out/'worker-ready.json').read_text());assert worker['database']==db and worker['db_user']==role
+   start('web',['npm','run','dev','--','--port',str(web_port)],WEB);wait(origin)
+   run(['npm','run','test:e2e','--','tests/reacceptance-full-ui.spec.ts','--workers=1','--reporter=line','--output',str(out/'browser-results')],WEB)
   else:
    api_port,web_port=port(),port()
    while web_port==api_port:web_port=port()
@@ -68,6 +110,7 @@ def main():
    proposal=json.loads((out/'proposal-ready.json').read_text(encoding='utf-8'));env['DATCO_PROPOSAL_CONTEXT']=json.dumps(proposal)
    env['DATCO_TEST_CONTEXT_READY']=str(out/'context-ready.json');run([sys.executable,'tests/portal_context_setup.py']);env['DATCO_PORTAL_CONTEXT']=(out/'context-ready.json').read_text(encoding='utf-8')
    env['DATCO_TEST_HANDOFF_READY']=str(out/'handoff-ready.json');run([sys.executable,'tests/portal_handoff_setup.py']);env['DATCO_HANDOFF_CONTEXT']=(out/'handoff-ready.json').read_text(encoding='utf-8')
+   env['DATCO_MVP_READY']=str(out/'mvp-ready.json');run([sys.executable,'tests/mvp_portal_setup.py']);env['DATCO_MVP_CONTEXT']=(out/'mvp-ready.json').read_text(encoding='utf-8')
    start('worker',[sys.executable,'tests/isolated_worker.py'],API)
    deadline=time.monotonic()+30
    while not (out/'worker-ready.json').exists():
@@ -76,7 +119,7 @@ def main():
     time.sleep(.1)
    worker=json.loads((out/'worker-ready.json').read_text());assert worker['database']==db and worker['db_user']==role
    start('web',['npm','run','dev','--','--port',str(web_port)],WEB);wait(origin)
-   specs=['tests/portal-handoff.spec.ts'] if phase=='handoff-e2e' else ['tests/request-ux.spec.ts'] if phase=='request-ux-e2e' else ['tests/request-ux.spec.ts','tests/operator-final-ux.spec.ts'] if phase=='slice2-final-e2e' else ['tests/company.spec.ts','tests/portal-context.spec.ts','tests/role-portals.spec.ts'] if phase=='operator-context-e2e' else ['tests/request-ux.spec.ts','tests/operator-final-ux.spec.ts','tests/operator-review.spec.ts','tests/improvement-analysis.spec.ts','tests/operator-intake.spec.ts','tests/business-ux.spec.ts'] if phase=='slice2-e2e' else ['tests/request-ux.spec.ts','tests/operator-final-ux.spec.ts','tests/operator-review.spec.ts','tests/improvement-analysis.spec.ts','tests/operator-intake.spec.ts','tests/smoke.spec.ts','tests/notice.spec.ts','tests/proposal.spec.ts','tests/company.spec.ts','tests/workspace.spec.ts','tests/company-document-first.spec.ts','tests/role-portals.spec.ts','tests/portal-context.spec.ts','tests/portal-stability.spec.ts','tests/portal-handoff.spec.ts','tests/registration.spec.ts','tests/business-ux.spec.ts']
+   specs=['tests/business-ux.spec.ts'] if phase=='business-ux-e2e' else ['tests/mvp-portals.spec.ts','tests/mvp-analysis-handoff.spec.ts','tests/mvp-notice-review.spec.ts'] if phase=='mvp-e2e' else ['tests/portal-handoff.spec.ts'] if phase=='handoff-e2e' else ['tests/request-ux.spec.ts'] if phase=='request-ux-e2e' else ['tests/request-ux.spec.ts','tests/operator-final-ux.spec.ts'] if phase=='slice2-final-e2e' else ['tests/company.spec.ts','tests/portal-context.spec.ts','tests/role-portals.spec.ts'] if phase=='operator-context-e2e' else ['tests/request-ux.spec.ts','tests/operator-final-ux.spec.ts','tests/operator-review.spec.ts','tests/improvement-analysis.spec.ts','tests/operator-intake.spec.ts','tests/business-ux.spec.ts'] if phase=='slice2-e2e' else ['tests/request-ux.spec.ts','tests/operator-final-ux.spec.ts','tests/operator-review.spec.ts','tests/improvement-analysis.spec.ts','tests/operator-intake.spec.ts','tests/smoke.spec.ts','tests/notice.spec.ts','tests/proposal.spec.ts','tests/company.spec.ts','tests/workspace.spec.ts','tests/company-document-first.spec.ts','tests/role-portals.spec.ts','tests/portal-context.spec.ts','tests/portal-stability.spec.ts','tests/portal-handoff.spec.ts','tests/registration.spec.ts','tests/business-ux.spec.ts','tests/mvp-portals.spec.ts','tests/mvp-analysis-handoff.spec.ts','tests/mvp-notice-review.spec.ts']
    run(['npm','run','test:e2e','--',*specs,'--workers=1','--reporter=line'],WEB)
  except Exception:
   for log in logs:log.flush()
@@ -86,7 +129,7 @@ def main():
     tail=path.read_text(errors='replace')[-4000:]
     for secret in (password,url.password,env.get('DATCO_E2E_PASSWORD'),env['DATABASE_URL']):
      if secret:tail=tail.replace(secret,'[REDACTED]')
-    print('CI_CHILD_DIAGNOSTIC '+name+'\n'+tail,flush=True)
+    print('CI_CHILD_DIAGNOSTIC '+name+'\n'+redact_test_output(tail,env),flush=True)
   raise
  finally:
   for p in reversed(children):

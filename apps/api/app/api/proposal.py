@@ -9,6 +9,7 @@ import app.api.capability as cap_api
 router=APIRouter(prefix='/proposal',tags=['Proposal production'])
 def application(session):return ProposalApplication(cap_api.application(session))
 class Create(Command):
+ template_version:Literal['LEGACY_11','MVP_16']='LEGACY_11'
  candidate_id:str
  title:str=Field(min_length=1,max_length=500)
  idempotency_key:str=Field(min_length=1,max_length=100)
@@ -19,7 +20,8 @@ class Section(Command):
 class Save(Command):
  expected_version:str
  title:str=Field(min_length=1,max_length=500)
- sections:list[Section]=Field(min_length=11,max_length=11)
+ template_version:Literal['LEGACY_11','MVP_16']|None=None
+ sections:list[Section]|None=Field(default=None,min_length=11,max_length=16)
  candidate_id:str|None=None
  idempotency_key:str=Field(min_length=1,max_length=100)
 class Review(Command):
@@ -42,7 +44,7 @@ def listing(company_id:str,improvement_version_id:str,session:Annotated[Session,
  return application(session).listing(who,company_id,improvement_version_id)
 @router.post('',response_model=dict,dependencies=[Depends(trusted_origin)],responses=errors(401,403,404,409,422,503))
 def create(body:Create,session:Annotated[Session,Depends(get_session)],who=Depends(actor)):
- result=application(session).create(who,body.candidate_id,body.title,body.idempotency_key);session.commit();return result
+ result=application(session).create(who,body.candidate_id,body.title,body.idempotency_key,body.template_version);session.commit();return result
 @router.get('/matches/{candidate_id}/evidence/{proof_id}/download',responses=errors(401,403,404,503))
 def evidence(candidate_id:str,proof_id:str,session:Annotated[Session,Depends(get_session)],who=Depends(actor)):
  from app.proposal.policy import basis
@@ -78,4 +80,4 @@ def company_inbox(company_id:str,session:Annotated[Session,Depends(get_session)]
 def detail(proposal_id:str,session:Annotated[Session,Depends(get_session)],who=Depends(actor)):return application(session).detail(who,proposal_id)
 @router.post('/{proposal_id}/versions',response_model=dict,dependencies=[Depends(trusted_origin)],responses=errors(401,403,404,409,422,503))
 def save(proposal_id:str,body:Save,session:Annotated[Session,Depends(get_session)],who=Depends(actor)):
- result=application(session).save(who,proposal_id,body.expected_version,body.title,[s.model_dump() for s in body.sections],body.idempotency_key,body.candidate_id);session.commit();return result
+ result=application(session).save(who,proposal_id,body.expected_version,body.title,[s.model_dump() for s in body.sections] if body.sections is not None else None,body.idempotency_key,body.candidate_id,body.template_version);session.commit();return result

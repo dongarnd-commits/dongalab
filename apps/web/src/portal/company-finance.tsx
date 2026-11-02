@@ -1,3 +1,4 @@
+import {FileSelection} from './file-selection';
 import {useState} from 'react';
 import {BusinessEditor} from './company-editor';
 import type {CompanyWorkflow} from './workflow';
@@ -13,7 +14,7 @@ const blankFinancial=():Financial=>({year:0,revenue:'',period:'',unit:'원',curr
 const blankHistory=():History=>({name:'',period:'',agency:'',role:''});
 export function CompanyFinance({w}:{w:CompanyWorkflow}){
  const [draft,setDraft]=useBusinessDraft<Draft>(w,'finance-v14',()=>({data:structuredClone(w.detail!.inputs.at(-1)!.data),expected:w.detail!.company.current_ordinal,kind:null,index:0,files:[],form:false,editing:false}));
- const [error,setError]=useState(''),[info,setInfo]=useState(''),[drag,setDrag]=useState<Kind|null>(null);const p=draft.data;
+ const [error,setError]=useState(''),[info,setInfo]=useState('');const p=draft.data;
  const section=(kind:Kind)=>kind==='finance'?'financials':'history';
  function fresh(kind:Kind,index?:number){const data=structuredClone(w.detail!.inputs.at(-1)!.data);const key=section(kind),i=index??data[key].length;if(index===undefined){if(kind==='finance')data.financials.push(blankFinancial());else data.history.push(blankHistory());}return {data,expected:w.detail!.company.current_ordinal,kind,index:i,files:[],form:true,editing:index!==undefined} as Draft;}
  function start(kind:Kind,index?:number){setError('');setInfo('');setDraft(fresh(kind,index));}
@@ -24,9 +25,10 @@ export function CompanyFinance({w}:{w:CompanyWorkflow}){
   if(data[key].length>100)throw Error('등록 가능한 내역은 최대 100개입니다. 자료를 나누어 확인해 주세요.');await w.reload();setDraft({...draft,data,index,files:[],form:count>0});if(count)setInfo('문서에서 확인한 항목을 검토하고 저장해 주세요.');if(missing)setError('일부 항목을 읽지 못했습니다. 원본은 자료함에서 확인할 수 있으며 직접 입력으로 보완할 수 있습니다.');
  }
  async function save(){await w.request('/'+w.cid+'/profile',{data:p,expected_ordinal:draft.expected});const actual=await w.reload();if(!actual)throw Error('저장한 내용을 다시 확인하지 못했습니다.');setDraft({...draft,data:structuredClone(actual.inputs.at(-1)!.data),expected:actual.company.current_ordinal,kind:null,files:[],form:false,editing:false});setInfo('');await w.business.refresh();}
- return <>{(['finance','history'] as const).map(kind=>{const finance=kind==='finance',list=finance?w.detail!.inputs.at(-1)!.data.financials:w.detail!.inputs.at(-1)!.data.history,active=draft.kind===kind,open=active&&draft.form;return <BusinessCard key={kind} title={finance?'재무정보':'정부지원사업 수행이력'}>
+ return <div className="company-finance-columns">{(['finance','history'] as const).map(kind=>{const finance=kind==='finance',list=finance?w.detail!.inputs.at(-1)!.data.financials:w.detail!.inputs.at(-1)!.data.history,active=draft.kind===kind,open=active&&draft.form;return <BusinessCard key={kind} title={finance?'재무정보':'정부지원사업 수행이력'}>
  <p className="mb-4 text-sm text-slate-600">{finance?'최근 3개년 표준재무제표증명 PDF를 등록해 주세요.':'기존 정부지원사업의 결과보고서 등을 등록해 주세요.'}</p>
- <div className={'mb-4 rounded-xl border-2 border-dashed p-5 '+(drag===kind?'border-blue-500 bg-blue-50':'border-slate-200')} onDragOver={e=>{e.preventDefault();setDrag(kind);}} onDragLeave={()=>setDrag(null)} onDrop={e=>{e.preventDefault();setDrag(null);if(!w.busy)void files(kind,Array.from(e.dataTransfer.files));}}><BusinessField label={finance?'재무 PDF 파일 선택 또는 끌어놓기':'수행이력 PDF 파일 선택 또는 끌어놓기'}><input className="block w-full min-w-0" type="file" multiple accept=".pdf" disabled={w.busy} onChange={e=>{void files(kind,Array.from(e.target.files??[]));e.currentTarget.value='';}}/></BusinessField><p className="text-sm text-slate-500">PDF 파일 선택 또는 끌어놓기 · 파일당 20MB 이하</p>{active&&draft.files.map((f,i)=><p key={i} className="text-sm">{f.name}</p>)}</div>
+ <FileSelection label={finance?'재무 PDF 파일 선택 또는 끌어놓기':'수행이력 PDF 파일 선택 또는 끌어놓기'} accept=".pdf" files={active?draft.files:[]} disabled={w.busy} onFiles={values=>{void files(kind,values);}} onRemove={index=>setDraft({...draft,files:draft.files.filter((_,i)=>i!==index)})}/>
+ {finance&&<p className="text-sm text-slate-500">직접 입력 필수: 재무연도·매출액·기준기간·금액 단위·통화. 자산·부채·손익 상세는 선택 입력입니다. 금액은 지정한 단위로 입력해 주세요.</p>}
  {active&&draft.files.length>0&&<button disabled={w.busy} className={secondary} onClick={()=>void w.run(analyze,'')}>{finance?'재무자료 분석':'수행이력 자료 분석'}</button>}
  <button disabled={w.busy} className={secondary} onClick={()=>start(kind)}>{finance?'재무정보 직접 입력':'수행이력 직접 입력'}</button>
  {list.length>0?<ul className="my-5 space-y-3">{list.map((row,i)=><li key={i} className="rounded-xl border border-slate-200 p-4">{'year' in row?<p>{row.year}년 · 매출액 {money(row.revenue)}{row.unit}</p>:<p className="business-history-summary" title={row.name}>{row.name} · {row.period} · {row.agency}</p>}<button disabled={w.busy} className={secondary} onClick={()=>start(kind,i)}>{finance?'재무정보 수정':'수행이력 수정'}</button></li>)}</ul>:<p className="my-4 text-sm text-slate-500">{finance?'등록된 재무정보가 없습니다.':'등록된 수행이력이 없습니다.'}</p>}
@@ -41,7 +43,7 @@ export function CompanyFinance({w}:{w:CompanyWorkflow}){
  {finance&&hasSumMismatch(p.financials[draft.index])&&<label className="mb-4 block text-sm"><input type="checkbox" required checked={!!p.financials[draft.index].consistency_note} onChange={e=>change('consistency_note',e.target.checked?'기업 사용자가 합계 불일치를 확인하고 입력 금액을 검토함':'')}/> 합계가 일치하지 않는 금액을 원본과 대조해 확인했습니다.</label>}
  {error&&<p role="alert">{error}</p>}{info&&<p role="status">{info}</p>}{w.error&&<p className="text-rose-800">{w.error}</p>}
  <div className="flex flex-wrap gap-3"><button disabled={w.busy} className={primary}>{finance?'재무정보 저장':'수행이력 저장'}</button><button type="button" disabled={w.busy} className={secondary} onClick={()=>{setDraft({...draft,kind:null,files:[],form:false});setError('');setInfo('');}}>입력 취소</button></div></form></BusinessEditor>}
- </BusinessCard>;})}</>;
+ </BusinessCard>;})}</div>;
 }
 
 export function money(raw:string){return /^-?\d+$/.test(raw)?raw.replace(/\B(?=(\d{3})+(?!\d))/g,','):raw;}
@@ -57,6 +59,7 @@ function FinancialChecks({row,previous}:{row:Financial;previous:Financial|undefi
  const a=amount('assets'),l=amount('liabilities'),e=amount('equity'),ca=amount('current_assets'),cl=amount('current_liabilities'),cap=amount('capital');
  const ratio=(n:bigint|null,d:bigint|null)=>{if(n===null||d===null)return '계산에 필요한 금액이 없습니다.';if(d===BigInt(0))return '기준 금액이 0이어서 계산할 수 없습니다.';const sign=(n<BigInt(0))!==(d<BigInt(0))?'-':'',a=(n<BigInt(0)?-n:n)*BigInt(10000),b=d<BigInt(0)?-d:d;let q=a/b;const r=a%b;if(r*BigInt(2)>b||r*BigInt(2)===b&&q%BigInt(2)!==BigInt(0))q+=BigInt(1);return `${q===BigInt(0)?'':sign}${q/BigInt(100)}.${String(q%BigInt(100)).padStart(2,'0')}%`;};
  const prev=previous?.unit===row.unit&&previous?.currency===row.currency&&/^-?\d+$/.test(previous.revenue)?BigInt(previous.revenue):null,revenue=amount('revenue');
+ if(!row.year||!row.revenue)return <p className="my-4 text-sm">필수 입력: 재무연도·매출액·기준기간·금액 단위·통화. 나머지 금액은 선택 입력이며 확인된 값으로 비율을 계산합니다.</p>;
  return <div className="my-4 rounded-xl bg-slate-50 p-4 text-sm">{hasSumMismatch(row)&&<p role="alert">자산·부채·자본 또는 유동·비유동 합계가 일치하지 않습니다. 금액을 확인해 주세요.</p>}<p>부채비율 {ratio(l,e)} · 유동비율 {ratio(ca,cl)}</p><p>매출증감률 {previous?ratio(revenue===null||prev===null?null:revenue-prev,prev):'비교할 전년도 자료가 없습니다.'}</p>{e!==null&&cap!==null&&e<cap&&<p>자본잠식 여부를 확인해 주세요.</p>}{a===null&&<p>자산총계가 없어 합계를 확인할 수 없습니다.</p>}</div>;
 }
 function SourceComparison({w,row}:{w:CompanyWorkflow;row:Financial|History}){

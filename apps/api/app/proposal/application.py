@@ -7,7 +7,7 @@ from app.capability.proposal import proposal_blockers
 from app.infrastructure import proposal_schema as P,capability_schema as S,notice_schema as N
 from app.notice.domain import Denied
 from app.proposal.policy import basis
-from app.proposal.documents import draft,validate,render
+from app.proposal.documents import draft,validate,render,template_version,TEMPLATES
 
 class ProposalApplication:
  def __init__(self,capability):self.s=capability
@@ -28,42 +28,56 @@ class ProposalApplication:
   if blockers:raise Denied(blockers[0])
   review=max(detail['reviews'],key=lambda r:(r['created_at'],r['id']))
   return detail,review
- def manifest(self,detail,review):
+ def manifest(self,detail,review,actor=None):
   snap=detail['snapshot'];cv=self.s.get(S.composition_versions,snap['composition_version_id']);caps=[self.s.get(S.versions,l['capability_version_id']) for l in self.s.rows(S.composition_links,version_id=cv['id'])]
   features=[self.s.get(S.revisions,l['revision_id']) for c in caps for l in self.s.rows(S.links,version_id=c['id'])]
   refs=dict(company_id=snap['input']['company']['company_id'],fact_version_ids=snap['input']['company'].get('fact_version_ids',[]),improvement_version_id=cv['improvement_version_id'],capability_version_ids=[c['id'] for c in caps],feature_revision_ids=[f['id'] for f in features],composition_version_id=cv['id'],notice_version_id=snap['input']['notice']['notice_version_id'],requirement_version_id=snap['requirement_version_id'],match_snapshot_id=snap['id'],match_candidate_id=detail['candidate']['id'],match_review_id=review['id'],evidence_ids=[i['evidence']['id'] for i in snap['input']['notice']['items']])
-  return frozen_json(dict(refs=refs,input=snap['input'],notice_title=self.s.get(N.notices,snap['input']['notice']['notice_id'])['title'],capability_versions=caps,feature_revisions=features,match_review=review))
- def write_version(self,actor,root,detail,review,title,sections=None):
+  manifest=dict(refs=refs,input=snap['input'],notice_title=self.s.get(N.notices,snap['input']['notice']['notice_id'])['title'],capability_versions=caps,feature_revisions=features,match_review=review)
+  basis=cv['data'].get('basis')
+  if basis:
+   from app.capability.recommendations import validate_basis
+   manifest['reviewed_analysis']=validate_basis(self.s,actor,snap['input']['company'],basis)
+   refs.update(analysis_run_id=basis['run_id'],analysis_review_ids=basis['review_ids'],analysis_source_version_id=basis.get('source_version_id',cv['improvement_version_id']))
+  return frozen_json(manifest)
+ def write_version(self,actor,root,detail,review,title,sections=None,template='LEGACY_11'):
   title=title.strip()
   if not title or len(title)>500:raise Denied('INVALID_REQUEST',422)
-  manifest=self.manifest(detail,review);sections=sections if sections is not None else draft(manifest)
-  validate(sections)
+  if template not in TEMPLATES:raise Denied('INVALID_PROPOSAL_TEMPLATE',422)
+  manifest=self.manifest(detail,review,actor);manifest['template_version']=template
+  sections=sections if sections is not None else draft(manifest)
+  validate(sections,template)
   # Client cannot replace source references while editing prose.
   sections=[dict(s,evidence_refs=manifest['refs']) for s in sections]
   ordinal=root['current_ordinal'];digest=fingerprint(dict(title=title,sections=sections,manifest=manifest))
   version=self.s.add(P.versions,proposal_id=root['id'],ordinal=ordinal,match_snapshot_id=detail['snapshot']['id'],match_review_id=review['id'],title=title,sections=sections,manifest=manifest,content_digest=digest,actor_id=actor.id)
   self.s.record(actor,'CREATE_PROPOSAL_VERSION',proposal_id=root['id'],version_id=version['id'])
   return dict(proposal_id=root['id'],version_id=version['id'],ordinal=ordinal)
- def create(self,actor,candidate_id,title,key):
+ def create(self,actor,candidate_id,title,key,template='LEGACY_11'):
   self.operator(actor);self.s.match(actor,candidate_id)
   def execute():
    detail,review=self.locked_match(actor,candidate_id);context=detail['snapshot']['input']['company'];basis(self.s,actor,context['company_id'],context['improvement_version_id'])
    root=self.s.add(P.roots,company_id=context['company_id'],match_review_id=review['id'],current_ordinal=1)
-   return self.write_version(actor,root,detail,review,title)
-  return self.s.command(actor,key,['CREATE_PROPOSAL',candidate_id,title],execute)
- def save(self,actor,key,expected_version,title,sections,idempotency_key,candidate_id=None):
+   return self.write_version(actor,root,detail,review,title,template=template)
+  payload=['CREATE_PROPOSAL',candidate_id,title] if template=='LEGACY_11' else ['CREATE_PROPOSAL',candidate_id,title,template]
+  return self.s.command(actor,key,payload,execute)
+ def save(self,actor,key,expected_version,title,sections,idempotency_key,candidate_id=None,template=None):
   self.operator(actor);self.root(actor,key)
+  if sections is None and template is None:raise Denied('REQUIRED_DATA_MISSING',422)
   def execute():
    root,versions,_=self.root(actor,key,True);previous=max(versions,key=lambda v:v['ordinal'])
    if previous['id']!=expected_version:raise Denied('STALE_INPUT_VERSION')
+   selected_template=template or template_version(previous['manifest'])
+   if selected_template not in TEMPLATES:raise Denied('INVALID_PROPOSAL_TEMPLATE',422)
    candidate=candidate_id or previous['manifest']['refs']['match_candidate_id'];detail,review=self.locked_match(actor,candidate)
    if detail['snapshot']['input']['company']['company_id']!=root['company_id']:raise Denied('OBJECT_NOT_FOUND',404)
    for request in self.s.rows(P.requests,version_id=previous['id']):
     if request['state']=='OPEN':self.s.session.execute(update(P.requests).where(P.requests.c.id==request['id']).values(state='CLOSED',closure_reason='SUPERSEDED'))
    root=dict(root,current_ordinal=root['current_ordinal']+1,match_review_id=review['id'])
    self.s.session.execute(update(P.roots).where(P.roots.c.id==key).values(current_ordinal=root['current_ordinal'],match_review_id=review['id']))
-   return self.write_version(actor,root,detail,review,title,sections)
-  return self.s.command(actor,idempotency_key,['SAVE_PROPOSAL',key,expected_version,title,sections,candidate_id],execute)
+   return self.write_version(actor,root,detail,review,title,sections,selected_template)
+  payload=['SAVE_PROPOSAL',key,expected_version,title,sections,candidate_id]
+  if template is not None:payload.append(template)
+  return self.s.command(actor,idempotency_key,payload,execute)
  def version(self,actor,key):
   v=self.s.get(P.versions,key);root,_,b=self.root(actor,v['proposal_id'])
   if actor.role!='DATCO_OPERATOR':
@@ -177,6 +191,12 @@ class ProposalApplication:
   from app.proposal.policy import verified_completion
   snap=self.s.get(S.match_snapshots,v['match_snapshot_id']);cv=self.s.get(S.composition_versions,snap['composition_version_id']);self.s.get(S.compositions,cv['composition_id'],True)
   current=self.s.get(S.compositions,cv['composition_id'])['current_ordinal']==cv['ordinal']
+  analysis_basis=cv['data'].get('basis')
+  if analysis_basis:
+   from app.company.application import CompanyApplication
+   from app.company.improvement_analysis import ImprovementAnalysis
+   checker=ImprovementAnalysis(CompanyApplication(self.s.session,self.s.files))
+   current=current and checker.basis_current_for_company_decision(actor,cv['improvement_version_id'],analysis_basis['run_id'],analysis_basis['review_ids'])
   for link in sorted(self.s.rows(S.composition_links,version_id=cv['id']),key=lambda l:self.s.get(S.versions,l['capability_version_id'])['capability_id']):
    capv=self.s.get(S.versions,link['capability_version_id']);root=self.s.get(S.capabilities,capv['capability_id'],True);current=current and root['current_ordinal']==capv['ordinal']
   notice=snap['input']['notice'];n=self.s.get(N.notices,notice['notice_id'],True);nv=self.s.get(N.versions,notice['notice_version_id']);rv=self.s.get(N.requirement_versions,snap['requirement_version_id'])

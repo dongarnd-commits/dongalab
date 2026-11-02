@@ -180,6 +180,8 @@ class CapabilityApplication:
         return {'context':context,'candidates':self.catalog(actor,context['original_text']) if context['original_text'].strip() else []}
     def save_composition(self,actor,data,key,composition_id=None,expected_version=None):
         context=self.context(actor,data['improvement_version_id'],require_current=False)
+        from app.capability.recommendations import validate_extensions
+        validate_extensions(self,actor,context,data)
         ids=data['capability_version_ids']
         if len(ids)!=len(set(ids)) or not ids or not data['name'].strip() or not data['coverage']: raise Denied('REQUIRED_DATA_MISSING')
         selected=[self.get(S.versions,v) for v in ids]; roots={}
@@ -203,7 +205,8 @@ class CapabilityApplication:
         def execute():
             # Shared order with prepare_match: Composition root, then sorted Capability roots.
             if composition_id: self.get(S.compositions,composition_id,True)
-            self.context(actor,data['improvement_version_id'])
+            current_context=self.context(actor,data['improvement_version_id'])
+            validate_extensions(self,actor,current_context,data)
             for capability_id in sorted({v['capability_id'] for v in selected}):
                 self.get(S.capabilities,capability_id,True)
             for selected_version in selected:
@@ -283,6 +286,8 @@ class CapabilityApplication:
             root=self.get(S.compositions,cv['composition_id'],True)
             if root['current_ordinal']!=cv['ordinal']: raise Denied('STALE_INPUT_VERSION')
             context=self.context(actor,cv['improvement_version_id'])
+            from app.capability.recommendations import validate_extensions
+            validate_extensions(self,actor,context,cv['data'])
             links=self.rows(S.composition_links,version_id=cv['id'])
             versions=[self.get(S.versions,link['capability_version_id']) for link in links]
             for capability_id in sorted({v['capability_id'] for v in versions}):
@@ -315,6 +320,8 @@ class CapabilityApplication:
         current=self.get(S.compositions,cv['composition_id'])['current_ordinal']==cv['ordinal']
         context=self.context(actor,cv['improvement_version_id'],require_current=False)
         current=current and context.get('current_valid') is True
+        from app.capability.recommendations import basis_current
+        current=current and basis_current(self,actor,context,cv['data'])
         # Re-read the same authority; changed Fact/condition inputs stale only this snapshot.
         if 'comparison' in snapshot['input']:
             latest=read_comparison_inputs(self.inputs,actor,context,snapshot['input']['notice'])

@@ -15,6 +15,7 @@ def service(session):
 class Key(Command):
     idempotency_key:str=Field(min_length=1,max_length=100)
 class AnalysisRequest(Key):
+    provider:Literal['RULE','GPT','GEMINI','CLAUDE','GROK']='RULE'
     selection_token:str=Field(pattern='^[a-f0-9]{64}$')
     excluded_files:dict[str,str]=Field(default_factory=dict,max_length=100)
     reason:str=Field(min_length=1,max_length=1000)
@@ -59,11 +60,17 @@ def judge_submission(vid:str,body:SubmissionJudgement,session:DB,who=Depends(act
     result=SubmissionReview(service(session).a).save(who,vid,body.idempotency_key,body.expected_ordinal,body.decision,body.note,body.run_id,body.job_id,body.draft_id,body.analysis_limit)
     session.commit();return result
 
+@router.get('/analysis/providers',response_model=dict,responses=errors(401,403))
+def providers(session:DB,who=Depends(actor)):
+    service(session).a.role(who,'DATCO_OPERATOR')
+    from app.company.improvement_providers import provider_status
+    return provider_status()
+
 @router.get('/improvements/{vid}/analysis-inputs',response_model=dict,responses=errors(401,403,404))
 def inputs(vid:str,session:DB,who=Depends(actor)):return service(session).sources(who,vid)
 @router.post('/improvements/{vid}/analysis-jobs',response_model=dict,status_code=202,dependencies=[Depends(trusted_origin)],responses=errors(401,403,404,409,422))
 def request(vid:str,body:AnalysisRequest,session:DB,who=Depends(actor)):
-    svc=service(session);result=svc.request(who,vid,body.idempotency_key,body.selection_token,body.excluded_files,body.reason,body.common_file_ids,body.mode=='ENSURE');session.commit();return svc.job(who,result['id'])
+    svc=service(session);result=svc.request(who,vid,body.idempotency_key,body.selection_token,body.excluded_files,body.reason,body.common_file_ids,body.mode=='ENSURE',body.provider);session.commit();return svc.job(who,result['id'])
 @router.get('/analysis-jobs/{jid}',response_model=dict,responses=errors(401,403,404))
 def job(jid:str,session:DB,who=Depends(actor)):return service(session).job(who,jid)
 @router.post('/analysis-jobs/{jid}/retry',response_model=dict,status_code=202,dependencies=[Depends(trusted_origin)],responses=errors(401,403,404,409))
