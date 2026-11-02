@@ -8,6 +8,8 @@ from app.infrastructure.notice_documents import LocalPrivateFiles
 from app.worker import process_one
 from app.collector.worker import process_collection_one
 factory=get_session_factory();files=LocalPrivateFiles(Path(os.environ['DATCO_TEST_FILES']))
+if os.environ.get('DATCO_ACCEPTANCE_PREPARATION')=='1':
+ identity.update(head=os.environ['DATCO_ACCEPTANCE_HEAD'],nonce=os.environ['DATCO_TEST_NONCE'],files=str(files.root))
 ready=Path(os.environ['DATCO_TEST_WORKER_READY'])
 temporary=ready.with_suffix('.tmp')
 temporary.write_text(json.dumps(identity),encoding='utf-8')

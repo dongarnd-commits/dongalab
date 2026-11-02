@@ -44,3 +44,11 @@ app.include_router(workspace_router)
 
 from app.api.improvement_analysis import router as improvement_analysis_router
 app.include_router(improvement_analysis_router)
+
+from app.api.admin import router as admin_router
+app.include_router(admin_router)
+
+from app.api.dmp_assets import router as dmp_assets_router
+app.include_router(dmp_assets_router)
+from app.api.asset_solutions import router as asset_solutions_router
+app.include_router(asset_solutions_router)

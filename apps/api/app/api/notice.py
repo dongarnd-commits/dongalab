@@ -1,5 +1,5 @@
 from typing import Annotated, Literal
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Request, Response, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 from app.core.config import ROOT,get_settings
@@ -153,6 +153,11 @@ def notice_list(session: Annotated[Session,Depends(get_session)],who=Depends(act
     from app.notice.domain import authorize
     authorize(who)
     return SqlNoticeStore(session).rows("notices")
+
+@router.get('/catalog',response_model=dict,responses=errors(401,403,422,503))
+def catalog(session:Annotated[Session,Depends(get_session)],who=Depends(actor),q:str=Query(default='',max_length=500),mode:Literal['','LIVE','SANITIZED_SNAPSHOT','SYNTHETIC_DEMO']='',agency:str=Query(default='',max_length=200),page:int=Query(default=1,ge=1),limit:int=Query(default=20,ge=1,le=100)):
+    from app.notice.catalog import saved_catalog
+    return saved_catalog(session,who,q,mode,agency,page,limit)
 
 @router.get("/{notice_id}",response_model=NoticeDetail,responses=errors(401,403,404,422,503))
 def detail(notice_id: str,session: Annotated[Session,Depends(get_session)],who=Depends(actor)):

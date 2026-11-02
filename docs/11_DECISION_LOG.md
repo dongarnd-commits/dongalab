@@ -196,3 +196,37 @@ Status: ACCEPTED (LIMITED). 사용자 명시 지시에 따라 동일 feature bra
 Status: ACCEPTED (LIMITED). 사용자 명시 UX 통합 개선 지시에 따라 기존 PR #16에서 운영자 목록/상세/자동 진입 분석/전체 제출본 판단만 개선한다. 최소 typed append-only 검토 테이블 추가가 승인된 범위이며 기존 CONFIRM·후보 Review·요청 불변 Trigger·권한을 우회하지 않는다. 공통파일 미선택은 관련성 제외 판단이 아니다. 테스트 후 관련 파일 Commit/Push·Draft 유지·최신 CI 확인을 수행한다. 실사용 DB Migration·HTTPS 반영·신규 Branch/PR·외부 AI·main Merge는 제외한다.
 
 상세 계약·변경 영향·실행 검증 구분: [운영자 UX 구현 보고](reviews/SLICE2_OPERATOR_UX_REPORT.md).
+
+
+## Decision-MVP-001 — 제안서 전달 중심 MVP v1.0 / 2026-10-30
+
+Status: ACCEPTED (USER DEVELOPMENT SCOPE ONLY). 사용자는 전주기 대신 기업 개선요구→Rule/검토→서비스 단독·복합 구성→실제 Notice/Matching→16절 DOCX/PDF 제안서 전달을 이번 MVP 구현 목표로 명시 승인했다. 전주기 H01~H32와 과거 결정을 삭제하지 않고 미래 확장으로 보존한다. 대표/조직의 별도 공식 승인은 확인하지 않았다.
+
+개발 Branch/Worktree·Commit/Push·통합 Draft PR·비파괴 증분 Migration 코드/소유 격리 DB·합성 검증을 허용한다. main Merge·실서비스·공유 DB·실제 자료/계정·권한/State 정책·외부 AI/OAuth/과금은 별도 승인이다. 외부 GPT/GEMINI/CLAUDE/GROK은 모두 NOT_CONFIGURED, RULE만 실제 실행한다. MANUAL/ENSURE는 별도 실행 정책이다. 기존 11절/승인/원본을 보존하며 MVP16 템플릿은 새 불변 Version에서만 적용한다. 자세한 영향과 인수는 mvp/MASTER_DEVELOPMENT_CONTRACT.md·GAP_MATRIX.md·EXECUTION_PLAN.md·ACCEPTANCE.md를 따른다.
+
+## Decision-MVP-002 — 분석 입력과 공식 구조화의 명시 계보
+
+2026-10-30 사용자 MVP 개발 지시에 따른 비파괴 구현. 제출v1의Run·최신USE_FOR_REQUEST Review를 source_version_id와 함께 구조화v2의analysis_basis에 명시 저장한다. v2 회사ACK/운영자CONFIRM, Fact확인, MatchReview, 제안내용Review, 기업제안의사결정은 각각 기존 Guard를 유지한다.
+단일문서용 기존 AnalysisProvider와 별도 개선요구 공통결과 경계를 둔다. Rule만 실행하며 외부4종은 동일 NOT_CONFIGURED다. fg31m0012026 증분은 새 근거의 정합성만 추가하고 기존행/불변Trigger/함수설정을 보존한다. 실제 공유DB에는 실행하지 않았다.
+
+## Decision-MVP-003 — 표준 제안서의 명시 템플릿 Version
+
+기존LEGACY_11 기본과 과거파일/승인을 보존한다. 새운영자 흐름이MVP_16을 명시 선택하고, 템플릿 변경은새ProposalVersion으로 만든다. 같은별도내용검토Version에서DOCX/PDF를생성하고기존지정회사 전달/승인Guard를유지한다. 실제비용·기간·원인·효과·신청자격을자동확정하지않는다.
+
+
+## Decision-MVP-004 — 1차 사용자 E2E 보완과 같은 주소 재인수 / 2026-11-02
+
+Status: ACCEPTED (LIMITED USER DEVELOPMENT/UAT SCOPE). 사용자 명시 지시로 Rule v4의 역할별 중복 제거·원문 기반 기능 후보와 운영자 검토/3포털 UX를 보완한다. 기존 DB literal 근거 제약, Version, Company Scope, ACK/CONFIRM/PROPOSABLE, 요청·답변·승인 불변성을 바꾸지 않는다. 미확정 항목은 사람 검토 후에도 제약/한계로 보존하며 후보를 사실로 자동 승격하지 않는다.
+
+전체 회귀·최신 Draft PR #17 CI 통과 후 기존 8444 인수환경만 새 소유 DB/파일로 전환한다. 기존 네 합성 계정명/비밀번호·주소를 유지하고 기존 기업·분석·검토·원본·도구는 백업/실제 복원 검증하여 보존한다. 8443/공유 DB/Worker/Caddy/방화벽/실제 자료, main Merge, 외부 AI 호출은 승인 범위 밖이다. 실제 실행 결과는 mvp/REACCEPTANCE_REPORT.md에 통합한다.
+
+
+## Decision-MVP-005 — DMP 기술자산·자동 조합 / 2026-11-02
+
+Status: ACCEPTED (LIMITED USER DEVELOPMENT SCOPE). 사용자 첨부 지시로 관리자 기술자산/시스템 자동 초안/운영자 기업별 판단을 분리한다. 발행 Capability 0건에서도 실제 원천 기반 후보를 생성하되 제공 가능성·연계·자격·비용·기업 의사결정은 자동 확정하지 않는다. 승인된 최소 추가 Schema/API/Version/역할별 범위는 mvp/DMP_ASSET_AUTO_COMPOSITION.md에 구현 전에 기록한다. 현재 실행 8444/8443·공유 DB·기존 이력은 보존하며 실제자료 사용/새 방화벽·인증서 신뢰 변경·운영 전환/main Merge/외부 AI는 별도 승인이다. 실기업 평가는 자료·보안 승인 미제공으로 PENDING이다.
+
+## Decision-MVP-006 — 선택 변경 후 등록 연계 검사와 별도 인수 준비 / 2026-11-02
+
+Status: ACCEPTED (LIMITED USER FOCUSED VERIFICATION SCOPE). PR18의 단독 대안에서 모듈 추가·타 시스템 교체 시 원래 대안의 연계만 검사하여 고객 전달까지 진행하는 결함을 실제 시험으로 재현했다. 기존 필수 연계·의존성 검사에 최종 선택 모듈 쌍의 등록 INTEGRATION 선택지 검사를 적용한다. 정확한 등록 Version·조건·Evidence 검증, 미검증 초안 저장과 PROPOSABLE의 구분은 유지한다. Schema/API/Role/State 변경은 없다.
+
+등록 관계가 없는 모듈 쌍의 독립성/미등록 필수 연계는 현재 자료만으로 확정할 수 없으며 새 all-pairs 연결 의무나 면제 정책을 도입하지 않는다. 실제 제공 담당자의 범위·근거 확인과 필요 시 정책 결정은 남는다. 승인 원본649개를 재사용하는 별도 loopback 지속형 준비 도구만 추가하고 기존8443/8444·DB·볼륨·계정·백업은 전환하지 않는다. 실제자료·개별 계정·보존/삭제·백업 정책은 별도 승인 대기이며 가짜 공고·기업별 추천 정답을 준비하지 않는다. 실제 실행/시험 근거와 승인 제안은 mvp/DMP_ASSET_AUTO_COMPOSITION.md에 통합한다.

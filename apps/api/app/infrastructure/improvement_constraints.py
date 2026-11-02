@@ -36,6 +36,16 @@ BEGIN
  WHEN ev->>'kind'='SITE' THEN NOT EXISTS(SELECT 1 FROM company_site_versions s WHERE s.id=m.site_version_id AND ev->>'version_id'=s.id AND ev->>'field'='process' AND length(ev->>'quote')>0 AND strpos(s.data->>'process',ev->>'quote')>0)
  WHEN ev->>'kind'='FACT' THEN NOT EXISTS(SELECT 1 FROM improvement_analysis_inputs x JOIN company_fact_versions v ON v.id=x.fact_version_id WHERE x.manifest_id=m.id AND v.id=ev->>'version_id' AND x.fact_review_id=ev->>'review_id' AND x.data->>'evidence_id'=ev->>'evidence_id' AND length(ev->>'quote')>0 AND strpos(v.value,ev->>'quote')>0)
  WHEN ev->>'kind'='EVIDENCE' THEN NOT EXISTS(SELECT 1 FROM improvement_analysis_inputs x JOIN company_evidence e ON e.id=x.evidence_id WHERE x.manifest_id=m.id AND e.id=ev->>'evidence_id' AND e.company_id=m.company_id AND length(ev->>'quote')>0 AND strpos(e.text,ev->>'quote')>0)
+
+ WHEN ev->>'kind'='RESPONSE' THEN NOT EXISTS(
+  SELECT 1 FROM jsonb_array_elements(COALESCE(m.data->'reviewed_answers','[]'::jsonb)) x
+  JOIN company_information_responses p ON p.id=x->>'response_id'
+  JOIN company_information_requests q ON q.id=p.request_id
+  JOIN company_information_reviews z ON z.id=x->>'review_id'
+  WHERE p.id=ev->>'response_id' AND q.id=ev->>'request_id' AND z.id=ev->>'review_id'
+  AND q.company_id=m.company_id AND (q.improvement_version_id IS NULL OR q.improvement_version_id=m.version_id)
+  AND z.request_id=q.id AND z.response_id=p.id AND z.outcome='VERIFIED' AND p.submitted
+  AND length(ev->>'quote')>0 AND strpos(p.message,ev->>'quote')>0)
  ELSE TRUE END)
  OR EXISTS(SELECT 1 FROM improvement_analysis_candidate_details d WHERE d.category IN ('STRUCTURE','CONFLICT') AND jsonb_array_length(d.data->'evidence') < CASE WHEN d.category='CONFLICT' THEN 2 ELSE 1 END)
  THEN RAISE EXCEPTION 'IMPROVEMENT_EVIDENCE_MISMATCH' USING ERRCODE='23514'; END IF;
@@ -52,6 +62,42 @@ BEGIN
  OR EXISTS(SELECT 1 FROM improvement_request_draft_selections s JOIN improvement_request_draft_versions v ON v.id=s.draft_version_id JOIN improvement_request_drafts d ON d.id=v.draft_id JOIN improvement_analysis_reviews r ON r.id=s.analysis_review_id JOIN analysis_candidates a ON a.id=r.candidate_id WHERE a.run_id<>d.run_id OR r.decision<>'USE_FOR_REQUEST')
  OR EXISTS(SELECT 1 FROM improvement_request_deliveries z JOIN improvement_request_drafts d ON d.id=z.draft_id JOIN improvement_request_draft_versions v ON v.id=z.draft_version_id JOIN company_information_requests r ON r.id=z.request_id WHERE v.draft_id<>d.id OR z.actor_id<>d.actor_id OR r.company_id<>d.company_id OR r.improvement_version_id IS DISTINCT FROM d.version_id OR r.title<>v.title OR r.message<>v.message OR r.due_date IS DISTINCT FROM v.due_date OR r.state='DRAFT')
  THEN RAISE EXCEPTION 'IMPROVEMENT_DRAFT_MISMATCH' USING ERRCODE='23514'; END IF;
+
+ IF EXISTS(SELECT 1 FROM improvement_analysis_manifests m WHERE
+ (m.data ? 'provider' AND COALESCE(m.data->>'provider','') NOT IN ('RULE','GPT','GEMINI','CLAUDE','GROK'))
+ OR (m.data ? 'reviewed_answers' AND jsonb_typeof(m.data->'reviewed_answers') IS DISTINCT FROM 'array'))
+ THEN RAISE EXCEPTION 'MVP_ANALYSIS_INPUT_CONTRACT' USING ERRCODE='23514'; END IF;
+ IF EXISTS(SELECT 1 FROM improvement_analysis_manifests m,
+ jsonb_array_elements(COALESCE(m.data->'reviewed_answers','[]'::jsonb)) x
+ WHERE NOT EXISTS(SELECT 1 FROM company_information_responses p
+ JOIN company_information_requests q ON q.id=p.request_id
+ JOIN company_information_reviews z ON z.id=x->>'review_id'
+ WHERE p.id=x->>'response_id' AND q.id=x->>'request_id' AND q.company_id=m.company_id
+ AND (q.improvement_version_id IS NULL OR q.improvement_version_id=m.version_id)
+ AND z.request_id=q.id AND z.response_id=p.id AND z.outcome='VERIFIED' AND p.submitted
+ AND p.ordinal::text=x->>'ordinal'
+ AND encode(sha256(convert_to(p.message,'UTF8')),'hex')=x->>'message_digest'))
+ THEN RAISE EXCEPTION 'MVP_REVIEWED_ANSWER_LINEAGE' USING ERRCODE='23514'; END IF;
+ IF EXISTS(SELECT 1 FROM company_improvement_versions v WHERE v.data ? 'analysis_basis' AND
+ (jsonb_typeof(v.data->'analysis_basis') IS DISTINCT FROM 'object'
+ OR jsonb_typeof(v.data->'analysis_basis'->'review_ids') IS DISTINCT FROM 'array'))
+ THEN RAISE EXCEPTION 'MVP_STRUCTURE_ANALYSIS_BASIS' USING ERRCODE='23514'; END IF;
+ IF EXISTS(SELECT 1 FROM company_improvement_versions v WHERE v.data ? 'analysis_basis' AND
+ (jsonb_array_length(v.data->'analysis_basis'->'review_ids') NOT BETWEEN 1 AND 100
+ OR NOT EXISTS(SELECT 1 FROM analysis_runs r JOIN analysis_improvement_contexts c ON c.run_id=r.id
+ JOIN improvement_analysis_manifests m ON m.id=c.manifest_id
+ JOIN company_improvement_versions s ON s.id=m.version_id
+ JOIN company_improvements i ON i.id=s.improvement_id
+ WHERE r.id=v.data->'analysis_basis'->>'run_id'
+ AND s.id=v.data->'analysis_basis'->>'source_version_id' AND s.improvement_id=v.improvement_id
+ AND s.ordinal<v.ordinal AND s.site_ordinal=v.site_ordinal AND i.company_id=m.company_id
+ AND EXISTS(SELECT 1 FROM company_improvement_reviews z WHERE z.version_id=v.id AND z.outcome='MANUAL_STRUCTURE' AND z.actor_id=v.actor_id))))
+ THEN RAISE EXCEPTION 'MVP_STRUCTURE_ANALYSIS_BASIS' USING ERRCODE='23514'; END IF;
+ IF EXISTS(SELECT 1 FROM company_improvement_versions v,
+ jsonb_array_elements_text(v.data->'analysis_basis'->'review_ids') rid WHERE
+ NOT EXISTS(SELECT 1 FROM improvement_analysis_reviews d JOIN analysis_candidates a ON a.id=d.candidate_id
+ WHERE d.id=rid AND d.decision='USE_FOR_REQUEST' AND a.run_id=v.data->'analysis_basis'->>'run_id'))
+ THEN RAISE EXCEPTION 'MVP_STRUCTURE_REVIEW_LINEAGE' USING ERRCODE='23514'; END IF;
  RETURN NULL;
 END
 """

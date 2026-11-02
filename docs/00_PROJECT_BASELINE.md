@@ -1,5 +1,9 @@
 # DATCO 정부지원사업 운영체계 - Project Baseline
 
+> 2026-11-02 사용자 승인 증분: 관리자는 DMP 시스템·모듈·기능과 제공검증을 관리하고 시스템은 0발행 Capability에서도 원천 기술후보·단독/복합 초안을 생성한다. 운영자는 정확한 기업·분석·자산 Version 근거를 검토·수정한 뒤 기존 Composition/Matching/Proposal Guard로 진행한다. 기존 발행 Catalog·전주기 설계·승인/권한/불변 이력은 보존한다. 구현 전 영향/세부 계약과 실제 검증 상태는 [DMP 기술자산·자동조합](mvp/DMP_ASSET_AUTO_COMPOSITION.md)에 기록한다.
+
+> 2026-10-30 MVP v1.0 범위 증분: 이번 사용자 명시 개발 지시의 완료 범위는 기업 개선요구 → 검토된 DATCO 서비스 단독/복합 구성 → 실제 지원사업 검토·3자 매칭 → 표준 제안서 DOCX/PDF 검토·수요기업 전달까지다. 아래 전주기 H01~H32·신청/선정 후 운영은 미래 확장과 과거 기준으로 보존한다. 기존 Role/State/Company Scope·CONFIRM/ACK/PROPOSABLE·승인·원본/Version Guard는 변경하지 않는다. 대표/조직의 별도 공식 승인 상태는 미확인이다. 세부 실행 계약과 신규 M01~M18 인수는 [MVP 개발 계약](mvp/MASTER_DEVELOPMENT_CONTRACT.md), [인수 기준](mvp/ACCEPTANCE.md)을 따른다.
+
 ## 1. 문서 지위와 적용 기준
 
 이 문서는 프로젝트 최상위 제품/시스템 기준이다. AGENTS.md는 개발자의 행동규칙이며, Architecture, Data Model, State, Permission, 화면, Collector, Intelligence, Demo/Test 문서는 이 Baseline을 구체화한다.

@@ -38,6 +38,8 @@ def test_slice2_upgrade_preserves_existing_request_content_and_guard(tmp_path):
             assert c.scalar(function)==guard
             assert c.scalar(config)==settings
             for n,rows in before.items():assert [dict(r) for r in c.execute(text('SELECT * FROM '+n)).mappings()]==rows
+            mvp=load('fg31m0012026_mvp_analysis_lineage.py');mvp.upgrade()
+            assets=load('gh02a0012026_dmp_assets.py');assets.upgrade()
             for n,t in Base.metadata.tables.items():assert {x['name'] for x in inspect(c).get_columns(n,schema=schema)}==set(t.c.keys())
-            ux.downgrade();increment.downgrade();assert c.scalar(function)==guard;increment.upgrade();ux.upgrade()
+            assets.downgrade();mvp.downgrade();ux.downgrade();increment.downgrade();assert c.scalar(function)==guard;increment.upgrade();ux.upgrade();mvp.upgrade();assets.upgrade()
     finally:session.close();outer.rollback();c.close()

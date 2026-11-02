@@ -1,3 +1,4 @@
+import {FileSelection} from './file-selection';
 import {useState,useRef,useEffect} from 'react';
 import type {CompanyWorkflow} from './workflow';
 import {emptyProfile,companyReasons,type Profile,type CompanyData} from '../company/client';
@@ -17,7 +18,7 @@ function Original({file}:{file:File}){
 export function InitialRegistration({w,goto}:{w:CompanyWorkflow;goto:(s:string)=>void}){
  // Actor-memory only: survives the initial company selection, never browser storage.
  const request=useRef<AbortController|null>(null),continuing=useRef(false);useEffect(()=>()=>request.current?.abort(),[]);
- const [draft,setState]=useState<Draft>(()=>w.drafts.get('initial-registration') as Draft??blank()),[busy,setBusy]=useState(false),[drag,setDrag]=useState(false);
+ const [draft,setState]=useState<Draft>(()=>w.drafts.get('initial-registration') as Draft??blank()),[busy,setBusy]=useState(false);
  const update=(patch:Partial<Draft>)=>{const next={...(w.drafts.get('initial-registration') as Draft??draft),...patch};w.drafts.set('initial-registration',next);setState(next);return next;};
  const setProfile=(patch:Partial<Profile>)=>update({profile:{...draft.profile,...patch}});
  function add(files:File[]){if(files.length+draft.documents.length>2||files.some(f=>!f.size||f.size>20*1024*1024||!f.name.toLowerCase().endsWith('.pdf'))){update({error:'PDF를 최대 2개, 파일당 20MB 이하로 선택해 주세요.'});return;}update({documents:[...draft.documents,...files.map(file=>({file,candidates:[],locations:[],error:''}))],error:''});}
@@ -84,11 +85,9 @@ if(current.documents.some(d=>!actual.files.some(f=>f.id===d.fileId&&(!d.digest||
  const showForm=draft.mode==='direct'||draft.documents.some(d=>d.analyzed)||!!draft.created;
  return <><BusinessHeading title="기업정보 등록 시작" description="서류를 올려 정보를 가져오거나 직접 입력해 주세요."/>{draft.error&&<p role="alert">{draft.error}</p>}
  {draft.mode==='documents'?<BusinessCard title="사업자등록 서류 업로드"><p>사업자등록증 또는 사업자등록증명원 PDF 중 하나만 있어도 됩니다.</p>
- <div className={'mt-4 rounded-xl border-2 border-dashed p-6 '+(drag?'border-blue-500 bg-blue-50':'border-slate-200')} onDragOver={e=>{e.preventDefault();setDrag(true);}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);if(!locked&&!draft.created)add(Array.from(e.dataTransfer.files));}}>
- <BusinessField label="최초 등록 PDF 선택"><input className="block w-full min-w-0" disabled={locked||!!draft.created} type="file" multiple accept=".pdf,application/pdf" onChange={e=>{add(Array.from(e.target.files??[]));e.currentTarget.value='';}}/></BusinessField><p>파일 선택 또는 드래그 앤 드롭 · 최대 2개 · 각 20MB</p>
- </div><div className="mt-4 flex flex-wrap items-center gap-3" aria-label="서류 작업">
+ <FileSelection label="최초 등록 PDF 선택" accept=".pdf,application/pdf" files={draft.documents.map(d=>d.file)} disabled={locked||!!draft.created} maxFiles={2} hint="사업자등록증·사업자등록증명원 PDF" onFiles={add} onRemove={index=>update({documents:draft.documents.filter((_,i)=>i!==index),error:''})}/><div className="mt-4 flex flex-wrap items-center gap-3" aria-label="서류 작업">
  <button className={primary} disabled={locked||!!draft.created||!draft.documents.length} onClick={()=>void analyze()}>문서 분석</button>
- <button className={secondary} disabled={locked||!!draft.created||!draft.documents.length} onClick={()=>update({documents:[],error:''})}>선택 취소</button>
+ <button className={secondary} disabled={locked||!!draft.created||!draft.documents.length} onClick={()=>update({documents:[],error:''})}>선택한 서류 모두 비우기</button>
  <button className={secondary} disabled={locked||!!draft.created} onClick={()=>update({mode:'direct',error:''})}>직접 입력으로 진행</button></div>
  {draft.documents.map((doc,i)=><article className="mt-4" key={i}><p>{doc.file.name}{doc.analyzed&&!doc.error?' · 분석 완료':''}</p>{doc.error&&<p role="alert">{doc.error}</p>}</article>)}
  {busy&&<div role="status"><p>문서를 읽고 있습니다. 잠시 기다려 주세요.</p><button className={secondary} onClick={()=>{request.current?.abort();setBusy(false);update({error:'분석을 취소했습니다. 직접 입력으로 진행할 수 있습니다.'});}}>분석 취소</button></div>}
