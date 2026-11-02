@@ -219,6 +219,27 @@ def source_accounts(directory):
     return dict(accounts=context["accounts"],password=context["password"]),path
 
 
+
+def wait_postgres_tcp(m,timeout=90):
+    import psycopg
+    resource=inspect_label("container",m["container"],m["nonce"])
+    ports=resource["NetworkSettings"]["Ports"].get("5432/tcp") or []
+    if not any(p["HostIp"]=="127.0.0.1" and int(p["HostPort"])==m["pg_port"] for p in ports):
+        raise RuntimeError("OWN_POSTGRES_PORT_MISMATCH")
+    deadline=time.monotonic()+timeout
+    while True:
+        try:
+            with psycopg.connect(host="127.0.0.1",port=m["pg_port"],dbname="datco_ci_admin",
+                                 user="ci_provisioner",password=m["admin_password"],connect_timeout=2) as connection:
+                if connection.execute("select current_database(),current_user").fetchone()!=("datco_ci_admin","ci_provisioner"):
+                    raise RuntimeError("OWN_POSTGRES_IDENTITY_MISMATCH")
+            return
+        except psycopg.OperationalError:
+            if time.monotonic()>=deadline:
+                raise RuntimeError("OWN_POSTGRES_NOT_READY") from None
+            time.sleep(.25)
+
+
 def create(args):
     from sqlalchemy.engine import URL
     import psycopg
@@ -282,6 +303,7 @@ def create(args):
         if time.monotonic() > deadline:
             raise RuntimeError("OWN_POSTGRES_NOT_READY")
         time.sleep(.5)
+    wait_postgres_tcp(m)
     from sqlalchemy.engine import make_url
     url = make_url(m["url"])
     with psycopg.connect(host="127.0.0.1", port=pg, dbname="datco_ci_admin",

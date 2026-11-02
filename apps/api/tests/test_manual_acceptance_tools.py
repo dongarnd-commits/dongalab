@@ -148,3 +148,37 @@ def test_repository_common_dir_from_non_utf8_cli(tmp_path):
     env.pop("PYTHONPATH",None)
     result=subprocess.run([sys.executable,"-B","-c",code],cwd=tmp_path,env=env,capture_output=True,encoding="utf-8")
     assert result.returncode==0,result.stderr
+
+
+def test_postgres_waits_for_owned_tcp_identity_after_temporary_server(monkeypatch):
+    import psycopg
+    m={**sample(),"pg_port":45100,"admin_password":"TEST_unit_only"}
+    monkeypatch.setattr(uat,"inspect_label",lambda *args:{"NetworkSettings":{"Ports":{"5432/tcp":[{"HostIp":"127.0.0.1","HostPort":"45100"}]}}})
+    attempts=[]
+    class Connection:
+        def __enter__(self):return self
+        def __exit__(self,*args):pass
+        def execute(self,query):
+            assert query=="select current_database(),current_user"
+            return self
+        def fetchone(self):return ("datco_ci_admin","ci_provisioner")
+    def connect(**kwargs):
+        attempts.append(kwargs)
+        if len(attempts)==1:raise psycopg.OperationalError("temporary Unix server has no TCP")
+        return Connection()
+    monkeypatch.setattr(psycopg,"connect",connect)
+    monkeypatch.setattr(uat.time,"sleep",lambda *args:None)
+    uat.wait_postgres_tcp(m)
+    assert len(attempts)==2
+    assert all(c["host"]=="127.0.0.1" and c["port"]==45100 for c in attempts)
+
+
+def test_postgres_not_ready_has_bounded_failure_without_provisioning(monkeypatch):
+    import psycopg
+    m={**sample(),"pg_port":45100,"admin_password":"TEST_not_a_live_secret"}
+    monkeypatch.setattr(uat,"inspect_label",lambda *args:{"NetworkSettings":{"Ports":{"5432/tcp":[{"HostIp":"127.0.0.1","HostPort":"45100"}]}}})
+    def unavailable(**kwargs):raise psycopg.OperationalError("initializing")
+    monkeypatch.setattr(psycopg,"connect",unavailable)
+    clock=iter((0,2));monkeypatch.setattr(uat.time,"monotonic",lambda:next(clock))
+    with pytest.raises(RuntimeError,match="OWN_POSTGRES_NOT_READY"):
+        uat.wait_postgres_tcp(m,timeout=1)

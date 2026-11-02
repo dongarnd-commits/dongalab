@@ -22,6 +22,7 @@
 | 관리자 미연결 컨트롤과 중복 권한 부여 혼란 | 실제 연결된 5개 메뉴와 업무 이동 사용. 이미 부여된 접근은 버튼 비활성/사유 표시. Backend 권한 정책은 유지 |
 | Windows 시험 서버 조회의 일시적 ECONNRESET | 실제 실패한 GET 조회에만 제한된 transport 재시도. 저장·발송 POST의 자동 재시도는 추가하지 않음 |
 | 인수 도구의 루트 CLI에서 API 모듈을 못 찾음 | 자식 환경 설정 이전의 API import 경로와 Git UTF-8 경로 디코딩을 보완. PYTHONPATH/UTF-8 모드가 없는 독립 subprocess와 실제 기존 계정 읽기 전용 검증 추가 |
+| Docker PG 초기화의 임시 Unix 서버를 최종 준비로 오인 | 소유 레이블/loopback 포트와 실제 TCP DB 신원을 확인한 뒤 Role/DB 생성. 준비 대기는 제한시간 내 실패하며 업무 DDL을 자동 반복하지 않음 |
 | 실패 진단에 요청 헤더가 포함될 수 있음 | CI stdout/완료된 오류 문서에서 세션 헤더·시험 비밀번호 마스킹. 실패/상태/검증 근거는 보존 |
 
 현재 Rule은 improvement-rules-v4이며 범용 LLM 의미분석이 아니다. R01~R08을 유지한다.
@@ -41,7 +42,7 @@ STRUCTURE content가 실제 인용에 포함되어야 한다는 기존 DB 제약
 
 | 검증 | 실행 결과/근거 |
 |---|---|
-| 전체 Backend Unit | 295 PASS / private runtime reacceptance-unit.xml |
+| 전체 Backend Unit | 297 PASS / private runtime reacceptance-unit.xml |
 | Rule·사용자 재현·기존 추천 평가 | 105 PASS, 기존 서비스 추천 Gold 23개 기대값 유지 |
 | 전체 격리 PostgreSQL | 292 PASS / 기존 실제 원문 opt-in 1 SKIP / ci/96d1a7114624/integration.xml |
 | 새 빈 데이터 UI 시나리오 | 3 PASS / ci/ffce0c929383/browser-results |
