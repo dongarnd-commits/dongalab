@@ -44,6 +44,18 @@ def evaluate_case(case):
         for rule,outcome in gold.get('diagnostic',{}).items():
             found=next((d['outcome'] for d in diagnostics if d['rule']==rule),None)
             check('repeated_question_or_answer_state',found,outcome)
+        for rule in gold.get('no_missing_rules',[]):
+            check('repeated_question_emission',
+                  [c['data']['rule_id'] for c in candidates if c['category']=='MISSING_INFORMATION' and c['data']['rule_id']==rule],[])
+        labels=[c['data'].get('function_label','') for c in candidates if c['category']=='STRUCTURE']
+        for label in gold.get('absent_function_labels',[]):
+            term=label.split('·')[0].split(' ')[0]
+            check('excluded_function',not any(term in value for value in labels),True)
+        for label in gold.get('required_function_labels',[]):
+            term=label.split(' ')[0]
+            check('required_function',any(term in value for value in labels),True)
+        for quote in gold.get('evidence_quotes',[]):
+            check('required_evidence_quote',quote in [e.get('quote') for c in candidates for e in c['data']['evidence']],True)
         check('candidate_source_grounding',all(e in spans for c in candidates for e in c['data']['evidence']),True)
     elif case['kind']=='scalars':
         result=scalar_observations(payload['spans'])
@@ -75,7 +87,7 @@ def evaluate_case(case):
         except DocumentError as exc:
             output=dict(error=str(exc))
         for key,wanted in gold.items():
-            check('parser_'+key,len(output.get('locations',[])) if key=='locations' else output.get(key),wanted)
+            check('parser_'+key,len(output.get('locations',[])) if key=='locations' else [location['text'] for location in output.get('locations',[])] if key=='texts' else output.get(key),wanted)
     else:
         raise ValueError('UNSUPPORTED_EVALUATOR_CASE')
     return dict(id=case['id'],kind=case['kind'],passed=all(c['passed'] for c in checks),checks=checks,output=output)

@@ -4,7 +4,7 @@ from copy import deepcopy
 from app.capability.search import search_reasons, query_terms
 from app.notice.domain import Denied
 
-VERSION = 'published-solutions-v3'
+VERSION = 'published-solutions-v4'
 VOCABULARY = (
     ('재고', '입고', '출고', '입출고', '수불', '물류', '창고'),
     ('생산', '공정', '작업실적', '제조', 'mes'),
@@ -19,7 +19,7 @@ VOCABULARY = (
 # Domain membership is a retrieval guard, not a synonym relation: payroll does
 # not become attendance just because both belong to HR.
 SYNONYMS = (
-    ('입출고', '입고', '출고'), ('생산실적', '작업실적'),
+    ('생산실적', '작업실적'),
     ('근태', '출퇴근'), ('휴가', '연차'), ('급여', '임금'),
     ('전자결재', '결재', '기안'), ('전표', '분개'),
     ('hr', '인사'), ('mes', '생산'), ('qms', '품질'), ('scms', '공급망'),
@@ -41,7 +41,9 @@ def clauses(text):
     value = re.sub(r'아니라', '대상 아님,', value)
     value = re.sub(r'무관(?:하며|하고|하지만)', '무관,', value)
     value = re.sub(r'관련[이는은]?\s*없(?:고|으며)', '관련 없음,', value)
-    return re.split(r'[\n,;.!?]', value)
+    # Separate explicit coordinated business scopes before deciding exclusions.
+    # Keep original demands/evidence unchanged; these are retrieval clauses only.
+    return re.split(r'[\n,;.!?]|(?:하며|하지만|이며|이고)\s+', value)
 
 
 def positive_text(text):
@@ -53,6 +55,8 @@ def expanded(text):
     value = positive_text(text)
     tokens = set(query_terms(value))
     related = [word for group in SYNONYMS if any(word in tokens for word in group) for word in group]
+    # The compound covers two directional tasks; one direction does not imply the other.
+    if '입출고' in tokens:related.extend(('입고','출고'))
     weak = ('확인', '개선', '통합', '중복', '분산', '현재', '체계적', '정리')
     return ' '.join(term for term in query_terms(' '.join([value, *related])) if not term.startswith(weak))
 
@@ -88,6 +92,7 @@ def exclusions(context, reviewed=()):
         for word in found:
             if word in DOMAIN_EXCLUSIONS:
                 words.update(VOCABULARY[DOMAIN_EXCLUSIONS[word]])
+    if '입출고' in words:words.update(('입고','출고'))
     for group in SYNONYMS:
         if words.intersection(group):
             words.update(group)

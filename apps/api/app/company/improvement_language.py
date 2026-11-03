@@ -62,6 +62,8 @@ def answer_span(rule,spans,present):
             if explicit_scope or current_tool:
                 return source,'FOUND'
             subject={'R06':r'예산|사업비|견적','R07':r'일정|착수|기한|납기|도입\s*(?:시기|시점)'}.get(rule)
+            if subject and re.search(r'(?:'+subject+r')[^,;.!?]{0,80}(?:현재|아직)\s*(?:미정|미확정|미결정|모름)',line):
+                return source,'DECLARED_UNKNOWN'
             if subject and re.search(r'(?:'+subject+r').{0,35}(?:추후|별도|근거\s*확인\s*후).{0,12}(?:산정|확인|검토)',line):
                 return source,'DECLARED_UNKNOWN'
             found=re.search(present,line) or re.search(ANSWERS.get(rule,r'(?!)'),line)

@@ -13,7 +13,7 @@ from app.capability.search import compact, query_terms, GENERAL, PARTICLES
 from app.company.improvement_structure import normalized
 from app.notice.domain import Denied
 
-VERSION = "asset-solutions-v3"
+VERSION = "asset-solutions-v4"
 MAX_MODULE_FEATURES = 8
 MAX_COMPOSITE_MODULES = 6
 MAX_ALTERNATIVES = 8

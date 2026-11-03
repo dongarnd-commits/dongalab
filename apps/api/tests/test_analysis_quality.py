@@ -81,3 +81,20 @@ def test_alternative_scope_uses_only_literal_registered_source_quotes():
             assert any(e['quote'] in row['addressed_scope'] for c in selected for e in c['evidence'])
             assert '아직 검증하지 않았습니다' in row['unaddressed_scope']
 
+
+def test_coordinated_positive_and_excluded_work_keep_separate_scopes():
+    from app.capability.asset_solutions import generate
+    from test_asset_solutions import context,catalog
+    for text in ('출고 처리 기록을 조회하려고 하며 회계 전표는 제외합니다.',
+                 '출고 처리 기록을 조회하지만 회계 전표는 도입하지 않습니다.'):
+        result=generate(context(text),catalog())
+        assert {item['name'] for item in result['candidates']}=={'출고등록'}
+        assert all(row['text']==text for row in result['demands'])
+
+def test_explicit_later_unknown_budget_is_an_answer_without_invented_amount():
+    from app.company.improvement_rules import analyze
+    text='사업비는 공급 범위를 확인한 다음 정하며 아직 미확정입니다.'
+    source=dict(kind='IMPROVEMENT',version_id='TEST_UNKNOWN',field='constraints',quote=text,descriptor='TEST field')
+    candidates,diagnostics=analyze({},[source])
+    assert next(d['outcome'] for d in diagnostics if d['rule']=='R06')=='DECLARED_UNKNOWN'
+    assert not any(c['category']=='MISSING_INFORMATION' and c['data']['rule_id']=='R06' for c in candidates)

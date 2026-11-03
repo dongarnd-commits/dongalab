@@ -1,0 +1,3009 @@
+{
+  "schema": "analysis-quality-comparison-v2",
+  "scope": "EXPOSED_REGRESSION_NOT_UNSEEN_HOLDOUT",
+  "code_head": "0b6f56a88131a10fdc9c4cb16ed7658250275b03",
+  "corpus_sha256": "0d72ed1458a76dacdc182fad41691f767aac5345e8262600d9625ac74a60c918",
+  "versions": {
+    "improvement_rule": "improvement-rules-v4",
+    "asset_rule": "asset-solutions-v2",
+    "published_rule": "published-solutions-v2",
+    "generic_parser": "company-local-parser-v1",
+    "registration_ocr": "company-registration-local-ocr-v1.2",
+    "financial_ocr": "nts-business-layout-ocr-v1"
+  },
+  "source_sha256": {
+    "apps/api/app/capability/asset_solutions.py": "6a8c5d005a418bb214ff0006b09836e50112bbf11f882a229c932044477ab0dd",
+    "apps/api/app/capability/recommendations.py": "6907ef8d151db8fc9d17984d012ad3371af3bfa5decb4e3a7e606e9363dd3080",
+    "apps/api/app/capability/search.py": "3611226f3818d90496356686466c427d101fd6b67403e50918b5051801a6a919",
+    "apps/api/app/company/documents.py": "c82365196de975bfc0eac6d18cb2104ecb354f506ccc41287a60ed4e2669bfc4",
+    "apps/api/app/company/improvement_language.py": "f618354e8776b8722d27d114b87f9a51bf2b0ac183443370b8e9f5b854c555bc",
+    "apps/api/app/company/improvement_rules.py": "c2387c38806a63123e55e22b8da2f6708fe2586b2b7163a74972aa3a231cd689",
+    "apps/api/app/company/improvement_structure.py": "a0fab5012211ac4d787641b85c668a24f7b977ff45d3d103283b9378cc44561b",
+    "apps/api/app/company/ocr.py": "64bfb90d8f3926e93477902070c3f7621e19c96735cf9ed388659383e1419b6a",
+    "apps/api/app/company/registration.py": "a76fb0bb92e3989ed31f1478a9e471712e21bdf3f18d46b1d8b8973a0016f8a6",
+    "apps/api/app/company/statement_documents.py": "ea178c3ba54f24930179a0b2ce05655751421b9059f3910632c3e5b9c20dcb3c",
+    "apps/api/app/notice/domain.py": "44f8f7ce6b7784c9cadae3c5b00dba5348867956cd6a45f63722832279968490",
+    "apps/api/tests/test_asset_solutions.py": "54359893fd8ec3ee2e6cdbc9466f5e7cc1a79ae4ee89d5584393db65569d0512"
+  },
+  "summary": {
+    "cases": 24,
+    "passed": 13,
+    "failed": 11,
+    "processing_failures": 0,
+    "unsupported_inputs": 1,
+    "rejected_inputs": 3,
+    "content_cases": 21,
+    "content_passed": 10,
+    "declared_unsupported_grammar_cases": 5,
+    "declared_unsupported_grammar_failed": 5,
+    "assertions": 60,
+    "failed_assertions": 16
+  },
+  "metrics": {
+    "candidate_source_grounding": {
+      "total": 9,
+      "failed": 0
+    },
+    "catalog_quote_grounding": {
+      "total": 6,
+      "failed": 0
+    },
+    "classification": {
+      "total": 2,
+      "failed": 2
+    },
+    "excluded_function": {
+      "total": 2,
+      "failed": 0
+    },
+    "number_unit_period_groups": {
+      "total": 5,
+      "failed": 5
+    },
+    "number_unit_period_values": {
+      "total": 5,
+      "failed": 5
+    },
+    "parser_error": {
+      "total": 3,
+      "failed": 0
+    },
+    "parser_locations": {
+      "total": 1,
+      "failed": 0
+    },
+    "parser_parser": {
+      "total": 1,
+      "failed": 0
+    },
+    "parser_texts": {
+      "total": 1,
+      "failed": 0
+    },
+    "recommendation_missing": {
+      "total": 6,
+      "failed": 2
+    },
+    "recommendation_unnecessary": {
+      "total": 6,
+      "failed": 0
+    },
+    "repeated_question_emission": {
+      "total": 4,
+      "failed": 0
+    },
+    "repeated_question_or_answer_state": {
+      "total": 2,
+      "failed": 2
+    },
+    "required_function": {
+      "total": 1,
+      "failed": 0
+    },
+    "unnecessary_composite_modules": {
+      "total": 6,
+      "failed": 0
+    }
+  },
+  "operator_correction_proxy": 16,
+  "limitations": [
+    "Synthetic finite development corpus, not unseen holdout or real-company accuracy.",
+    "Gold mismatch counts are a correction proxy, not measured operator time or rewrite volume.",
+    "No OCR execution, real-company files, corrected Fact persistence or authenticated DB workflow is evaluated here; existing integration guards require separate regression.",
+    "Unsupported and damaged inputs are reported as such; expected rejection is not successful extraction.",
+    "Round2 cases have already been exposed. This is regression evidence, not an unseen holdout.",
+    "Changes to gold and changes to product code must be compared separately. Original raw gold and first-evaluation JSON are retained.",
+    "Free-text scalar grammar limitations remain failures in the same 24-case denominator.",
+    "Exact commit bytes and current support-import bytes may differ in line endings; source_loading records both and verifies LF-equivalent pure support.",
+    "Generic parser rejection of an unsupported or damaged input is not successful extraction; OCR versions are references and OCR was not executed."
+  ],
+  "results": [
+    {
+      "id": "H01",
+      "kind": "rules",
+      "passed": false,
+      "checks": [
+        {
+          "metric": "classification",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "metric": "candidate_source_grounding",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        }
+      ],
+      "output": {
+        "candidates": [],
+        "diagnostics": [
+          {
+            "rule": "R02",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R04",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R05",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R06",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R07",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          }
+        ]
+      }
+    },
+    {
+      "id": "H02",
+      "kind": "rules",
+      "passed": false,
+      "checks": [
+        {
+          "metric": "classification",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "metric": "candidate_source_grounding",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        }
+      ],
+      "output": {
+        "candidates": [],
+        "diagnostics": [
+          {
+            "rule": "R02",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R04",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R05",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R06",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R07",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          }
+        ]
+      }
+    },
+    {
+      "id": "H03",
+      "kind": "rules",
+      "passed": true,
+      "checks": [
+        {
+          "metric": "excluded_function",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "metric": "required_function",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "metric": "candidate_source_grounding",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        }
+      ],
+      "output": {
+        "candidates": [
+          {
+            "category": "STRUCTURE",
+            "content": "재고 수량은 조회",
+            "reason": "원문에 명시된 현황·목표·요구사항을 구조화한 후보입니다.",
+            "data": {
+              "subject": "required_functions",
+              "rule_id": "R03",
+              "rule_version": "improvement-rules-v4",
+              "claim_kind": "INFERRED",
+              "evidence": [
+                {
+                  "kind": "IMPROVEMENT",
+                  "version_id": "TEST_HOLDOUT_VERSION",
+                  "field": "original_text",
+                  "quote": "급여계산은 원하지 않습니다. 창고 재고 수량은 조회하려고 합니다.",
+                  "descriptor": "TEST holdout original field original_text"
+                }
+              ],
+              "uncertainty": "원문 업무 표현에서 제안한 기능 검토 후보; 실제 서비스 제공·구축 가능성 확인 필요",
+              "question": "",
+              "derivation": {
+                "id": "STOCK_STATUS",
+                "method": "BOUNDED_LITERAL_MAPPING",
+                "matched_quotes": [
+                  "재고 수량은 조회"
+                ]
+              },
+              "function_label": "재고 현황 관리"
+            }
+          }
+        ],
+        "diagnostics": [
+          {
+            "rule": "R02",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R04",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R05",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R06",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R07",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          }
+        ]
+      }
+    },
+    {
+      "id": "H04",
+      "kind": "rules",
+      "passed": true,
+      "checks": [
+        {
+          "metric": "excluded_function",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "metric": "candidate_source_grounding",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        }
+      ],
+      "output": {
+        "candidates": [
+          {
+            "category": "STRUCTURE",
+            "content": "검사 기록을 조회",
+            "reason": "원문에 명시된 현황·목표·요구사항을 구조화한 후보입니다.",
+            "data": {
+              "subject": "required_functions",
+              "rule_id": "R03",
+              "rule_version": "improvement-rules-v4",
+              "claim_kind": "INFERRED",
+              "evidence": [
+                {
+                  "kind": "IMPROVEMENT",
+                  "version_id": "TEST_HOLDOUT_VERSION",
+                  "field": "original_text",
+                  "quote": "전자결재는 추천하지 않습니다. 검사 기록을 조회하려고 합니다.",
+                  "descriptor": "TEST holdout original field original_text"
+                }
+              ],
+              "uncertainty": "원문 업무 표현에서 제안한 기능 검토 후보; 실제 서비스 제공·구축 가능성 확인 필요",
+              "question": "",
+              "derivation": {
+                "id": "QUALITY_RECORD",
+                "method": "BOUNDED_LITERAL_MAPPING",
+                "matched_quotes": [
+                  "검사 기록을 조회"
+                ]
+              },
+              "function_label": "품질·불량 현황 관리"
+            }
+          },
+          {
+            "category": "STRUCTURE",
+            "content": "결재는 추천하지 않습니다. 검사 기록을 조회",
+            "reason": "원문에 명시된 현황·목표·요구사항을 구조화한 후보입니다.",
+            "data": {
+              "subject": "required_functions",
+              "rule_id": "R03",
+              "rule_version": "improvement-rules-v4",
+              "claim_kind": "INFERRED",
+              "evidence": [
+                {
+                  "kind": "IMPROVEMENT",
+                  "version_id": "TEST_HOLDOUT_VERSION",
+                  "field": "original_text",
+                  "quote": "전자결재는 추천하지 않습니다. 검사 기록을 조회하려고 합니다.",
+                  "descriptor": "TEST holdout original field original_text"
+                }
+              ],
+              "uncertainty": "원문 업무 표현에서 제안한 기능 검토 후보; 실제 서비스 제공·구축 가능성 확인 필요",
+              "question": "",
+              "derivation": {
+                "id": "DOCUMENT_FLOW",
+                "method": "BOUNDED_LITERAL_MAPPING",
+                "matched_quotes": [
+                  "결재는 추천하지 않습니다. 검사 기록을 조회"
+                ]
+              },
+              "function_label": "문서·결재 흐름 관리"
+            }
+          }
+        ],
+        "diagnostics": [
+          {
+            "rule": "R02",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R04",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R05",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R06",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R07",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          }
+        ]
+      }
+    },
+    {
+      "id": "H05",
+      "kind": "rules",
+      "passed": false,
+      "checks": [
+        {
+          "metric": "repeated_question_or_answer_state",
+          "actual": "NOT_FOUND_IN_SCOPE",
+          "expected": "DECLARED_UNKNOWN",
+          "passed": false
+        },
+        {
+          "metric": "candidate_source_grounding",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        }
+      ],
+      "output": {
+        "candidates": [
+          {
+            "category": "STRUCTURE",
+            "content": "예산은 현장 견적을 확인한 뒤 정하며 현재 미정입니다.",
+            "reason": "원문에 명시된 현황·목표·요구사항을 구조화한 후보입니다.",
+            "data": {
+              "subject": "constraints",
+              "rule_id": "R03",
+              "rule_version": "improvement-rules-v4",
+              "claim_kind": "DIRECT_SOURCE",
+              "evidence": [
+                {
+                  "kind": "IMPROVEMENT",
+                  "version_id": "TEST_HOLDOUT_VERSION",
+                  "field": "constraints",
+                  "quote": "예산은 현장 견적을 확인한 뒤 정하며 현재 미정입니다.",
+                  "descriptor": "TEST holdout original field constraints"
+                }
+              ],
+              "uncertainty": "사람 검토 필요; 확인된 기업 사실이 아님",
+              "question": ""
+            }
+          },
+          {
+            "category": "MISSING_INFORMATION",
+            "content": "검사 범위 내 사업비 추가 확인 후보",
+            "reason": "예산 검토에는 산정 범위와 통화·포함 비용의 확인이 필요합니다.",
+            "data": {
+              "subject": "사업비",
+              "rule_id": "R06",
+              "rule_version": "improvement-rules-v4",
+              "claim_kind": "SEARCH_NOT_FOUND",
+              "evidence": [
+                {
+                  "kind": "IMPROVEMENT",
+                  "version_id": "TEST_HOLDOUT_VERSION",
+                  "field": "constraints",
+                  "quote": "예산은 현장 견적을 확인한 뒤 정하며 현재 미정입니다.",
+                  "descriptor": "TEST holdout original field constraints"
+                }
+              ],
+              "uncertainty": "명시 라벨 검사 범위에서만 미확인; 제외 자료 및 의미상 동등 표현은 확인하지 않음",
+              "question": "검토할 예산의 산정 범위·통화·포함 비용을 확인해 주세요.",
+              "search_scope": [],
+              "uninspected_ids": [],
+              "assessment": "NOT_FOUND_IN_SCOPE"
+            }
+          }
+        ],
+        "diagnostics": [
+          {
+            "rule": "R02",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R04",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R05",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R06",
+            "outcome": "NOT_FOUND_IN_SCOPE",
+            "evidence": [
+              {
+                "kind": "IMPROVEMENT",
+                "version_id": "TEST_HOLDOUT_VERSION",
+                "field": "constraints",
+                "quote": "예산은 현장 견적을 확인한 뒤 정하며 현재 미정입니다.",
+                "descriptor": "TEST holdout original field constraints"
+              }
+            ],
+            "scope": [],
+            "uninspected_ids": []
+          },
+          {
+            "rule": "R07",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          }
+        ]
+      }
+    },
+    {
+      "id": "H06",
+      "kind": "rules",
+      "passed": false,
+      "checks": [
+        {
+          "metric": "repeated_question_or_answer_state",
+          "actual": "NOT_APPLICABLE",
+          "expected": "FOUND",
+          "passed": false
+        },
+        {
+          "metric": "candidate_source_grounding",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        }
+      ],
+      "output": {
+        "candidates": [
+          {
+            "category": "STRUCTURE",
+            "content": "도입 시점은 2028년 2월로 정했습니다.",
+            "reason": "원문에 명시된 현황·목표·요구사항을 구조화한 후보입니다.",
+            "data": {
+              "subject": "constraints",
+              "rule_id": "R03",
+              "rule_version": "improvement-rules-v4",
+              "claim_kind": "DIRECT_SOURCE",
+              "evidence": [
+                {
+                  "kind": "IMPROVEMENT",
+                  "version_id": "TEST_HOLDOUT_VERSION",
+                  "field": "constraints",
+                  "quote": "도입 시점은 2028년 2월로 정했습니다.",
+                  "descriptor": "TEST holdout original field constraints"
+                }
+              ],
+              "uncertainty": "사람 검토 필요; 확인된 기업 사실이 아님",
+              "question": ""
+            }
+          }
+        ],
+        "diagnostics": [
+          {
+            "rule": "R02",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R04",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R05",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R06",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R07",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          }
+        ]
+      }
+    },
+    {
+      "id": "H07",
+      "kind": "rules",
+      "passed": true,
+      "checks": [
+        {
+          "metric": "repeated_question_emission",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "metric": "repeated_question_emission",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "metric": "candidate_source_grounding",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        }
+      ],
+      "output": {
+        "candidates": [
+          {
+            "category": "STRUCTURE",
+            "content": "현재 작업은 엑셀로 집계하며 일평균 재입력에 45분이 걸립니다.",
+            "reason": "원문에 명시된 현황·목표·요구사항을 구조화한 후보입니다.",
+            "data": {
+              "subject": "as_is",
+              "rule_id": "R01",
+              "rule_version": "improvement-rules-v4",
+              "claim_kind": "DIRECT_SOURCE",
+              "evidence": [
+                {
+                  "kind": "IMPROVEMENT",
+                  "version_id": "TEST_HOLDOUT_VERSION",
+                  "field": "as_is",
+                  "quote": "현재 작업은 엑셀로 집계하며 일평균 재입력에 45분이 걸립니다.",
+                  "descriptor": "TEST holdout original field as_is"
+                }
+              ],
+              "uncertainty": "사람 검토 필요; 확인된 기업 사실이 아님",
+              "question": ""
+            }
+          }
+        ],
+        "diagnostics": [
+          {
+            "rule": "R02",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R04",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R05",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R06",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R07",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          }
+        ]
+      }
+    },
+    {
+      "id": "H08",
+      "kind": "rules",
+      "passed": true,
+      "checks": [
+        {
+          "metric": "repeated_question_emission",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "metric": "candidate_source_grounding",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        }
+      ],
+      "output": {
+        "candidates": [
+          {
+            "category": "STRUCTURE",
+            "content": "목표는 집계시간을 10분으로 줄이는 것입니다.",
+            "reason": "원문에 명시된 현황·목표·요구사항을 구조화한 후보입니다.",
+            "data": {
+              "subject": "goal",
+              "rule_id": "R03",
+              "rule_version": "improvement-rules-v4",
+              "claim_kind": "DIRECT_SOURCE",
+              "evidence": [
+                {
+                  "kind": "IMPROVEMENT",
+                  "version_id": "TEST_HOLDOUT_VERSION",
+                  "field": "goal",
+                  "quote": "목표는 집계시간을 10분으로 줄이는 것입니다.",
+                  "descriptor": "TEST holdout original field goal"
+                }
+              ],
+              "uncertainty": "사람 검토 필요; 확인된 기업 사실이 아님",
+              "question": ""
+            }
+          }
+        ],
+        "diagnostics": [
+          {
+            "rule": "R02",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R04",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R05",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R06",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R07",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          }
+        ]
+      }
+    },
+    {
+      "id": "H09",
+      "kind": "rules",
+      "passed": true,
+      "checks": [
+        {
+          "metric": "repeated_question_emission",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "metric": "candidate_source_grounding",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        }
+      ],
+      "output": {
+        "candidates": [
+          {
+            "category": "STRUCTURE",
+            "content": "대상은 2개 현장의 검사 담당자 7명입니다.",
+            "reason": "원문에 명시된 현황·목표·요구사항을 구조화한 후보입니다.",
+            "data": {
+              "subject": "constraints",
+              "rule_id": "R03",
+              "rule_version": "improvement-rules-v4",
+              "claim_kind": "DIRECT_SOURCE",
+              "evidence": [
+                {
+                  "kind": "IMPROVEMENT",
+                  "version_id": "TEST_HOLDOUT_VERSION",
+                  "field": "constraints",
+                  "quote": "대상은 2개 현장의 검사 담당자 7명입니다.",
+                  "descriptor": "TEST holdout original field constraints"
+                }
+              ],
+              "uncertainty": "사람 검토 필요; 확인된 기업 사실이 아님",
+              "question": ""
+            }
+          }
+        ],
+        "diagnostics": [
+          {
+            "rule": "R02",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R04",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R05",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R06",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          },
+          {
+            "rule": "R07",
+            "outcome": "NOT_APPLICABLE",
+            "reason": "명시된 적용조건 없음"
+          }
+        ]
+      }
+    },
+    {
+      "id": "H10",
+      "kind": "scalars",
+      "passed": false,
+      "checks": [
+        {
+          "metric": "number_unit_period_values",
+          "actual": [],
+          "expected": [
+            "1250000000"
+          ],
+          "passed": false
+        },
+        {
+          "metric": "number_unit_period_groups",
+          "actual": 0,
+          "expected": 1,
+          "passed": false
+        }
+      ],
+      "output": [],
+      "support_status": "UNSUPPORTED_FREE_TEXT_SCALAR_GRAMMAR",
+      "support_limit": "This supplied free-text grammar is not supported by the bounded scalar parser. Original gold stays unchanged; failure remains in the denominator."
+    },
+    {
+      "id": "H11",
+      "kind": "scalars",
+      "passed": false,
+      "checks": [
+        {
+          "metric": "number_unit_period_values",
+          "actual": [],
+          "expected": [
+            "-35000000"
+          ],
+          "passed": false
+        },
+        {
+          "metric": "number_unit_period_groups",
+          "actual": 0,
+          "expected": 1,
+          "passed": false
+        }
+      ],
+      "output": [],
+      "support_status": "UNSUPPORTED_FREE_TEXT_SCALAR_GRAMMAR",
+      "support_limit": "This supplied free-text grammar is not supported by the bounded scalar parser. Original gold stays unchanged; failure remains in the denominator."
+    },
+    {
+      "id": "H12",
+      "kind": "scalars",
+      "passed": false,
+      "checks": [
+        {
+          "metric": "number_unit_period_values",
+          "actual": [],
+          "expected": [
+            "750.0"
+          ],
+          "passed": false
+        },
+        {
+          "metric": "number_unit_period_groups",
+          "actual": 0,
+          "expected": 1,
+          "passed": false
+        }
+      ],
+      "output": [],
+      "support_status": "UNSUPPORTED_FREE_TEXT_SCALAR_GRAMMAR",
+      "support_limit": "This supplied free-text grammar is not supported by the bounded scalar parser. Original gold stays unchanged; failure remains in the denominator."
+    },
+    {
+      "id": "H13",
+      "kind": "scalars",
+      "passed": false,
+      "checks": [
+        {
+          "metric": "number_unit_period_values",
+          "actual": [],
+          "expected": [
+            "300000"
+          ],
+          "passed": false
+        },
+        {
+          "metric": "number_unit_period_groups",
+          "actual": 0,
+          "expected": 1,
+          "passed": false
+        }
+      ],
+      "output": [],
+      "support_status": "UNSUPPORTED_FREE_TEXT_SCALAR_GRAMMAR",
+      "support_limit": "This supplied free-text grammar is not supported by the bounded scalar parser. Original gold stays unchanged; failure remains in the denominator."
+    },
+    {
+      "id": "H14",
+      "kind": "scalars",
+      "passed": false,
+      "checks": [
+        {
+          "metric": "number_unit_period_values",
+          "actual": [],
+          "expected": [
+            "1.7",
+            "3.4"
+          ],
+          "passed": false
+        },
+        {
+          "metric": "number_unit_period_groups",
+          "actual": 0,
+          "expected": 2,
+          "passed": false
+        }
+      ],
+      "output": [],
+      "support_status": "UNSUPPORTED_FREE_TEXT_SCALAR_GRAMMAR",
+      "support_limit": "This supplied free-text grammar is not supported by the bounded scalar parser. Original gold stays unchanged; failure remains in the denominator."
+    },
+    {
+      "id": "H15",
+      "kind": "assets",
+      "passed": false,
+      "checks": [
+        {
+          "metric": "recommendation_missing",
+          "actual": [
+            "전표등록"
+          ],
+          "expected": [],
+          "passed": false
+        },
+        {
+          "metric": "recommendation_unnecessary",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "metric": "unnecessary_composite_modules",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "metric": "catalog_quote_grounding",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        }
+      ],
+      "output": {
+        "rule_version": "asset-solutions-v2",
+        "status": "INPUT_INSUFFICIENT",
+        "demands": [
+          {
+            "id": "improvement:as_is",
+            "kind": "CURRENT_STATE",
+            "text": "회계 전표를 확인하려고 하며 급여계산은 제외합니다.",
+            "evidence": [
+              {
+                "kind": "IMPROVEMENT_VERSION",
+                "version_id": "TEST_VERSION_A",
+                "field": "as_is",
+                "quote": "회계 전표를 확인하려고 하며 급여계산은 제외합니다."
+              }
+            ],
+            "uncertainty": "확인된 개선요구 원문입니다. 서비스 해결범위 확정은 별도입니다.",
+            "source_ids": [
+              "improvement:as_is"
+            ],
+            "roles": [
+              "CURRENT_STATE"
+            ]
+          }
+        ],
+        "candidates": [],
+        "alternatives": [],
+        "uncovered_demands": [
+          "improvement:as_is"
+        ],
+        "limitations": [
+          "등록된 기능 표현을 이용한 제한된 규칙 검색·조합 초안이며 범용 AI 의미분석이 아닙니다.",
+          "자동 초안은 사람 검토 전 상태이며 제공 가능성·실제 해결·지원사업 자격을 확정하지 않습니다.",
+          "명시 제외·한계(원문): 회계 전표를 확인하려고 하며 급여계산은 제외합니다",
+          "구체적인 양성 업무 요구가 부족하여 후보를 생성하지 않았습니다."
+        ]
+      }
+    },
+    {
+      "id": "H16",
+      "kind": "assets",
+      "passed": true,
+      "checks": [
+        {
+          "metric": "recommendation_missing",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "metric": "recommendation_unnecessary",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "metric": "unnecessary_composite_modules",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "metric": "catalog_quote_grounding",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        }
+      ],
+      "output": {
+        "rule_version": "asset-solutions-v2",
+        "status": "CANDIDATES",
+        "demands": [
+          {
+            "id": "improvement:as_is",
+            "kind": "CURRENT_STATE",
+            "text": "품질 검사와 불량 현황 조회가 필요합니다.",
+            "evidence": [
+              {
+                "kind": "IMPROVEMENT_VERSION",
+                "version_id": "TEST_VERSION_A",
+                "field": "as_is",
+                "quote": "품질 검사와 불량 현황 조회가 필요합니다."
+              }
+            ],
+            "uncertainty": "확인된 개선요구 원문입니다. 서비스 해결범위 확정은 별도입니다.",
+            "source_ids": [
+              "improvement:as_is"
+            ],
+            "roles": [
+              "CURRENT_STATE"
+            ]
+          }
+        ],
+        "candidates": [
+          {
+            "feature_id": "TEST_FEATURE_QUALITY",
+            "external_id": "TEST_EXTERNAL_QUALITY",
+            "revision_id": "TEST_REVISION_QUALITY",
+            "asset_version_id": "TEST_ASSET_VERSION_QUALITY",
+            "system_version_id": "TEST_SYSTEM_VERSION_TEST_MES",
+            "module_version_id": "TEST_MODULE_VERSION_TEST_QUALITY",
+            "system_id": "TEST_MES",
+            "module_id": "TEST_QUALITY",
+            "system_name": "TEST_MES",
+            "module_name": "TEST_QUALITY",
+            "name": "불량현황",
+            "description": "품질 검사 기록과 불량 현황 조회",
+            "business_areas": [],
+            "problems": [],
+            "prerequisites": [],
+            "exclusions": [],
+            "relations": [],
+            "availability": "NEEDS_CONFIRMATION",
+            "availability_evidence": "",
+            "mapping_status": "ADMIN_REGISTERED",
+            "source": {
+              "kind": "TEST_SYNTHETIC",
+              "import_id": "TEST_IMPORT",
+              "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "revision_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            },
+            "demand_ids": [
+              "improvement:as_is"
+            ],
+            "matched_terms": [
+              "불량",
+              "품질",
+              "검사"
+            ],
+            "demand_terms": {
+              "improvement:as_is": [
+                "불량",
+                "품질",
+                "검사"
+              ]
+            },
+            "reasons": [
+              "improvement:as_is: 기능명: 불량",
+              "improvement:as_is: 기능 설명: 품질, 검사, 불량"
+            ],
+            "evidence": [
+              {
+                "feature_revision_id": "TEST_REVISION_QUALITY",
+                "asset_version_id": "TEST_ASSET_VERSION_QUALITY",
+                "field": "name",
+                "quote": "불량현황",
+                "matched_terms": [
+                  "불량"
+                ]
+              },
+              {
+                "feature_revision_id": "TEST_REVISION_QUALITY",
+                "asset_version_id": "TEST_ASSET_VERSION_QUALITY",
+                "field": "description",
+                "quote": "품질 검사 기록과 불량 현황 조회",
+                "matched_terms": [
+                  "품질",
+                  "검사",
+                  "불량"
+                ]
+              }
+            ],
+            "limitations": [
+              "불량현황: 현재 제공 가능 상태와 검증 근거 확인 필요.",
+              "기업 업무의 실제 적용범위·예외·성과는 운영자 검토가 필요합니다."
+            ],
+            "provision_status": "NEEDS_CONFIRMATION",
+            "review_status": "REVIEW_REQUIRED",
+            "retrieval_score": 6
+          }
+        ],
+        "alternatives": [
+          {
+            "id": "asset-alt-5f6d9e72ee81333a9264fd40",
+            "name": "TEST_MES — TEST_QUALITY 검토 초안",
+            "kind": "SINGLE_MODULE",
+            "topology_kind": "SINGLE_MODULE",
+            "why": "기업 요구의 양성 업무 표현이 실제 기능 원문과 연결됩니다. 기능별 근거를 확인한 후 선택하세요.",
+            "systems": [
+              {
+                "id": "TEST_MES",
+                "name": "TEST_MES",
+                "version_id": "TEST_SYSTEM_VERSION_TEST_MES"
+              }
+            ],
+            "modules": [
+              {
+                "id": "TEST_QUALITY",
+                "name": "TEST_QUALITY",
+                "version_id": "TEST_MODULE_VERSION_TEST_QUALITY"
+              }
+            ],
+            "feature_selections": [
+              {
+                "feature_revision_id": "TEST_REVISION_QUALITY",
+                "asset_version_id": "TEST_ASSET_VERSION_QUALITY",
+                "system_version_id": "TEST_SYSTEM_VERSION_TEST_MES",
+                "module_version_id": "TEST_MODULE_VERSION_TEST_QUALITY",
+                "role": "불량현황 기능 적용 검토"
+              }
+            ],
+            "features": [
+              {
+                "feature_id": "TEST_FEATURE_QUALITY",
+                "external_id": "TEST_EXTERNAL_QUALITY",
+                "revision_id": "TEST_REVISION_QUALITY",
+                "asset_version_id": "TEST_ASSET_VERSION_QUALITY",
+                "system_version_id": "TEST_SYSTEM_VERSION_TEST_MES",
+                "module_version_id": "TEST_MODULE_VERSION_TEST_QUALITY",
+                "system_id": "TEST_MES",
+                "module_id": "TEST_QUALITY",
+                "system_name": "TEST_MES",
+                "module_name": "TEST_QUALITY",
+                "name": "불량현황",
+                "description": "품질 검사 기록과 불량 현황 조회",
+                "business_areas": [],
+                "problems": [],
+                "prerequisites": [],
+                "exclusions": [],
+                "relations": [],
+                "availability": "NEEDS_CONFIRMATION",
+                "availability_evidence": "",
+                "mapping_status": "ADMIN_REGISTERED",
+                "source": {
+                  "kind": "TEST_SYNTHETIC",
+                  "import_id": "TEST_IMPORT",
+                  "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "revision_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                }
+              }
+            ],
+            "coverage": [
+              {
+                "demand_id": "improvement:as_is",
+                "requirement": "품질 검사와 불량 현황 조회가 필요합니다.",
+                "evidence_refs": [
+                  {
+                    "kind": "IMPROVEMENT_VERSION",
+                    "version_id": "TEST_VERSION_A",
+                    "field": "as_is",
+                    "quote": "품질 검사와 불량 현황 조회가 필요합니다."
+                  }
+                ],
+                "status": "PARTIAL",
+                "capability_version_id": null,
+                "feature_revision_ids": [
+                  "TEST_REVISION_QUALITY"
+                ],
+                "role": "검토할 원천 기능 역할: 불량현황",
+                "addressed_scope": "원문 표현과 연결된 기능 후보: 불량현황",
+                "unaddressed_scope": "요구 전체의 해결·실제 적용성·효과는 아직 검증하지 않았습니다.",
+                "missing_information": [
+                  "기업 업무의 실제 적용범위·예외·성과는 운영자 검토가 필요합니다.",
+                  "불량현황: 현재 제공 가능 상태와 검증 근거 확인 필요."
+                ]
+              }
+            ],
+            "integrations": [],
+            "conditions": [],
+            "unresolved": [
+              "불량현황: 제공 가능 검증 필요.",
+              "기업 업무의 실제 적용범위·예외·성과는 운영자 검토가 필요합니다."
+            ],
+            "review_status": "REVIEW_REQUIRED"
+          }
+        ],
+        "uncovered_demands": [],
+        "limitations": [
+          "등록된 기능 표현을 이용한 제한된 규칙 검색·조합 초안이며 범용 AI 의미분석이 아닙니다.",
+          "자동 초안은 사람 검토 전 상태이며 제공 가능성·실제 해결·지원사업 자격을 확정하지 않습니다."
+        ]
+      }
+    },
+    {
+      "id": "H17",
+      "kind": "assets",
+      "passed": true,
+      "checks": [
+        {
+          "metric": "recommendation_missing",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "metric": "recommendation_unnecessary",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "metric": "unnecessary_composite_modules",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "metric": "catalog_quote_grounding",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        }
+      ],
+      "output": {
+        "rule_version": "asset-solutions-v2",
+        "status": "CANDIDATES",
+        "demands": [
+          {
+            "id": "improvement:as_is",
+            "kind": "CURRENT_STATE",
+            "text": "재고 현황 조회와 회계 전표 결산이 각각 필요합니다.",
+            "evidence": [
+              {
+                "kind": "IMPROVEMENT_VERSION",
+                "version_id": "TEST_VERSION_A",
+                "field": "as_is",
+                "quote": "재고 현황 조회와 회계 전표 결산이 각각 필요합니다."
+              }
+            ],
+            "uncertainty": "확인된 개선요구 원문입니다. 서비스 해결범위 확정은 별도입니다.",
+            "source_ids": [
+              "improvement:as_is"
+            ],
+            "roles": [
+              "CURRENT_STATE"
+            ]
+          }
+        ],
+        "candidates": [
+          {
+            "feature_id": "TEST_FEATURE_ACC",
+            "external_id": "TEST_EXTERNAL_ACC",
+            "revision_id": "TEST_REVISION_ACC",
+            "asset_version_id": "TEST_ASSET_VERSION_ACC",
+            "system_version_id": "TEST_SYSTEM_VERSION_TEST_ACCOUNTING",
+            "module_version_id": "TEST_MODULE_VERSION_TEST_LEDGER",
+            "system_id": "TEST_ACCOUNTING",
+            "module_id": "TEST_LEDGER",
+            "system_name": "TEST_ACCOUNTING",
+            "module_name": "TEST_LEDGER",
+            "name": "전표등록",
+            "description": "회계 전표 확인과 결산 처리",
+            "business_areas": [],
+            "problems": [],
+            "prerequisites": [],
+            "exclusions": [],
+            "relations": [],
+            "availability": "NEEDS_CONFIRMATION",
+            "availability_evidence": "",
+            "mapping_status": "ADMIN_REGISTERED",
+            "source": {
+              "kind": "TEST_SYNTHETIC",
+              "import_id": "TEST_IMPORT",
+              "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "revision_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            },
+            "demand_ids": [
+              "improvement:as_is"
+            ],
+            "matched_terms": [
+              "전표",
+              "회계"
+            ],
+            "demand_terms": {
+              "improvement:as_is": [
+                "전표",
+                "회계"
+              ]
+            },
+            "reasons": [
+              "improvement:as_is: 기능명: 전표",
+              "improvement:as_is: 기능 설명: 회계, 전표"
+            ],
+            "evidence": [
+              {
+                "feature_revision_id": "TEST_REVISION_ACC",
+                "asset_version_id": "TEST_ASSET_VERSION_ACC",
+                "field": "name",
+                "quote": "전표등록",
+                "matched_terms": [
+                  "전표"
+                ]
+              },
+              {
+                "feature_revision_id": "TEST_REVISION_ACC",
+                "asset_version_id": "TEST_ASSET_VERSION_ACC",
+                "field": "description",
+                "quote": "회계 전표 확인과 결산 처리",
+                "matched_terms": [
+                  "회계",
+                  "전표"
+                ]
+              }
+            ],
+            "limitations": [
+              "전표등록: 현재 제공 가능 상태와 검증 근거 확인 필요.",
+              "기업 업무의 실제 적용범위·예외·성과는 운영자 검토가 필요합니다."
+            ],
+            "provision_status": "NEEDS_CONFIRMATION",
+            "review_status": "REVIEW_REQUIRED",
+            "retrieval_score": 5
+          },
+          {
+            "feature_id": "TEST_FEATURE_STOCK",
+            "external_id": "TEST_EXTERNAL_STOCK",
+            "revision_id": "TEST_REVISION_STOCK",
+            "asset_version_id": "TEST_ASSET_VERSION_STOCK",
+            "system_version_id": "TEST_SYSTEM_VERSION_TEST_ERP",
+            "module_version_id": "TEST_MODULE_VERSION_TEST_STOCK",
+            "system_id": "TEST_ERP",
+            "module_id": "TEST_STOCK",
+            "system_name": "TEST_ERP",
+            "module_name": "TEST_STOCK",
+            "name": "재고현황",
+            "description": "재고 수량과 현재 재고 조회",
+            "business_areas": [],
+            "problems": [],
+            "prerequisites": [],
+            "exclusions": [],
+            "relations": [],
+            "availability": "NEEDS_CONFIRMATION",
+            "availability_evidence": "",
+            "mapping_status": "ADMIN_REGISTERED",
+            "source": {
+              "kind": "TEST_SYNTHETIC",
+              "import_id": "TEST_IMPORT",
+              "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "revision_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            },
+            "demand_ids": [
+              "improvement:as_is"
+            ],
+            "matched_terms": [
+              "재고"
+            ],
+            "demand_terms": {
+              "improvement:as_is": [
+                "재고"
+              ]
+            },
+            "reasons": [
+              "improvement:as_is: 기능명: 재고",
+              "improvement:as_is: 기능 설명: 재고"
+            ],
+            "evidence": [
+              {
+                "feature_revision_id": "TEST_REVISION_STOCK",
+                "asset_version_id": "TEST_ASSET_VERSION_STOCK",
+                "field": "name",
+                "quote": "재고현황",
+                "matched_terms": [
+                  "재고"
+                ]
+              },
+              {
+                "feature_revision_id": "TEST_REVISION_STOCK",
+                "asset_version_id": "TEST_ASSET_VERSION_STOCK",
+                "field": "description",
+                "quote": "재고 수량과 현재 재고 조회",
+                "matched_terms": [
+                  "재고"
+                ]
+              }
+            ],
+            "limitations": [
+              "재고현황: 현재 제공 가능 상태와 검증 근거 확인 필요.",
+              "기업 업무의 실제 적용범위·예외·성과는 운영자 검토가 필요합니다."
+            ],
+            "provision_status": "NEEDS_CONFIRMATION",
+            "review_status": "REVIEW_REQUIRED",
+            "retrieval_score": 4
+          }
+        ],
+        "alternatives": [
+          {
+            "id": "asset-alt-addfc337f50c60ea59e8ef09",
+            "name": "TEST_ACCOUNTING / TEST_ERP — TEST_LEDGER · TEST_STOCK 검토 초안",
+            "kind": "CROSS_SYSTEM",
+            "topology_kind": "CROSS_SYSTEM",
+            "why": "기업 요구의 양성 업무 표현이 실제 기능 원문과 연결됩니다. 기능별 근거를 확인한 후 선택하세요.",
+            "systems": [
+              {
+                "id": "TEST_ACCOUNTING",
+                "name": "TEST_ACCOUNTING",
+                "version_id": "TEST_SYSTEM_VERSION_TEST_ACCOUNTING"
+              },
+              {
+                "id": "TEST_ERP",
+                "name": "TEST_ERP",
+                "version_id": "TEST_SYSTEM_VERSION_TEST_ERP"
+              }
+            ],
+            "modules": [
+              {
+                "id": "TEST_LEDGER",
+                "name": "TEST_LEDGER",
+                "version_id": "TEST_MODULE_VERSION_TEST_LEDGER"
+              },
+              {
+                "id": "TEST_STOCK",
+                "name": "TEST_STOCK",
+                "version_id": "TEST_MODULE_VERSION_TEST_STOCK"
+              }
+            ],
+            "feature_selections": [
+              {
+                "feature_revision_id": "TEST_REVISION_ACC",
+                "asset_version_id": "TEST_ASSET_VERSION_ACC",
+                "system_version_id": "TEST_SYSTEM_VERSION_TEST_ACCOUNTING",
+                "module_version_id": "TEST_MODULE_VERSION_TEST_LEDGER",
+                "role": "전표등록 기능 적용 검토"
+              },
+              {
+                "feature_revision_id": "TEST_REVISION_STOCK",
+                "asset_version_id": "TEST_ASSET_VERSION_STOCK",
+                "system_version_id": "TEST_SYSTEM_VERSION_TEST_ERP",
+                "module_version_id": "TEST_MODULE_VERSION_TEST_STOCK",
+                "role": "재고현황 기능 적용 검토"
+              }
+            ],
+            "features": [
+              {
+                "feature_id": "TEST_FEATURE_ACC",
+                "external_id": "TEST_EXTERNAL_ACC",
+                "revision_id": "TEST_REVISION_ACC",
+                "asset_version_id": "TEST_ASSET_VERSION_ACC",
+                "system_version_id": "TEST_SYSTEM_VERSION_TEST_ACCOUNTING",
+                "module_version_id": "TEST_MODULE_VERSION_TEST_LEDGER",
+                "system_id": "TEST_ACCOUNTING",
+                "module_id": "TEST_LEDGER",
+                "system_name": "TEST_ACCOUNTING",
+                "module_name": "TEST_LEDGER",
+                "name": "전표등록",
+                "description": "회계 전표 확인과 결산 처리",
+                "business_areas": [],
+                "problems": [],
+                "prerequisites": [],
+                "exclusions": [],
+                "relations": [],
+                "availability": "NEEDS_CONFIRMATION",
+                "availability_evidence": "",
+                "mapping_status": "ADMIN_REGISTERED",
+                "source": {
+                  "kind": "TEST_SYNTHETIC",
+                  "import_id": "TEST_IMPORT",
+                  "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "revision_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                }
+              },
+              {
+                "feature_id": "TEST_FEATURE_STOCK",
+                "external_id": "TEST_EXTERNAL_STOCK",
+                "revision_id": "TEST_REVISION_STOCK",
+                "asset_version_id": "TEST_ASSET_VERSION_STOCK",
+                "system_version_id": "TEST_SYSTEM_VERSION_TEST_ERP",
+                "module_version_id": "TEST_MODULE_VERSION_TEST_STOCK",
+                "system_id": "TEST_ERP",
+                "module_id": "TEST_STOCK",
+                "system_name": "TEST_ERP",
+                "module_name": "TEST_STOCK",
+                "name": "재고현황",
+                "description": "재고 수량과 현재 재고 조회",
+                "business_areas": [],
+                "problems": [],
+                "prerequisites": [],
+                "exclusions": [],
+                "relations": [],
+                "availability": "NEEDS_CONFIRMATION",
+                "availability_evidence": "",
+                "mapping_status": "ADMIN_REGISTERED",
+                "source": {
+                  "kind": "TEST_SYNTHETIC",
+                  "import_id": "TEST_IMPORT",
+                  "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "revision_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                }
+              }
+            ],
+            "coverage": [
+              {
+                "demand_id": "improvement:as_is",
+                "requirement": "재고 현황 조회와 회계 전표 결산이 각각 필요합니다.",
+                "evidence_refs": [
+                  {
+                    "kind": "IMPROVEMENT_VERSION",
+                    "version_id": "TEST_VERSION_A",
+                    "field": "as_is",
+                    "quote": "재고 현황 조회와 회계 전표 결산이 각각 필요합니다."
+                  }
+                ],
+                "status": "PARTIAL",
+                "capability_version_id": null,
+                "feature_revision_ids": [
+                  "TEST_REVISION_ACC",
+                  "TEST_REVISION_STOCK"
+                ],
+                "role": "검토할 원천 기능 역할: 전표등록 · 재고현황",
+                "addressed_scope": "원문 표현과 연결된 기능 후보: 전표등록 · 재고현황",
+                "unaddressed_scope": "요구 전체의 해결·실제 적용성·효과는 아직 검증하지 않았습니다.",
+                "missing_information": [
+                  "기업 업무의 실제 적용범위·예외·성과는 운영자 검토가 필요합니다.",
+                  "전표등록: 현재 제공 가능 상태와 검증 근거 확인 필요.",
+                  "재고현황: 현재 제공 가능 상태와 검증 근거 확인 필요."
+                ]
+              }
+            ],
+            "integrations": [
+              {
+                "from_asset_id": "TEST_LEDGER",
+                "to_asset_id": "TEST_STOCK",
+                "data": "전표등록 · 재고현황: 실제 데이터 항목·공통 식별자·형식은 확인 필요.",
+                "workflow": "TEST_LEDGER / TEST_STOCK 기능을 연결하는 업무 초안입니다. 처리 순서·책임·예외는 기업과 검토하세요.",
+                "prerequisites": [],
+                "verification": "UNVERIFIED",
+                "evidence_note": "확인된 모듈 간 연계 근거가 등록되지 않았습니다.",
+                "uncertainty": "연계가 검증되지 않은 구성 초안이며 실제 연동을 보장하지 않습니다."
+              }
+            ],
+            "conditions": [],
+            "unresolved": [
+              "전표등록: 제공 가능 검증 필요.",
+              "재고현황: 제공 가능 검증 필요.",
+              "연계가 검증되지 않은 구성 초안이며 실제 연동을 보장하지 않습니다.",
+              "기업 업무의 실제 적용범위·예외·성과는 운영자 검토가 필요합니다."
+            ],
+            "review_status": "REVIEW_REQUIRED"
+          },
+          {
+            "id": "asset-alt-8b6d2ca9c7516fc7f6a4c982",
+            "name": "TEST_ACCOUNTING — TEST_LEDGER 검토 초안",
+            "kind": "SINGLE_MODULE",
+            "topology_kind": "SINGLE_MODULE",
+            "why": "기업 요구의 양성 업무 표현이 실제 기능 원문과 연결됩니다. 기능별 근거를 확인한 후 선택하세요.",
+            "systems": [
+              {
+                "id": "TEST_ACCOUNTING",
+                "name": "TEST_ACCOUNTING",
+                "version_id": "TEST_SYSTEM_VERSION_TEST_ACCOUNTING"
+              }
+            ],
+            "modules": [
+              {
+                "id": "TEST_LEDGER",
+                "name": "TEST_LEDGER",
+                "version_id": "TEST_MODULE_VERSION_TEST_LEDGER"
+              }
+            ],
+            "feature_selections": [
+              {
+                "feature_revision_id": "TEST_REVISION_ACC",
+                "asset_version_id": "TEST_ASSET_VERSION_ACC",
+                "system_version_id": "TEST_SYSTEM_VERSION_TEST_ACCOUNTING",
+                "module_version_id": "TEST_MODULE_VERSION_TEST_LEDGER",
+                "role": "전표등록 기능 적용 검토"
+              }
+            ],
+            "features": [
+              {
+                "feature_id": "TEST_FEATURE_ACC",
+                "external_id": "TEST_EXTERNAL_ACC",
+                "revision_id": "TEST_REVISION_ACC",
+                "asset_version_id": "TEST_ASSET_VERSION_ACC",
+                "system_version_id": "TEST_SYSTEM_VERSION_TEST_ACCOUNTING",
+                "module_version_id": "TEST_MODULE_VERSION_TEST_LEDGER",
+                "system_id": "TEST_ACCOUNTING",
+                "module_id": "TEST_LEDGER",
+                "system_name": "TEST_ACCOUNTING",
+                "module_name": "TEST_LEDGER",
+                "name": "전표등록",
+                "description": "회계 전표 확인과 결산 처리",
+                "business_areas": [],
+                "problems": [],
+                "prerequisites": [],
+                "exclusions": [],
+                "relations": [],
+                "availability": "NEEDS_CONFIRMATION",
+                "availability_evidence": "",
+                "mapping_status": "ADMIN_REGISTERED",
+                "source": {
+                  "kind": "TEST_SYNTHETIC",
+                  "import_id": "TEST_IMPORT",
+                  "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "revision_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                }
+              }
+            ],
+            "coverage": [
+              {
+                "demand_id": "improvement:as_is",
+                "requirement": "재고 현황 조회와 회계 전표 결산이 각각 필요합니다.",
+                "evidence_refs": [
+                  {
+                    "kind": "IMPROVEMENT_VERSION",
+                    "version_id": "TEST_VERSION_A",
+                    "field": "as_is",
+                    "quote": "재고 현황 조회와 회계 전표 결산이 각각 필요합니다."
+                  }
+                ],
+                "status": "PARTIAL",
+                "capability_version_id": null,
+                "feature_revision_ids": [
+                  "TEST_REVISION_ACC"
+                ],
+                "role": "검토할 원천 기능 역할: 전표등록",
+                "addressed_scope": "원문 표현과 연결된 기능 후보: 전표등록",
+                "unaddressed_scope": "요구 전체의 해결·실제 적용성·효과는 아직 검증하지 않았습니다.",
+                "missing_information": [
+                  "기업 업무의 실제 적용범위·예외·성과는 운영자 검토가 필요합니다.",
+                  "전표등록: 현재 제공 가능 상태와 검증 근거 확인 필요."
+                ]
+              }
+            ],
+            "integrations": [],
+            "conditions": [],
+            "unresolved": [
+              "전표등록: 제공 가능 검증 필요.",
+              "기업 업무의 실제 적용범위·예외·성과는 운영자 검토가 필요합니다."
+            ],
+            "review_status": "REVIEW_REQUIRED"
+          },
+          {
+            "id": "asset-alt-fb392f2e0a305fb0f247823e",
+            "name": "TEST_ERP — TEST_STOCK 검토 초안",
+            "kind": "SINGLE_MODULE",
+            "topology_kind": "SINGLE_MODULE",
+            "why": "기업 요구의 양성 업무 표현이 실제 기능 원문과 연결됩니다. 기능별 근거를 확인한 후 선택하세요.",
+            "systems": [
+              {
+                "id": "TEST_ERP",
+                "name": "TEST_ERP",
+                "version_id": "TEST_SYSTEM_VERSION_TEST_ERP"
+              }
+            ],
+            "modules": [
+              {
+                "id": "TEST_STOCK",
+                "name": "TEST_STOCK",
+                "version_id": "TEST_MODULE_VERSION_TEST_STOCK"
+              }
+            ],
+            "feature_selections": [
+              {
+                "feature_revision_id": "TEST_REVISION_STOCK",
+                "asset_version_id": "TEST_ASSET_VERSION_STOCK",
+                "system_version_id": "TEST_SYSTEM_VERSION_TEST_ERP",
+                "module_version_id": "TEST_MODULE_VERSION_TEST_STOCK",
+                "role": "재고현황 기능 적용 검토"
+              }
+            ],
+            "features": [
+              {
+                "feature_id": "TEST_FEATURE_STOCK",
+                "external_id": "TEST_EXTERNAL_STOCK",
+                "revision_id": "TEST_REVISION_STOCK",
+                "asset_version_id": "TEST_ASSET_VERSION_STOCK",
+                "system_version_id": "TEST_SYSTEM_VERSION_TEST_ERP",
+                "module_version_id": "TEST_MODULE_VERSION_TEST_STOCK",
+                "system_id": "TEST_ERP",
+                "module_id": "TEST_STOCK",
+                "system_name": "TEST_ERP",
+                "module_name": "TEST_STOCK",
+                "name": "재고현황",
+                "description": "재고 수량과 현재 재고 조회",
+                "business_areas": [],
+                "problems": [],
+                "prerequisites": [],
+                "exclusions": [],
+                "relations": [],
+                "availability": "NEEDS_CONFIRMATION",
+                "availability_evidence": "",
+                "mapping_status": "ADMIN_REGISTERED",
+                "source": {
+                  "kind": "TEST_SYNTHETIC",
+                  "import_id": "TEST_IMPORT",
+                  "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "revision_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                }
+              }
+            ],
+            "coverage": [
+              {
+                "demand_id": "improvement:as_is",
+                "requirement": "재고 현황 조회와 회계 전표 결산이 각각 필요합니다.",
+                "evidence_refs": [
+                  {
+                    "kind": "IMPROVEMENT_VERSION",
+                    "version_id": "TEST_VERSION_A",
+                    "field": "as_is",
+                    "quote": "재고 현황 조회와 회계 전표 결산이 각각 필요합니다."
+                  }
+                ],
+                "status": "PARTIAL",
+                "capability_version_id": null,
+                "feature_revision_ids": [
+                  "TEST_REVISION_STOCK"
+                ],
+                "role": "검토할 원천 기능 역할: 재고현황",
+                "addressed_scope": "원문 표현과 연결된 기능 후보: 재고현황",
+                "unaddressed_scope": "요구 전체의 해결·실제 적용성·효과는 아직 검증하지 않았습니다.",
+                "missing_information": [
+                  "기업 업무의 실제 적용범위·예외·성과는 운영자 검토가 필요합니다.",
+                  "재고현황: 현재 제공 가능 상태와 검증 근거 확인 필요."
+                ]
+              }
+            ],
+            "integrations": [],
+            "conditions": [],
+            "unresolved": [
+              "재고현황: 제공 가능 검증 필요.",
+              "기업 업무의 실제 적용범위·예외·성과는 운영자 검토가 필요합니다."
+            ],
+            "review_status": "REVIEW_REQUIRED"
+          }
+        ],
+        "uncovered_demands": [],
+        "limitations": [
+          "등록된 기능 표현을 이용한 제한된 규칙 검색·조합 초안이며 범용 AI 의미분석이 아닙니다.",
+          "자동 초안은 사람 검토 전 상태이며 제공 가능성·실제 해결·지원사업 자격을 확정하지 않습니다."
+        ]
+      }
+    },
+    {
+      "id": "H18",
+      "kind": "assets",
+      "passed": true,
+      "checks": [
+        {
+          "metric": "recommendation_missing",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "metric": "recommendation_unnecessary",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "metric": "unnecessary_composite_modules",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "metric": "catalog_quote_grounding",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        }
+      ],
+      "output": {
+        "rule_version": "asset-solutions-v2",
+        "status": "NO_SOLUTION",
+        "demands": [
+          {
+            "id": "improvement:as_is",
+            "kind": "CURRENT_STATE",
+            "text": "관광객의 항공권 예약을 개선하려고 합니다.",
+            "evidence": [
+              {
+                "kind": "IMPROVEMENT_VERSION",
+                "version_id": "TEST_VERSION_A",
+                "field": "as_is",
+                "quote": "관광객의 항공권 예약을 개선하려고 합니다."
+              }
+            ],
+            "uncertainty": "확인된 개선요구 원문입니다. 서비스 해결범위 확정은 별도입니다.",
+            "source_ids": [
+              "improvement:as_is"
+            ],
+            "roles": [
+              "CURRENT_STATE"
+            ]
+          }
+        ],
+        "candidates": [],
+        "alternatives": [],
+        "uncovered_demands": [
+          "improvement:as_is"
+        ],
+        "limitations": [
+          "등록된 기능 표현을 이용한 제한된 규칙 검색·조합 초안이며 범용 AI 의미분석이 아닙니다.",
+          "자동 초안은 사람 검토 전 상태이며 제공 가능성·실제 해결·지원사업 자격을 확정하지 않습니다.",
+          "현재 확인된 솔루션 없음."
+        ]
+      }
+    },
+    {
+      "id": "H19",
+      "kind": "assets",
+      "passed": false,
+      "checks": [
+        {
+          "metric": "recommendation_missing",
+          "actual": [
+            "근태등록"
+          ],
+          "expected": [],
+          "passed": false
+        },
+        {
+          "metric": "recommendation_unnecessary",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "metric": "unnecessary_composite_modules",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "metric": "catalog_quote_grounding",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        }
+      ],
+      "output": {
+        "rule_version": "asset-solutions-v2",
+        "status": "INPUT_INSUFFICIENT",
+        "demands": [
+          {
+            "id": "improvement:as_is",
+            "kind": "CURRENT_STATE",
+            "text": "직원 출퇴근을 기록하지만 급여계산은 도입하지 않습니다.",
+            "evidence": [
+              {
+                "kind": "IMPROVEMENT_VERSION",
+                "version_id": "TEST_VERSION_A",
+                "field": "as_is",
+                "quote": "직원 출퇴근을 기록하지만 급여계산은 도입하지 않습니다."
+              }
+            ],
+            "uncertainty": "확인된 개선요구 원문입니다. 서비스 해결범위 확정은 별도입니다.",
+            "source_ids": [
+              "improvement:as_is"
+            ],
+            "roles": [
+              "CURRENT_STATE"
+            ]
+          }
+        ],
+        "candidates": [],
+        "alternatives": [],
+        "uncovered_demands": [
+          "improvement:as_is"
+        ],
+        "limitations": [
+          "등록된 기능 표현을 이용한 제한된 규칙 검색·조합 초안이며 범용 AI 의미분석이 아닙니다.",
+          "자동 초안은 사람 검토 전 상태이며 제공 가능성·실제 해결·지원사업 자격을 확정하지 않습니다.",
+          "명시 제외·한계(원문): 직원 출퇴근을 기록하지만 급여계산은 도입하지 않습니다",
+          "구체적인 양성 업무 요구가 부족하여 후보를 생성하지 않았습니다."
+        ]
+      }
+    },
+    {
+      "id": "H20",
+      "kind": "assets",
+      "passed": true,
+      "checks": [
+        {
+          "metric": "recommendation_missing",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "metric": "recommendation_unnecessary",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "metric": "unnecessary_composite_modules",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "metric": "catalog_quote_grounding",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        }
+      ],
+      "output": {
+        "rule_version": "asset-solutions-v2",
+        "status": "CANDIDATES",
+        "demands": [
+          {
+            "id": "improvement:as_is",
+            "kind": "CURRENT_STATE",
+            "text": "문서 기안과 재고 수량 조회가 필요합니다.",
+            "evidence": [
+              {
+                "kind": "IMPROVEMENT_VERSION",
+                "version_id": "TEST_VERSION_A",
+                "field": "as_is",
+                "quote": "문서 기안과 재고 수량 조회가 필요합니다."
+              }
+            ],
+            "uncertainty": "확인된 개선요구 원문입니다. 서비스 해결범위 확정은 별도입니다.",
+            "source_ids": [
+              "improvement:as_is"
+            ],
+            "roles": [
+              "CURRENT_STATE"
+            ]
+          }
+        ],
+        "candidates": [
+          {
+            "feature_id": "TEST_FEATURE_DOC",
+            "external_id": "TEST_EXTERNAL_DOC",
+            "revision_id": "TEST_REVISION_DOC",
+            "asset_version_id": "TEST_ASSET_VERSION_DOC",
+            "system_version_id": "TEST_SYSTEM_VERSION_TEST_GROUPWARE",
+            "module_version_id": "TEST_MODULE_VERSION_TEST_DOCUMENT",
+            "system_id": "TEST_GROUPWARE",
+            "module_id": "TEST_DOCUMENT",
+            "system_name": "TEST_GROUPWARE",
+            "module_name": "TEST_DOCUMENT",
+            "name": "문서 기안",
+            "description": "전자결재 기안 문서 처리와 자료 검색",
+            "business_areas": [],
+            "problems": [],
+            "prerequisites": [],
+            "exclusions": [],
+            "relations": [],
+            "availability": "NEEDS_CONFIRMATION",
+            "availability_evidence": "",
+            "mapping_status": "ADMIN_REGISTERED",
+            "source": {
+              "kind": "TEST_SYNTHETIC",
+              "import_id": "TEST_IMPORT",
+              "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "revision_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            },
+            "demand_ids": [
+              "improvement:as_is"
+            ],
+            "matched_terms": [
+              "문서",
+              "기안",
+              "전자결재",
+              "결재"
+            ],
+            "demand_terms": {
+              "improvement:as_is": [
+                "문서",
+                "기안",
+                "전자결재",
+                "결재"
+              ]
+            },
+            "reasons": [
+              "improvement:as_is: 기능명: 문서, 기안",
+              "improvement:as_is: 기능 설명: 문서, 기안, 전자결재, 결재"
+            ],
+            "evidence": [
+              {
+                "feature_revision_id": "TEST_REVISION_DOC",
+                "asset_version_id": "TEST_ASSET_VERSION_DOC",
+                "field": "name",
+                "quote": "문서 기안",
+                "matched_terms": [
+                  "문서",
+                  "기안"
+                ]
+              },
+              {
+                "feature_revision_id": "TEST_REVISION_DOC",
+                "asset_version_id": "TEST_ASSET_VERSION_DOC",
+                "field": "description",
+                "quote": "전자결재 기안 문서 처리와 자료 검색",
+                "matched_terms": [
+                  "문서",
+                  "기안",
+                  "전자결재",
+                  "결재"
+                ]
+              }
+            ],
+            "limitations": [
+              "문서 기안: 현재 제공 가능 상태와 검증 근거 확인 필요.",
+              "기업 업무의 실제 적용범위·예외·성과는 운영자 검토가 필요합니다."
+            ],
+            "provision_status": "NEEDS_CONFIRMATION",
+            "review_status": "REVIEW_REQUIRED",
+            "retrieval_score": 10
+          },
+          {
+            "feature_id": "TEST_FEATURE_STOCK",
+            "external_id": "TEST_EXTERNAL_STOCK",
+            "revision_id": "TEST_REVISION_STOCK",
+            "asset_version_id": "TEST_ASSET_VERSION_STOCK",
+            "system_version_id": "TEST_SYSTEM_VERSION_TEST_ERP",
+            "module_version_id": "TEST_MODULE_VERSION_TEST_STOCK",
+            "system_id": "TEST_ERP",
+            "module_id": "TEST_STOCK",
+            "system_name": "TEST_ERP",
+            "module_name": "TEST_STOCK",
+            "name": "재고현황",
+            "description": "재고 수량과 현재 재고 조회",
+            "business_areas": [],
+            "problems": [],
+            "prerequisites": [],
+            "exclusions": [],
+            "relations": [],
+            "availability": "NEEDS_CONFIRMATION",
+            "availability_evidence": "",
+            "mapping_status": "ADMIN_REGISTERED",
+            "source": {
+              "kind": "TEST_SYNTHETIC",
+              "import_id": "TEST_IMPORT",
+              "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "revision_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            },
+            "demand_ids": [
+              "improvement:as_is"
+            ],
+            "matched_terms": [
+              "재고"
+            ],
+            "demand_terms": {
+              "improvement:as_is": [
+                "재고"
+              ]
+            },
+            "reasons": [
+              "improvement:as_is: 기능명: 재고",
+              "improvement:as_is: 기능 설명: 재고"
+            ],
+            "evidence": [
+              {
+                "feature_revision_id": "TEST_REVISION_STOCK",
+                "asset_version_id": "TEST_ASSET_VERSION_STOCK",
+                "field": "name",
+                "quote": "재고현황",
+                "matched_terms": [
+                  "재고"
+                ]
+              },
+              {
+                "feature_revision_id": "TEST_REVISION_STOCK",
+                "asset_version_id": "TEST_ASSET_VERSION_STOCK",
+                "field": "description",
+                "quote": "재고 수량과 현재 재고 조회",
+                "matched_terms": [
+                  "재고"
+                ]
+              }
+            ],
+            "limitations": [
+              "재고현황: 현재 제공 가능 상태와 검증 근거 확인 필요.",
+              "기업 업무의 실제 적용범위·예외·성과는 운영자 검토가 필요합니다."
+            ],
+            "provision_status": "NEEDS_CONFIRMATION",
+            "review_status": "REVIEW_REQUIRED",
+            "retrieval_score": 4
+          }
+        ],
+        "alternatives": [
+          {
+            "id": "asset-alt-3bf31b5d476d9e5358f13600",
+            "name": "TEST_ERP / TEST_GROUPWARE — TEST_STOCK · TEST_DOCUMENT 검토 초안",
+            "kind": "CROSS_SYSTEM",
+            "topology_kind": "CROSS_SYSTEM",
+            "why": "기업 요구의 양성 업무 표현이 실제 기능 원문과 연결됩니다. 기능별 근거를 확인한 후 선택하세요.",
+            "systems": [
+              {
+                "id": "TEST_ERP",
+                "name": "TEST_ERP",
+                "version_id": "TEST_SYSTEM_VERSION_TEST_ERP"
+              },
+              {
+                "id": "TEST_GROUPWARE",
+                "name": "TEST_GROUPWARE",
+                "version_id": "TEST_SYSTEM_VERSION_TEST_GROUPWARE"
+              }
+            ],
+            "modules": [
+              {
+                "id": "TEST_STOCK",
+                "name": "TEST_STOCK",
+                "version_id": "TEST_MODULE_VERSION_TEST_STOCK"
+              },
+              {
+                "id": "TEST_DOCUMENT",
+                "name": "TEST_DOCUMENT",
+                "version_id": "TEST_MODULE_VERSION_TEST_DOCUMENT"
+              }
+            ],
+            "feature_selections": [
+              {
+                "feature_revision_id": "TEST_REVISION_STOCK",
+                "asset_version_id": "TEST_ASSET_VERSION_STOCK",
+                "system_version_id": "TEST_SYSTEM_VERSION_TEST_ERP",
+                "module_version_id": "TEST_MODULE_VERSION_TEST_STOCK",
+                "role": "재고현황 기능 적용 검토"
+              },
+              {
+                "feature_revision_id": "TEST_REVISION_DOC",
+                "asset_version_id": "TEST_ASSET_VERSION_DOC",
+                "system_version_id": "TEST_SYSTEM_VERSION_TEST_GROUPWARE",
+                "module_version_id": "TEST_MODULE_VERSION_TEST_DOCUMENT",
+                "role": "문서 기안 기능 적용 검토"
+              }
+            ],
+            "features": [
+              {
+                "feature_id": "TEST_FEATURE_STOCK",
+                "external_id": "TEST_EXTERNAL_STOCK",
+                "revision_id": "TEST_REVISION_STOCK",
+                "asset_version_id": "TEST_ASSET_VERSION_STOCK",
+                "system_version_id": "TEST_SYSTEM_VERSION_TEST_ERP",
+                "module_version_id": "TEST_MODULE_VERSION_TEST_STOCK",
+                "system_id": "TEST_ERP",
+                "module_id": "TEST_STOCK",
+                "system_name": "TEST_ERP",
+                "module_name": "TEST_STOCK",
+                "name": "재고현황",
+                "description": "재고 수량과 현재 재고 조회",
+                "business_areas": [],
+                "problems": [],
+                "prerequisites": [],
+                "exclusions": [],
+                "relations": [],
+                "availability": "NEEDS_CONFIRMATION",
+                "availability_evidence": "",
+                "mapping_status": "ADMIN_REGISTERED",
+                "source": {
+                  "kind": "TEST_SYNTHETIC",
+                  "import_id": "TEST_IMPORT",
+                  "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "revision_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                }
+              },
+              {
+                "feature_id": "TEST_FEATURE_DOC",
+                "external_id": "TEST_EXTERNAL_DOC",
+                "revision_id": "TEST_REVISION_DOC",
+                "asset_version_id": "TEST_ASSET_VERSION_DOC",
+                "system_version_id": "TEST_SYSTEM_VERSION_TEST_GROUPWARE",
+                "module_version_id": "TEST_MODULE_VERSION_TEST_DOCUMENT",
+                "system_id": "TEST_GROUPWARE",
+                "module_id": "TEST_DOCUMENT",
+                "system_name": "TEST_GROUPWARE",
+                "module_name": "TEST_DOCUMENT",
+                "name": "문서 기안",
+                "description": "전자결재 기안 문서 처리와 자료 검색",
+                "business_areas": [],
+                "problems": [],
+                "prerequisites": [],
+                "exclusions": [],
+                "relations": [],
+                "availability": "NEEDS_CONFIRMATION",
+                "availability_evidence": "",
+                "mapping_status": "ADMIN_REGISTERED",
+                "source": {
+                  "kind": "TEST_SYNTHETIC",
+                  "import_id": "TEST_IMPORT",
+                  "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "revision_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                }
+              }
+            ],
+            "coverage": [
+              {
+                "demand_id": "improvement:as_is",
+                "requirement": "문서 기안과 재고 수량 조회가 필요합니다.",
+                "evidence_refs": [
+                  {
+                    "kind": "IMPROVEMENT_VERSION",
+                    "version_id": "TEST_VERSION_A",
+                    "field": "as_is",
+                    "quote": "문서 기안과 재고 수량 조회가 필요합니다."
+                  }
+                ],
+                "status": "PARTIAL",
+                "capability_version_id": null,
+                "feature_revision_ids": [
+                  "TEST_REVISION_STOCK",
+                  "TEST_REVISION_DOC"
+                ],
+                "role": "검토할 원천 기능 역할: 재고현황 · 문서 기안",
+                "addressed_scope": "원문 표현과 연결된 기능 후보: 재고현황 · 문서 기안",
+                "unaddressed_scope": "요구 전체의 해결·실제 적용성·효과는 아직 검증하지 않았습니다.",
+                "missing_information": [
+                  "기업 업무의 실제 적용범위·예외·성과는 운영자 검토가 필요합니다.",
+                  "재고현황: 현재 제공 가능 상태와 검증 근거 확인 필요.",
+                  "문서 기안: 현재 제공 가능 상태와 검증 근거 확인 필요."
+                ]
+              }
+            ],
+            "integrations": [
+              {
+                "from_asset_id": "TEST_DOCUMENT",
+                "to_asset_id": "TEST_STOCK",
+                "data": "문서 기안 · 재고현황: 실제 데이터 항목·공통 식별자·형식은 확인 필요.",
+                "workflow": "TEST_DOCUMENT / TEST_STOCK 기능을 연결하는 업무 초안입니다. 처리 순서·책임·예외는 기업과 검토하세요.",
+                "prerequisites": [],
+                "verification": "UNVERIFIED",
+                "evidence_note": "확인된 모듈 간 연계 근거가 등록되지 않았습니다.",
+                "uncertainty": "연계가 검증되지 않은 구성 초안이며 실제 연동을 보장하지 않습니다."
+              }
+            ],
+            "conditions": [],
+            "unresolved": [
+              "재고현황: 제공 가능 검증 필요.",
+              "문서 기안: 제공 가능 검증 필요.",
+              "연계가 검증되지 않은 구성 초안이며 실제 연동을 보장하지 않습니다.",
+              "기업 업무의 실제 적용범위·예외·성과는 운영자 검토가 필요합니다."
+            ],
+            "review_status": "REVIEW_REQUIRED"
+          },
+          {
+            "id": "asset-alt-98841f6c7f92779a8a35c468",
+            "name": "TEST_GROUPWARE — TEST_DOCUMENT 검토 초안",
+            "kind": "SINGLE_MODULE",
+            "topology_kind": "SINGLE_MODULE",
+            "why": "기업 요구의 양성 업무 표현이 실제 기능 원문과 연결됩니다. 기능별 근거를 확인한 후 선택하세요.",
+            "systems": [
+              {
+                "id": "TEST_GROUPWARE",
+                "name": "TEST_GROUPWARE",
+                "version_id": "TEST_SYSTEM_VERSION_TEST_GROUPWARE"
+              }
+            ],
+            "modules": [
+              {
+                "id": "TEST_DOCUMENT",
+                "name": "TEST_DOCUMENT",
+                "version_id": "TEST_MODULE_VERSION_TEST_DOCUMENT"
+              }
+            ],
+            "feature_selections": [
+              {
+                "feature_revision_id": "TEST_REVISION_DOC",
+                "asset_version_id": "TEST_ASSET_VERSION_DOC",
+                "system_version_id": "TEST_SYSTEM_VERSION_TEST_GROUPWARE",
+                "module_version_id": "TEST_MODULE_VERSION_TEST_DOCUMENT",
+                "role": "문서 기안 기능 적용 검토"
+              }
+            ],
+            "features": [
+              {
+                "feature_id": "TEST_FEATURE_DOC",
+                "external_id": "TEST_EXTERNAL_DOC",
+                "revision_id": "TEST_REVISION_DOC",
+                "asset_version_id": "TEST_ASSET_VERSION_DOC",
+                "system_version_id": "TEST_SYSTEM_VERSION_TEST_GROUPWARE",
+                "module_version_id": "TEST_MODULE_VERSION_TEST_DOCUMENT",
+                "system_id": "TEST_GROUPWARE",
+                "module_id": "TEST_DOCUMENT",
+                "system_name": "TEST_GROUPWARE",
+                "module_name": "TEST_DOCUMENT",
+                "name": "문서 기안",
+                "description": "전자결재 기안 문서 처리와 자료 검색",
+                "business_areas": [],
+                "problems": [],
+                "prerequisites": [],
+                "exclusions": [],
+                "relations": [],
+                "availability": "NEEDS_CONFIRMATION",
+                "availability_evidence": "",
+                "mapping_status": "ADMIN_REGISTERED",
+                "source": {
+                  "kind": "TEST_SYNTHETIC",
+                  "import_id": "TEST_IMPORT",
+                  "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "revision_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                }
+              }
+            ],
+            "coverage": [
+              {
+                "demand_id": "improvement:as_is",
+                "requirement": "문서 기안과 재고 수량 조회가 필요합니다.",
+                "evidence_refs": [
+                  {
+                    "kind": "IMPROVEMENT_VERSION",
+                    "version_id": "TEST_VERSION_A",
+                    "field": "as_is",
+                    "quote": "문서 기안과 재고 수량 조회가 필요합니다."
+                  }
+                ],
+                "status": "PARTIAL",
+                "capability_version_id": null,
+                "feature_revision_ids": [
+                  "TEST_REVISION_DOC"
+                ],
+                "role": "검토할 원천 기능 역할: 문서 기안",
+                "addressed_scope": "원문 표현과 연결된 기능 후보: 문서 기안",
+                "unaddressed_scope": "요구 전체의 해결·실제 적용성·효과는 아직 검증하지 않았습니다.",
+                "missing_information": [
+                  "기업 업무의 실제 적용범위·예외·성과는 운영자 검토가 필요합니다.",
+                  "문서 기안: 현재 제공 가능 상태와 검증 근거 확인 필요."
+                ]
+              }
+            ],
+            "integrations": [],
+            "conditions": [],
+            "unresolved": [
+              "문서 기안: 제공 가능 검증 필요.",
+              "기업 업무의 실제 적용범위·예외·성과는 운영자 검토가 필요합니다."
+            ],
+            "review_status": "REVIEW_REQUIRED"
+          },
+          {
+            "id": "asset-alt-fb392f2e0a305fb0f247823e",
+            "name": "TEST_ERP — TEST_STOCK 검토 초안",
+            "kind": "SINGLE_MODULE",
+            "topology_kind": "SINGLE_MODULE",
+            "why": "기업 요구의 양성 업무 표현이 실제 기능 원문과 연결됩니다. 기능별 근거를 확인한 후 선택하세요.",
+            "systems": [
+              {
+                "id": "TEST_ERP",
+                "name": "TEST_ERP",
+                "version_id": "TEST_SYSTEM_VERSION_TEST_ERP"
+              }
+            ],
+            "modules": [
+              {
+                "id": "TEST_STOCK",
+                "name": "TEST_STOCK",
+                "version_id": "TEST_MODULE_VERSION_TEST_STOCK"
+              }
+            ],
+            "feature_selections": [
+              {
+                "feature_revision_id": "TEST_REVISION_STOCK",
+                "asset_version_id": "TEST_ASSET_VERSION_STOCK",
+                "system_version_id": "TEST_SYSTEM_VERSION_TEST_ERP",
+                "module_version_id": "TEST_MODULE_VERSION_TEST_STOCK",
+                "role": "재고현황 기능 적용 검토"
+              }
+            ],
+            "features": [
+              {
+                "feature_id": "TEST_FEATURE_STOCK",
+                "external_id": "TEST_EXTERNAL_STOCK",
+                "revision_id": "TEST_REVISION_STOCK",
+                "asset_version_id": "TEST_ASSET_VERSION_STOCK",
+                "system_version_id": "TEST_SYSTEM_VERSION_TEST_ERP",
+                "module_version_id": "TEST_MODULE_VERSION_TEST_STOCK",
+                "system_id": "TEST_ERP",
+                "module_id": "TEST_STOCK",
+                "system_name": "TEST_ERP",
+                "module_name": "TEST_STOCK",
+                "name": "재고현황",
+                "description": "재고 수량과 현재 재고 조회",
+                "business_areas": [],
+                "problems": [],
+                "prerequisites": [],
+                "exclusions": [],
+                "relations": [],
+                "availability": "NEEDS_CONFIRMATION",
+                "availability_evidence": "",
+                "mapping_status": "ADMIN_REGISTERED",
+                "source": {
+                  "kind": "TEST_SYNTHETIC",
+                  "import_id": "TEST_IMPORT",
+                  "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "revision_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                }
+              }
+            ],
+            "coverage": [
+              {
+                "demand_id": "improvement:as_is",
+                "requirement": "문서 기안과 재고 수량 조회가 필요합니다.",
+                "evidence_refs": [
+                  {
+                    "kind": "IMPROVEMENT_VERSION",
+                    "version_id": "TEST_VERSION_A",
+                    "field": "as_is",
+                    "quote": "문서 기안과 재고 수량 조회가 필요합니다."
+                  }
+                ],
+                "status": "PARTIAL",
+                "capability_version_id": null,
+                "feature_revision_ids": [
+                  "TEST_REVISION_STOCK"
+                ],
+                "role": "검토할 원천 기능 역할: 재고현황",
+                "addressed_scope": "원문 표현과 연결된 기능 후보: 재고현황",
+                "unaddressed_scope": "요구 전체의 해결·실제 적용성·효과는 아직 검증하지 않았습니다.",
+                "missing_information": [
+                  "기업 업무의 실제 적용범위·예외·성과는 운영자 검토가 필요합니다.",
+                  "재고현황: 현재 제공 가능 상태와 검증 근거 확인 필요."
+                ]
+              }
+            ],
+            "integrations": [],
+            "conditions": [],
+            "unresolved": [
+              "재고현황: 제공 가능 검증 필요.",
+              "기업 업무의 실제 적용범위·예외·성과는 운영자 검토가 필요합니다."
+            ],
+            "review_status": "REVIEW_REQUIRED"
+          }
+        ],
+        "uncovered_demands": [],
+        "limitations": [
+          "등록된 기능 표현을 이용한 제한된 규칙 검색·조합 초안이며 범용 AI 의미분석이 아닙니다.",
+          "자동 초안은 사람 검토 전 상태이며 제공 가능성·실제 해결·지원사업 자격을 확정하지 않습니다."
+        ]
+      }
+    },
+    {
+      "id": "H21",
+      "kind": "parser",
+      "passed": true,
+      "checks": [
+        {
+          "metric": "parser_error",
+          "actual": "UNSUPPORTED_FORMAT",
+          "expected": "UNSUPPORTED_FORMAT",
+          "passed": true
+        }
+      ],
+      "output": {
+        "error": "UNSUPPORTED_FORMAT"
+      }
+    },
+    {
+      "id": "H22",
+      "kind": "parser",
+      "passed": true,
+      "checks": [
+        {
+          "metric": "parser_error",
+          "actual": "FORMAT_MISMATCH",
+          "expected": "FORMAT_MISMATCH",
+          "passed": true
+        }
+      ],
+      "output": {
+        "error": "FORMAT_MISMATCH"
+      }
+    },
+    {
+      "id": "H23",
+      "kind": "parser",
+      "passed": true,
+      "checks": [
+        {
+          "metric": "parser_error",
+          "actual": "FORMAT_MISMATCH",
+          "expected": "FORMAT_MISMATCH",
+          "passed": true
+        }
+      ],
+      "output": {
+        "error": "FORMAT_MISMATCH"
+      }
+    },
+    {
+      "id": "H24",
+      "kind": "parser",
+      "passed": true,
+      "checks": [
+        {
+          "metric": "parser_locations",
+          "actual": 2,
+          "expected": 2,
+          "passed": true
+        },
+        {
+          "metric": "parser_parser",
+          "actual": "company-local-parser-v1",
+          "expected": "company-local-parser-v1",
+          "passed": true
+        },
+        {
+          "metric": "parser_texts",
+          "actual": [
+            "TEST unrelated general attachment",
+            "No company facts asserted."
+          ],
+          "expected": [
+            "TEST unrelated general attachment",
+            "No company facts asserted."
+          ],
+          "passed": true
+        }
+      ],
+      "output": {
+        "parser": "company-local-parser-v1",
+        "locations": [
+          {
+            "descriptor": "TEXT line 1",
+            "text": "TEST unrelated general attachment",
+            "page": null
+          },
+          {
+            "descriptor": "TEXT line 2",
+            "text": "No company facts asserted.",
+            "page": null
+          }
+        ],
+        "limitations": []
+      }
+    }
+  ],
+  "code_selection": {
+    "requested": "0b6f56a88131a10fdc9c4cb16ed7658250275b03",
+    "kind": "COMMIT",
+    "selected_commit": "0b6f56a88131a10fdc9c4cb16ed7658250275b03",
+    "worktree_head": "fa5af078a3d41972838ece6389a949cc8d119240",
+    "worktree_dirty": true,
+    "variable_modules": [
+      "app.company.improvement_language",
+      "app.company.improvement_structure",
+      "app.capability.recommendations",
+      "app.capability.asset_solutions",
+      "app.company.improvement_rules"
+    ],
+    "execution": "Five pure modules compiled from exact git-show bytes or exact worktree bytes; support imports verified separately."
+  },
+  "source_loading": {
+    "apps/api/app/capability/asset_solutions.py": {
+      "selected": {
+        "sha256": "6a8c5d005a418bb214ff0006b09836e50112bbf11f882a229c932044477ab0dd",
+        "bytes": 26102,
+        "line_endings": "LF",
+        "crlf": 0,
+        "lone_lf": 475,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "6a8c5d005a418bb214ff0006b09836e50112bbf11f882a229c932044477ab0dd"
+      },
+      "worktree": {
+        "sha256": "a9133dd6e2d2d1c680028e9ae7b5c00b9c1986db43191902515134b81edfb9d8",
+        "bytes": 28337,
+        "line_endings": "CRLF",
+        "crlf": 503,
+        "lone_lf": 0,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "2b1cf9ed4e95134e5539e38f3e12646529861a7d638788acb1c29d715b066bdb"
+      },
+      "execution": "EXACT_SELECTED_BYTES_COMPILED_IN_MEMORY",
+      "support_lf_equivalent": null
+    },
+    "apps/api/app/capability/recommendations.py": {
+      "selected": {
+        "sha256": "6907ef8d151db8fc9d17984d012ad3371af3bfa5decb4e3a7e606e9363dd3080",
+        "bytes": 16483,
+        "line_endings": "LF",
+        "crlf": 0,
+        "lone_lf": 305,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "6907ef8d151db8fc9d17984d012ad3371af3bfa5decb4e3a7e606e9363dd3080"
+      },
+      "worktree": {
+        "sha256": "135efcc528c69bdd1375c912b3a35b3453533b93a2b9446bd42f204f4b690478",
+        "bytes": 17868,
+        "line_endings": "CRLF",
+        "crlf": 319,
+        "lone_lf": 0,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "2a213f7fccb72a031ec354da752a109a6356cd78c2558118d087bfe17eb87926"
+      },
+      "execution": "EXACT_SELECTED_BYTES_COMPILED_IN_MEMORY",
+      "support_lf_equivalent": null
+    },
+    "apps/api/app/capability/search.py": {
+      "selected": {
+        "sha256": "3611226f3818d90496356686466c427d101fd6b67403e50918b5051801a6a919",
+        "bytes": 3068,
+        "line_endings": "LF",
+        "crlf": 0,
+        "lone_lf": 50,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "3611226f3818d90496356686466c427d101fd6b67403e50918b5051801a6a919"
+      },
+      "worktree": {
+        "sha256": "6ca5e888ba6e90edb1b8e8615101663063dea9e161efe6f941bc9cfde26c66ff",
+        "bytes": 3118,
+        "line_endings": "CRLF",
+        "crlf": 50,
+        "lone_lf": 0,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "3611226f3818d90496356686466c427d101fd6b67403e50918b5051801a6a919"
+      },
+      "execution": "WORKTREE_PURE_SUPPORT_IMPORT",
+      "support_lf_equivalent": true
+    },
+    "apps/api/app/company/documents.py": {
+      "selected": {
+        "sha256": "c82365196de975bfc0eac6d18cb2104ecb354f506ccc41287a60ed4e2669bfc4",
+        "bytes": 8359,
+        "line_endings": "LF",
+        "crlf": 0,
+        "lone_lf": 184,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "c82365196de975bfc0eac6d18cb2104ecb354f506ccc41287a60ed4e2669bfc4"
+      },
+      "worktree": {
+        "sha256": "92f90542c69f6b2f61feaa6b8c4bcc0a724819e7dd496ca4a9871ee003078291",
+        "bytes": 8543,
+        "line_endings": "CRLF",
+        "crlf": 184,
+        "lone_lf": 0,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "c82365196de975bfc0eac6d18cb2104ecb354f506ccc41287a60ed4e2669bfc4"
+      },
+      "execution": "WORKTREE_PURE_SUPPORT_IMPORT",
+      "support_lf_equivalent": true
+    },
+    "apps/api/app/company/improvement_language.py": {
+      "selected": {
+        "sha256": "f618354e8776b8722d27d114b87f9a51bf2b0ac183443370b8e9f5b854c555bc",
+        "bytes": 5974,
+        "line_endings": "LF",
+        "crlf": 0,
+        "lone_lf": 86,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "f618354e8776b8722d27d114b87f9a51bf2b0ac183443370b8e9f5b854c555bc"
+      },
+      "worktree": {
+        "sha256": "bd5916c52d5c98f107fa18194b188d27c55acdf84d11382288d26a738c87719b",
+        "bytes": 6558,
+        "line_endings": "CRLF",
+        "crlf": 88,
+        "lone_lf": 0,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "9185aaf662bf50445b11597c3b4e66848e0d0dc23249a63b8b3a384a67bbd570"
+      },
+      "execution": "EXACT_SELECTED_BYTES_COMPILED_IN_MEMORY",
+      "support_lf_equivalent": null
+    },
+    "apps/api/app/company/improvement_rules.py": {
+      "selected": {
+        "sha256": "c2387c38806a63123e55e22b8da2f6708fe2586b2b7163a74972aa3a231cd689",
+        "bytes": 8917,
+        "line_endings": "LF",
+        "crlf": 0,
+        "lone_lf": 99,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "c2387c38806a63123e55e22b8da2f6708fe2586b2b7163a74972aa3a231cd689"
+      },
+      "worktree": {
+        "sha256": "febdcf4dd9fd2b9769b3d6a91d6ef6ba7a68d7d725b724b00ce6f380f997112f",
+        "bytes": 9043,
+        "line_endings": "CRLF",
+        "crlf": 99,
+        "lone_lf": 0,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "141fdc6e5b8220e9a6388cd4e0d6968019ba284871717a7433bd09c4021fa767"
+      },
+      "execution": "EXACT_SELECTED_BYTES_COMPILED_IN_MEMORY",
+      "support_lf_equivalent": null
+    },
+    "apps/api/app/company/improvement_structure.py": {
+      "selected": {
+        "sha256": "a0fab5012211ac4d787641b85c668a24f7b977ff45d3d103283b9378cc44561b",
+        "bytes": 8648,
+        "line_endings": "LF",
+        "crlf": 0,
+        "lone_lf": 149,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "a0fab5012211ac4d787641b85c668a24f7b977ff45d3d103283b9378cc44561b"
+      },
+      "worktree": {
+        "sha256": "f2528accdcd4a8821bb08c87d9820f116ea506d5fe77a62feb1f93ef843aa8de",
+        "bytes": 9036,
+        "line_endings": "CRLF",
+        "crlf": 150,
+        "lone_lf": 0,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "f50981294ec20e435eb5c355c01e8ef77f0437e452cde34cb8406e61591ccadb"
+      },
+      "execution": "EXACT_SELECTED_BYTES_COMPILED_IN_MEMORY",
+      "support_lf_equivalent": null
+    },
+    "apps/api/app/company/ocr.py": {
+      "selected": {
+        "sha256": "64bfb90d8f3926e93477902070c3f7621e19c96735cf9ed388659383e1419b6a",
+        "bytes": 1224,
+        "line_endings": "LF",
+        "crlf": 0,
+        "lone_lf": 18,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "64bfb90d8f3926e93477902070c3f7621e19c96735cf9ed388659383e1419b6a"
+      },
+      "worktree": {
+        "sha256": "3b5cd37b9a8b9d58bce11652d34822fdcc5f6ec2ba40a337602a2c39964f8627",
+        "bytes": 1242,
+        "line_endings": "CRLF",
+        "crlf": 18,
+        "lone_lf": 0,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "64bfb90d8f3926e93477902070c3f7621e19c96735cf9ed388659383e1419b6a"
+      },
+      "execution": "VERSION_REFERENCE_NOT_EXECUTED",
+      "support_lf_equivalent": null
+    },
+    "apps/api/app/company/registration.py": {
+      "selected": {
+        "sha256": "a76fb0bb92e3989ed31f1478a9e471712e21bdf3f18d46b1d8b8973a0016f8a6",
+        "bytes": 4959,
+        "line_endings": "LF",
+        "crlf": 0,
+        "lone_lf": 67,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "a76fb0bb92e3989ed31f1478a9e471712e21bdf3f18d46b1d8b8973a0016f8a6"
+      },
+      "worktree": {
+        "sha256": "d33e1348167238930dae94bf7c747ec8daf9e157f5d6d940c36135134a50a22f",
+        "bytes": 5026,
+        "line_endings": "CRLF",
+        "crlf": 67,
+        "lone_lf": 0,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "a76fb0bb92e3989ed31f1478a9e471712e21bdf3f18d46b1d8b8973a0016f8a6"
+      },
+      "execution": "VERSION_REFERENCE_NOT_EXECUTED",
+      "support_lf_equivalent": null
+    },
+    "apps/api/app/company/statement_documents.py": {
+      "selected": {
+        "sha256": "ea178c3ba54f24930179a0b2ce05655751421b9059f3910632c3e5b9c20dcb3c",
+        "bytes": 10901,
+        "line_endings": "LF",
+        "crlf": 0,
+        "lone_lf": 174,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "ea178c3ba54f24930179a0b2ce05655751421b9059f3910632c3e5b9c20dcb3c"
+      },
+      "worktree": {
+        "sha256": "a3bc49defa33fb1c53e14c6bb43737aea7cb3afe77bff6c0141a99182e58503c",
+        "bytes": 11075,
+        "line_endings": "CRLF",
+        "crlf": 174,
+        "lone_lf": 0,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "ea178c3ba54f24930179a0b2ce05655751421b9059f3910632c3e5b9c20dcb3c"
+      },
+      "execution": "VERSION_REFERENCE_NOT_EXECUTED",
+      "support_lf_equivalent": null
+    },
+    "apps/api/app/notice/domain.py": {
+      "selected": {
+        "sha256": "44f8f7ce6b7784c9cadae3c5b00dba5348867956cd6a45f63722832279968490",
+        "bytes": 1271,
+        "line_endings": "LF",
+        "crlf": 0,
+        "lone_lf": 45,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "44f8f7ce6b7784c9cadae3c5b00dba5348867956cd6a45f63722832279968490"
+      },
+      "worktree": {
+        "sha256": "bd4d6dadb0396a5c7f2e283a5fb904e6e3c4b775681027e4a0cc110861eca12e",
+        "bytes": 1316,
+        "line_endings": "CRLF",
+        "crlf": 45,
+        "lone_lf": 0,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "44f8f7ce6b7784c9cadae3c5b00dba5348867956cd6a45f63722832279968490"
+      },
+      "execution": "WORKTREE_PURE_SUPPORT_IMPORT",
+      "support_lf_equivalent": true
+    },
+    "apps/api/tests/test_asset_solutions.py": {
+      "selected": {
+        "sha256": "54359893fd8ec3ee2e6cdbc9466f5e7cc1a79ae4ee89d5584393db65569d0512",
+        "bytes": 26558,
+        "line_endings": "LF",
+        "crlf": 0,
+        "lone_lf": 458,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "54359893fd8ec3ee2e6cdbc9466f5e7cc1a79ae4ee89d5584393db65569d0512"
+      },
+      "worktree": {
+        "sha256": "bf47beabbd855de45139e519e8c46f5bdb6be3fc3480bf975c48101734eb8562",
+        "bytes": 27016,
+        "line_endings": "CRLF",
+        "crlf": 458,
+        "lone_lf": 0,
+        "lone_cr": 0,
+        "lf_normalized_sha256": "54359893fd8ec3ee2e6cdbc9466f5e7cc1a79ae4ee89d5584393db65569d0512"
+      },
+      "execution": "WORKTREE_PURE_SUPPORT_IMPORT",
+      "support_lf_equivalent": true
+    }
+  },
+  "evaluation_harness": {
+    "apps/api/tests/quality_compare.py": {
+      "sha256": "186da167f7607d1b8d6a11a96529c3c0805facd58b35ab489c84b1e96bc833b0",
+      "bytes": 8242,
+      "line_endings": "LF",
+      "crlf": 0,
+      "lone_lf": 156,
+      "lone_cr": 0,
+      "lf_normalized_sha256": "186da167f7607d1b8d6a11a96529c3c0805facd58b35ab489c84b1e96bc833b0"
+    },
+    "apps/api/tests/quality_evaluator.py": {
+      "sha256": "7ee742870880621edb855b22655f16d0e4138995b31c469da7c6fb0f88784f38",
+      "bytes": 9235,
+      "line_endings": "CRLF",
+      "crlf": 123,
+      "lone_lf": 0,
+      "lone_cr": 0,
+      "lf_normalized_sha256": "a0daf75878c25f808e797435730250b11237f4cbe13a0d8edbd52a8e6dac9593"
+    },
+    "apps/api/tests/test_asset_solutions.py": {
+      "sha256": "bf47beabbd855de45139e519e8c46f5bdb6be3fc3480bf975c48101734eb8562",
+      "bytes": 27016,
+      "line_endings": "CRLF",
+      "crlf": 458,
+      "lone_lf": 0,
+      "lone_cr": 0,
+      "lf_normalized_sha256": "54359893fd8ec3ee2e6cdbc9466f5e7cc1a79ae4ee89d5584393db65569d0512"
+    }
+  },
+  "gold_sha256": "dc197ffdc2baf5e4abdfac01edeb7c96619c7f3aa57501d899ba08872f092f8c",
+  "case_ids": [
+    "H01",
+    "H02",
+    "H03",
+    "H04",
+    "H05",
+    "H06",
+    "H07",
+    "H08",
+    "H09",
+    "H10",
+    "H11",
+    "H12",
+    "H13",
+    "H14",
+    "H15",
+    "H16",
+    "H17",
+    "H18",
+    "H19",
+    "H20",
+    "H21",
+    "H22",
+    "H23",
+    "H24"
+  ],
+  "corpus_metadata": {
+    "schema": "datco-quality-exposed-regression-round2-v1",
+    "criteria": "Human literal source roles, explicit exclusions and responses; Decimal/unit/year linkage; required and excluded business scopes. Frozen before fixes, no live company source. Unsupported cases stay in denominator.",
+    "evaluation_status": "EXPOSED_REGRESSION_NOT_UNSEEN_HOLDOUT",
+    "source_corpus": {
+      "path": "apps/api/tests/fixtures/analysis_quality_holdout_v1.json",
+      "sha256": "e2d0d22e91515bc46d11e4daac2ab3c3934ded49621b5d5bca2a80a688933cab",
+      "preserved": true
+    },
+    "round2_corrections": [
+      {
+        "id": "H07",
+        "original_gold": {
+          "diagnostic": {
+            "R02": "FOUND",
+            "R05": "FOUND"
+          }
+        },
+        "round2_gold": {
+          "no_missing_rules": [
+            "R02",
+            "R05"
+          ]
+        },
+        "reason": "입력에는 해당 측정 기준·기존 구성 질문의 적용 조건이 명시되지 않습니다. NOT_APPLICABLE도 질문을 만들지 않는 정상 업무 결과이므로 FOUND 진단 강제를 제거하고 실제 반복 질문 부재를 검사합니다.",
+        "classification": "EVALUATION_DESIGN_ERROR"
+      },
+      {
+        "id": "H08",
+        "original_gold": {
+          "diagnostic": {
+            "R02": "NOT_FOUND_IN_SCOPE"
+          }
+        },
+        "round2_gold": {
+          "no_missing_rules": [
+            "R02"
+          ]
+        },
+        "reason": "목표의 10분은 현재 기준값이 아닙니다. 적용 조건이 없는 질문에 NOT_FOUND_IN_SCOPE를 강제하지 않고 실제 반복 질문 부재를 검사합니다.",
+        "classification": "EVALUATION_DESIGN_ERROR"
+      },
+      {
+        "id": "H09",
+        "original_gold": {
+          "diagnostic": {
+            "R04": "FOUND"
+          }
+        },
+        "round2_gold": {
+          "no_missing_rules": [
+            "R04"
+          ]
+        },
+        "reason": "현장·담당자 수는 명시되어 있지만 해당 적용범위 질문의 트리거가 없습니다. FOUND 진단을 강제하지 않고 실제 반복 질문 부재를 검사합니다.",
+        "classification": "EVALUATION_DESIGN_ERROR"
+      },
+      {
+        "id": "H24",
+        "original_gold": {
+          "locations": 1,
+          "parser": "company-local-parser-v1"
+        },
+        "round2_gold": {
+          "locations": 2,
+          "parser": "company-local-parser-v1",
+          "texts": [
+            "TEST unrelated general attachment",
+            "No company facts asserted."
+          ]
+        },
+        "reason": "지원되는 TXT의 두 비어 있지 않은 원문 줄은 각각 별도 위치입니다. 위치 개수만 1로 기대했던 평가 설계 오류를 정정하고 두 원문 줄의 내용·순서를 함께 검사합니다.",
+        "classification": "EVALUATION_DESIGN_ERROR"
+      }
+    ],
+    "limitations": [
+      "All 24 cases have already been exposed; round2 is regression evaluation, not a new holdout.",
+      "H10-H14 retain original scalar gold and unsupported grammar failures; no claim of complete extraction.",
+      "H07/H08/H09 change four diagnostic assertions in three cases; H24 corrects the TXT location count and adds exact original-line checks.",
+      "Original corpus and first-evaluation before/after JSON are preserved; changed gold and changed code are reported separately.",
+      "No real-company data, OCR execution, human effort, operator time or user acceptance is evaluated."
+    ],
+    "preserved_original_results": [
+      {
+        "path": "apps/api/tests/fixtures/analysis_quality_holdout_before_v1.json",
+        "sha256": "f714d0ebaf700b2fe7a18940260ee3cb4d3d9d9ee6f9f04dd132830de87bbe47"
+      },
+      {
+        "path": "apps/api/tests/fixtures/analysis_quality_holdout_after_v1.json",
+        "sha256": "817deac1017affc8f0032af3709d3d926daed85f394378ce26c99691eff266fb"
+      }
+    ]
+  },
+  "report_errors": []
+}
