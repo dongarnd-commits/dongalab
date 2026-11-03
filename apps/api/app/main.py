@@ -52,3 +52,6 @@ from app.api.dmp_assets import router as dmp_assets_router
 app.include_router(dmp_assets_router)
 from app.api.asset_solutions import router as asset_solutions_router
 app.include_router(asset_solutions_router)
+
+from app.api.asset_imports import router as asset_imports_router
+app.include_router(asset_imports_router)
