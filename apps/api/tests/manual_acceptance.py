@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[3]
 API, WEB = ROOT / "apps/api", ROOT / "apps/web"
 BASE = ROOT / "storage/private/runtime/manual-acceptance"
 LABEL = "datco.manual_acceptance"
+RELEASE_OWNER_GUARD_VERSION = 1
 HIDDEN = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
 
 
@@ -473,6 +474,8 @@ def main():
     if args.action == "status":
         print(json.dumps(state, ensure_ascii=False))
     elif args.action == "start":
+        if (out / "release-owner.json").exists():
+            raise RuntimeError("ENROLLED_OWNER_USE_ACCEPTANCE_RELEASE_TOOL")
         if state["phase"] not in ("STOPPED",):
             raise RuntimeError("ONLY_STOPPED_ENVIRONMENT_CAN_START")
         if head() != m["head"]:
