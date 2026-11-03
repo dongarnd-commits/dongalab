@@ -13,7 +13,7 @@ test('MVP admin uses real summaries, source catalog, existing grant and unconfig
  const overview=await(await page.request.get('/api/admin/overview')).json();expect(overview.accounts).toBeGreaterThan(0);
  const nav=page.getByRole('navigation',{name:'관리자 메뉴'});await nav.getByRole('button',{name:'기준정보·버전',exact:true}).click();
  await page.getByText('표준 서비스 관리',{exact:true}).click();await expect(page.getByRole('heading',{name:'실제 DMP 기능·Capability Catalog',exact:true})).toBeVisible();
- const inventory=await(await page.request.get('/api/capability/features?limit=25')).json();await expect(page.getByText('조회된 실제 기능 '+inventory.total+'건',{exact:false})).toBeVisible();
+ const inventory=await(await page.request.get('/api/capability/features?limit=25')).json();expect(inventory.scope).toBe('CURRENT_CATALOG');await expect(page.getByText('현재 등록 기능 '+inventory.total+'건 · 과거 원천과 증분 등록을 포함한 최신 목록입니다.',{exact:false})).toBeVisible();
  await nav.getByRole('button',{name:'사용자·권한',exact:true}).click();
  const before=await(await page.request.get('/api/admin/access')).json();expect(JSON.stringify(before)).not.toContain('password_hash');
  await page.getByLabel('접근권한 대상 계정',{exact:true}).selectOption(c.accounts.operator);await page.getByLabel('접근권한 허용 기업',{exact:true}).selectOption(c.a.id);
