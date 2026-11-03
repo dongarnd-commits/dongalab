@@ -19,7 +19,7 @@ const lines=(s:string)=>s.split('\n');
 const Box=({title,children}:{title:string;children:React.ReactNode})=><section className="da-box"><div className="da-box-heading"><h3>{title}</h3></div>{children}</section>;
 
 export function DmpAssets(){
- const [catalog,setCatalog]=useState<Inventory|null>(null),[kind,setKind]=useState<AssetKind>('FEATURE'),[q,setQ]=useState(''),[system,setSystem]=useState(''),[module,setModule]=useState(''),[status,setStatus]=useState(''),[page,setPage]=useState(1);
+ const [catalog,setCatalog]=useState<Inventory|null>(null),[catalogQuery,setCatalogQuery]=useState(''),[kind,setKind]=useState<AssetKind>('FEATURE'),[q,setQ]=useState(''),[system,setSystem]=useState(''),[module,setModule]=useState(''),[status,setStatus]=useState(''),[page,setPage]=useState(1);
  const [detail,setDetail]=useState<Detail|null>(null),[editing,setEditing]=useState(false),[formKind,setFormKind]=useState<AssetKind>('FEATURE'),[parent,setParent]=useState(''),[sourceFeature,setSourceFeature]=useState<string|null>(null),[draft,setDraft]=useState<AssetData>(empty);
  const [baseline,setBaseline]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState<string|Error>(''),[message,setMessage]=useState('');
  const resultRef=useRef<HTMLDivElement>(null),reveal=useRef(false);
@@ -30,11 +30,12 @@ export function DmpAssets(){
  usePortalWorkState({dirty,busy:saving,uncertain});
  useEffect(()=>{if(reveal.current){resultRef.current?.focus();resultRef.current?.scrollIntoView({block:'start'});if(!busy)reveal.current=false;}},[detail,error,editing,busy]);
  useEffect(()=>{const prevent=(event:BeforeUnloadEvent)=>{if(dirty)event.preventDefault();};window.addEventListener('beforeunload',prevent);return()=>window.removeEventListener('beforeunload',prevent);},[dirty]);
+ const query=new URLSearchParams({kind,q,system,module,status,page:String(page),limit:'20'}).toString();
+ const currentCatalog=catalogQuery===query?catalog:null;
  const load=useCallback(async(signal?:AbortSignal)=>{
-  const params=new URLSearchParams({kind,q,system,module,status,page:String(page),limit:'20'});
-  const value=await portalApi<Inventory>('capability','/assets?'+params,undefined,signal);
-  if(!signal?.aborted)setCatalog(value);
- },[kind,q,system,module,status,page]);
+  const value=await portalApi<Inventory>('capability','/assets?'+query,undefined,signal);
+  if(!signal?.aborted){setCatalog(value);setCatalogQuery(query);}
+ },[query]);
  useEffect(()=>{const controller=new AbortController();const timer=setTimeout(()=>{void load(controller.signal).catch(e=>{if(!controller.signal.aborted)setError(e instanceof Error?e:'기술자산 조회 실패');});},0);return()=>{clearTimeout(timer);controller.abort();};},[load]);
  const canLeave=()=>!uncertain&&(!dirty||window.confirm('저장하지 않은 기술자산 변경을 버리고 이동할까요?'));
  async function act(work:()=>Promise<void>,mutation=false){if(gate.current)return;gate.current=true;setBusy(true);setError('');setMessage('');try{await work();if(mutation)setUncertain(false);}catch(e){if(mutation)setUncertain(!confirmedSave.current&&!(e instanceof PortalRequestError&&e.status!==undefined&&e.status>=400&&e.status<500));setError(e instanceof Error?e:'처리 결과를 확인하지 못했습니다. 다시 조회하여 저장 여부를 확인하세요.');}finally{gate.current=false;setBusy(false);}}
@@ -92,8 +93,8 @@ export function DmpAssets(){
  <button type="button" className="da-btn da-btn-outline" disabled={busy||uncertain} onClick={()=>setDraft({...draft,relations:[...draft.relations,{target_node_id:'',kind:'INTEGRATION',condition:'',verified:false,evidence:''}]})}>기술자산 관계 추가</button>
  <div className="da-detail-nav">{uncertain&&<p role="alert">저장 응답을 확인하지 못했습니다. 같은 요청을 다시 시도하면 기존 처리 결과를 확인하며 중복 저장하지 않습니다. 확인 전에는 다른 작업이나 로그아웃을 할 수 없습니다.</p>}<button className="da-btn da-btn-primary" disabled={busy||invalid}>{uncertain?'같은 기술자산 저장 요청 다시 시도':'기술자산 저장'}</button><button type="button" className="da-btn da-btn-outline" disabled={busy||uncertain} onClick={()=>{if(canLeave())setEditing(false);}}>기술자산 편집 취소</button></div></form></Box>}
  </div>
- {!catalog&&!error&&<p role="status">기술자산을 조회하고 있습니다.</p>}
- {catalog&&<><p>검색 결과 {catalog.total}건</p><div className="da-table-scroll"><table className="da-table"><thead><tr><th>기술자산</th><th>시스템·모듈</th><th>제공 상태</th><th>관리</th></tr></thead><tbody>{catalog.items.map(item=><tr key={item.id} data-asset-id={item.id}><td><strong>{item.name}</strong><p className="asset-row-summary">{item.description??item.data.description}</p></td><td>{affiliation(item)}{item.mapping_status==='SOURCE_CLASSIFICATION'&&<small className="asset-source-note">{item.kind==='SYSTEM'?'원천 시스템 분류':item.kind==='MODULE'?'원천 기능그룹 · 실제 모듈 관계 미확인':'원천 기능 · 실제 소속·제공 범위 미확인'}</small>}</td><td>{assetStatusLabel[item.availability]??'제공 확인 필요'}</td><td><button className="da-btn da-btn-outline" disabled={busy||uncertain} onClick={()=>void open(item.id)}>기술자산 상세·이력</button></td></tr>)}</tbody></table></div>{!catalog.items.length&&<p>조건에 맞는 기술자산이 없습니다. 검색 조건을 바꾸거나 확인된 기술자산을 등록하세요.</p>}<div className="da-detail-nav"><button className="da-btn da-btn-outline" disabled={busy||page<=1} onClick={()=>setPage(page-1)}>이전 기술자산 페이지</button><span>{page} / {Math.max(1,Math.ceil(catalog.total/catalog.limit))} 페이지</span><button className="da-btn da-btn-outline" disabled={busy||page*catalog.limit>=catalog.total} onClick={()=>setPage(page+1)}>다음 기술자산 페이지</button></div></>}
+ {!currentCatalog&&!error&&<p role="status">현재 조건에 맞는 기술자산을 조회하고 있습니다.</p>}
+ {currentCatalog&&<><p>검색 결과 {currentCatalog.total}건</p><div className="da-table-scroll"><table className="da-table"><thead><tr><th>기술자산</th><th>시스템·모듈</th><th>제공 상태</th><th>관리</th></tr></thead><tbody>{currentCatalog.items.map(item=><tr key={item.id} data-asset-id={item.id}><td><strong>{item.name}</strong><p className="asset-row-summary">{item.description??item.data.description}</p></td><td>{affiliation(item)}{item.mapping_status==='SOURCE_CLASSIFICATION'&&<small className="asset-source-note">{item.kind==='SYSTEM'?'원천 시스템 분류':item.kind==='MODULE'?'원천 기능그룹 · 실제 모듈 관계 미확인':'원천 기능 · 실제 소속·제공 범위 미확인'}</small>}</td><td>{assetStatusLabel[item.availability]??'제공 확인 필요'}</td><td><button className="da-btn da-btn-outline" disabled={busy||uncertain} onClick={()=>void open(item.id)}>기술자산 상세·이력</button></td></tr>)}</tbody></table></div>{!currentCatalog.items.length&&<p>조건에 맞는 기술자산이 없습니다. 검색 조건을 바꾸거나 확인된 기술자산을 등록하세요.</p>}<div className="da-detail-nav"><button className="da-btn da-btn-outline" disabled={busy||page<=1} onClick={()=>setPage(page-1)}>이전 기술자산 페이지</button><span>{page} / {Math.max(1,Math.ceil(currentCatalog.total/currentCatalog.limit))} 페이지</span><button className="da-btn da-btn-outline" disabled={busy||page*currentCatalog.limit>=currentCatalog.total} onClick={()=>setPage(page+1)}>다음 기술자산 페이지</button></div></>}
  </Box>
  </div>;
 }

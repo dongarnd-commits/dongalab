@@ -7,12 +7,25 @@ const logout=(page:Page)=>page.getByRole('button',{name:'로그아웃',exact:tru
 async function signIn(page:Page,role:string){const c=isolated();await page.goto('/login');await page.getByLabel('아이디',{exact:true}).fill(c.accounts[role]);await page.getByLabel('비밀번호',{exact:true}).fill(c.password);await page.getByRole('button',{name:'로그인',exact:true}).click();await expect(logout(page)).toBeVisible();}
 
 for(const role of ['ux_editor','operator','admin'])test('quality clean '+role+' logout immediately revokes current session and other tab',async({page})=>{
- await signIn(page,role);const second=await page.context().newPage();await second.goto(page.url());await expect(logout(second)).toBeVisible();
+ await signIn(page,role);
+ const protectedPath=new URL(page.url()).pathname,firstProtected=protectedPath+'?session_history=before',secondProtected=protectedPath+'?session_history=logout';
+ const cachedRestores:boolean[]=[];
+ await page.exposeBinding('__qualityCachedRestore',(_source,visible:boolean)=>{cachedRestores.push(visible);});
+ await page.addInitScript(()=>window.addEventListener('pageshow',event=>{if(!event.persisted||!location.pathname.startsWith('/portal/'))return;const root=document.getElementById('root'),view=root?.querySelector('.portal-layout');const visible=!!root&&!!view&&getComputedStyle(root).visibility!=='hidden'&&view.getClientRects().length>0;void (window as unknown as {__qualityCachedRestore:(visible:boolean)=>Promise<void>}).__qualityCachedRestore(visible);}));
+ expect((await page.goto(firstProtected))?.status()).toBe(200);await expect(logout(page)).toBeVisible();
+ expect((await page.goto(secondProtected))?.status()).toBe(200);await expect(logout(page)).toBeVisible();
+ const second=await page.context().newPage();await second.goto(page.url());await expect(logout(second)).toBeVisible();
  const writes:string[]=[];page.on('request',r=>{if(r.method()==='POST'&&!new URL(r.url()).pathname.startsWith('/api/notice/session'))writes.push(new URL(r.url()).pathname);});
  const cookie=(await page.context().cookies()).find(c=>c.name==='datco_session')!.value;
  await logout(page).click();await expect(confirmation(page)).toHaveCount(0);await expect(page).toHaveURL(/\/login$/);await expect(second).toHaveURL(/\/login$/);
  expect((await page.request.get('/api/notice/session',{headers:{Cookie:'datco_session='+cookie}})).status()).toBe(401);expect(writes).toEqual([]);
- await page.goBack();await expect(page).toHaveURL(/\/login$/);await second.reload();await expect(second).toHaveURL(/\/login$/);await second.close();
+ const backDocuments:number[]=[];page.on('response',response=>{if(response.request().resourceType()==='document'&&new URL(response.url()).pathname===protectedPath)backDocuments.push(response.status());});
+ await page.goBack();await expect(page).toHaveURL(/\/login$/);
+ expect(cachedRestores.every(visible=>!visible)).toBe(true);expect(cachedRestores.length>0||backDocuments.includes(303)).toBe(true);
+ const privateView=page.locator('#portal-identity,[data-testid=company-business-context],[data-testid=operator-business-context],[data-testid=admin-live]');await expect(privateView).toHaveCount(0);await expect(logout(page)).toHaveCount(0);
+ await page.reload();await expect(page).toHaveURL(/\/login$/);await expect(privateView).toHaveCount(0);
+ for(const previous of [firstProtected,secondProtected]){const denied=await page.request.get(previous,{headers:{Cookie:'datco_session='+cookie},maxRedirects:0});expect(denied.status()).toBe(303);expect(denied.headers().location).toBe('/login');}
+ await page.goto(firstProtected);await expect(page).toHaveURL(/\/login$/);await expect(privateView).toHaveCount(0);await second.reload();await expect(second).toHaveURL(/\/login$/);await expect(second.locator('#portal-identity,.portal-layout')).toHaveCount(0);expect(writes).toEqual([]);await second.close();
 });
 
 test('quality actual company draft uses continue/discard and logout failure retains exact draft',async({page})=>{

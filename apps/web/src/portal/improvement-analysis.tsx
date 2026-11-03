@@ -23,6 +23,11 @@ const key=()=>crypto.randomUUID();
 type SubmissionRecord={id:string;actor_id?:string;request_key?:string;draft_id?:string;ordinal:number;decision:string;actor_name:string;created_at:string;note:string;analysis_limit:string};
 type SubmissionReviews={history:SubmissionRecord[];projection:{current:boolean;label:string;status:string;latest:SubmissionRecord|null;job_id:string|null}};
 const judgementLabels:Record<string,string>={COMPLETED:'검토 완료 — 추가 보완요청 없음',NEEDS_CHECK:'추가 확인 필요 — 판단 보류',PREPARE_REQUEST:'보완요청 작성'};
+type ReviewEdits=Record<string,{note?:string;question?:string}>;
+function hasUnsavedReview(note:string,edits:ReviewEdits,runs:Run[],history:SubmissionRecord[]){
+ return !!note.trim()&&note.trim()!==(history.at(-1)?.note??'').trim()||Object.entries(edits).some(([id,edit])=>{const candidate=runs.flatMap(r=>r.candidates.map(c=>({key:r.run.id+':'+c.id,c}))).find(row=>row.key===id)?.c,stored=candidate?.reviews.at(-1);return edit.note!==undefined&&edit.note.trim()!==(stored?.note??'').trim()||edit.question!==undefined&&edit.question.trim()!==(stored?.question??candidate?.data.question??'').trim();});
+}
+
 
 function AnalysisConfirmation({busy,onCancel,children}:{busy:boolean;onCancel:()=>void;children:ReactNode}){
  const dialog=useRef<HTMLDialogElement>(null),cancel=useRef<HTMLButtonElement>(null),titleId=useId();
@@ -60,7 +65,7 @@ export function ImprovementAnalysisPanel({cid,vid,actorId,company,title,submissi
  const [saveState,setSaveState]=useState('');
  const [choices,setChoices]=useState<Record<string,boolean>>({}),[edits,setEdits]=useState<Record<string,{note?:string;question?:string}>>({}),[recovered,setRecovered]=useState(false),[sendUncertain,setSendUncertain]=useState(false);
  const savedDraft=draft?.versions.at(-1),dirty=!!savedDraft&&(form.title.trim()!==savedDraft.title||form.message.trim()!==savedDraft.message||form.due!==(savedDraft.due_date??''));
- const reviewDirty=!!note.trim()&&note.trim()!==(whole?.history.at(-1)?.note??'').trim()||Object.entries(edits).some(([id,edit])=>{const candidate=runs.flatMap(r=>r.candidates.map(c=>({key:r.run.id+':'+c.id,c}))).find(row=>row.key===id)?.c,stored=candidate?.reviews.at(-1);return edit.note!==undefined&&edit.note.trim()!==(stored?.note??'').trim()||edit.question!==undefined&&edit.question.trim()!==(stored?.question??candidate?.data.question??'').trim();});
+ const reviewDirty=hasUnsavedReview(note,edits,runs,whole?.history??[]);
  const workDirty=dirty||reviewDirty;
  usePortalWorkState({dirty:workDirty,busy,uncertain:sendUncertain||saveState==='저장 결과 확인 필요'});
  const draftSelected=useRef(false);
@@ -78,7 +83,7 @@ export function ImprovementAnalysisPanel({cid,vid,actorId,company,title,submissi
  useEffect(()=>{onDirty(workDirty);const warn=(e:BeforeUnloadEvent)=>{if(workDirty)e.preventDefault();};window.addEventListener('beforeunload',warn);return()=>{window.removeEventListener('beforeunload',warn);onDirty(false);};},[workDirty,onDirty]);
  useEffect(()=>()=>onDraftActive(false),[onDraftActive]);
  useEffect(()=>{if(!job||!['QUEUED','PROCESSING'].includes(job.state))return;const timer=setTimeout(()=>{void companyRequest<Job>('/analysis-jobs/'+job.id).then(async j=>{if(!alive.current)return;setJob(j);if(!['QUEUED','PROCESSING'].includes(j.state)){await load();changed();}}).catch(e=>{if(alive.current)setError(e.message);});},1000);return()=>clearTimeout(timer);},[job,load,changed]);
- function open(d:Draft){draftSelected.current=true;setSaveState('');if(d.company_id!==cid||d.version_id!==vid)throw Error('초안의 기업·제출본이 일치하지 않습니다.');if(dirty&&!window.confirm('저장하지 않은 수정을 버리고 다른 초안을 여시겠습니까?'))return;const v=d.versions.at(-1)!;setDraft(d);setForm({title:v.title,message:v.message,due:v.due_date??''});setConfirm(false);setSendUncertain(false);returnAfterSend.current=false;onDraftActive(true);}
+ function open(d:Draft){draftSelected.current=true;setSaveState('');if(d.company_id!==cid||d.version_id!==vid)throw Error('초안의 기업·제출본이 일치하지 않습니다.');if(dirty&&!window.confirm('저장하지 않은 수정을 버리고 다른 초안을 여시겠습니까?'))return false;const v=d.versions.at(-1)!;setDraft(d);setForm({title:v.title,message:v.message,due:v.due_date??''});setConfirm(false);setSendUncertain(false);returnAfterSend.current=false;onDraftActive(true);return true;}
  async function refreshDraft(check=false){if(!draft)return;const d=await companyRequest<Draft>('/analysis-drafts/'+draft.id);if(!alive.current)return d;if(d.company_id!==cid||d.version_id!==vid)throw Error('초안 대상이 변경되었습니다.');setDraft(d);setDrafts(old=>old.map(x=>x.id===d.id?d:x));if(check)setSendUncertain(false);const saved=d.versions.at(-1)!;if(saved.request_key===commands.current.key('save:'+d.id)&&saved.title===form.title.trim()&&saved.message===form.message.trim()&&(saved.due_date??'')===form.due){setSaveState('');commands.current.clear('save:'+d.id);}if(d.deliveries.length){setConfirm(false);window.dispatchEvent(new CustomEvent('datco-information-requests-changed',{detail:{company:cid,version:vid}}));if(returnAfterSend.current){const h=await companyRequest<SubmissionReviews>('/improvements/'+vid+'/submission-reviews');if(alive.current){onDirty(false);onFinished(`보완요청 발송이 확인되었습니다. ${company} · 제출본 v${submissionOrdinal} · 현재 업무 상태: ${h.projection.label}`);}}}return d;}
  async function saveDraft(){if(!draft||!version)return;setSaveState('저장 중');try{const slot='save:'+draft.id;await commands.current.execute<DraftVersion>(slot,{expected_ordinal:version.ordinal,title:form.title,message:form.message,due_date:form.due||null,review_ids:version.review_ids},body=>companyRequest('/analysis-drafts/'+draft.id+'/versions',body),async key=>(await companyRequest<Draft>('/analysis-drafts/'+draft.id)).versions.find(v=>v.request_key===key));await refreshDraft();if(alive.current){commands.current.clear(slot);setSaveState('');}}catch(e){setSaveState([400,401,403,404,409,422].includes((e as {status?:number})?.status??0)?'저장 실패':'저장 결과 확인 필요');throw e;}}
  const processing=!!job&&['QUEUED','PROCESSING'].includes(job.state);
@@ -104,6 +109,7 @@ export function ImprovementAnalysisPanel({cid,vid,actorId,company,title,submissi
   const data=await load();if(!alive.current)return;
   commands.current.clear(slot);pendingJudgement.current='';setRecovered(false);changed('datco-submission-reviewed');
   if(decision!=='PREPARE_REQUEST'){onDirty(false);onFinished(`검토 판단이 저장되었습니다. ${company} · 제출본 v${submissionOrdinal} · 현재 업무 상태: ${data.h.projection.label}`);}
+  return data;
  }
  async function prepareDraft(){
   if(!run||!selected.length)return;
@@ -128,8 +134,13 @@ export function ImprovementAnalysisPanel({cid,vid,actorId,company,title,submissi
   if(!alive.current)return;
   const verified=await companyRequest<Draft>('/analysis-drafts/'+d.id);if(!alive.current)return;
   if(!verified.freshness.usable||!sameReviews(verified.versions.at(-1)!.review_ids,ids))throw Error('초안의 최신 검토 근거가 변경되었습니다. 서버 상태를 확인하세요.');
-  if(!data.h.projection.current||data.h.history.at(-1)?.decision!=='PREPARE_REQUEST'||data.h.history.at(-1)?.draft_id!==d.id)await judge('PREPARE_REQUEST',d.id);
-  if(alive.current){commands.current.clear('draft');open(verified);onRequests();}
+  const recorded=!data.h.projection.current||data.h.history.at(-1)?.decision!=='PREPARE_REQUEST'||data.h.history.at(-1)?.draft_id!==d.id?await judge('PREPARE_REQUEST',d.id):data;
+  if(alive.current){commands.current.clear('draft');if(open(verified)){
+   // A successful exact-version read already confirms these inputs. Synchronize
+   // the parent guard before navigating; React effects may commit after this callback.
+   if(recorded&&!hasUnsavedReview(note,edits,recorded.r,recorded.h.history))onDirty(false);
+   onRequests();
+  }}
  }
  function candidateRow(c:Candidate){return <CandidateReview key={c.id} candidate={c} disabled={disabled} selected={isSelected(c)} edit={candidateEdit(c)} commonNote={note} onSelect={value=>changeChoice(c,value)} onEdit={edit=>setEdits(old=>({...old,[(run?.run.id??'')+':'+c.id]:edit}))} onReview={(c,decision,note,question)=>void action(async()=>{await recordReview(c,decision,note,question);await load();commands.current.clear('review:'+c.id);changeChoice(c,decision==='USE_FOR_REQUEST');})}/>;}
  return <div data-testid="improvement-analysis">{error&&<p role="alert">{error}</p>}

@@ -39,15 +39,19 @@ test('Excel selected source update preserves original, retries uncertain apply, 
  const retained=await(await page.request.get('/api/capability/features?q='+encodeURIComponent(nonce))).json();expect(retained.total).toBe(2);
  // Actual source SYSTEM/MODULE/FEATURE details through the running backend,
  // distinct from the UI-contract fault/latency fixture in quality-portals.
- await page.getByLabel('기술자산 검색',{exact:true}).fill(nonce);
+ await page.getByLabel('기술자산 검색',{exact:true}).fill('');
+ await page.getByLabel('기술자산 시스템',{exact:true}).selectOption({label:first[0]+' · 원천 분류'});
  const assets=page.getByTestId('dmp-assets');
  for(const label of ['시스템','모듈','기능']){
   await assets.getByRole('button',{name:label+' 탐색',exact:true}).click();
   await expect(assets.locator('tr[data-asset-id]').first()).toBeVisible();
   const response=page.waitForResponse(r=>r.request().method()==='GET'&&new URL(r.url()).pathname.startsWith('/api/capability/assets/'));
-  await assets.getByRole('button',{name:'기술자산 상세·이력',exact:true}).first().click();const actual=await response;expect(actual.status()).toBe(200);const body=await actual.json();expect(body.root.managed).toBe(false);
+  await assets.getByRole('button',{name:'기술자산 상세·이력',exact:true}).first().click();const actual=await response;expect(actual.status()).toBe(200);const body=await actual.json();expect(body.root.managed).toBe(false);expect(body.current.kind).toBe(({시스템:'SYSTEM',모듈:'MODULE',기능:'FEATURE'} as Record<string,string>)[label]);
   await expect(assets.getByRole('heading',{name:/ · 기술자산 상세$/})).toBeInViewport();await expect(assets.getByTestId('asset-result')).toBeFocused();
   if(label==='기능'){expect(body.current.source.kind).toBe('ADMIN_WORKBOOK');expect(body.current.availability).toBe('NEEDS_CONFIRMATION');expect(body.current.source.workbook.location.row).toBe(body.current.external_id===target?2:3);}
  }
+ expect((await page.request.get('/api/capability/assets/source-system%3Anot-a-digest')).status()).toBe(400);
+ expect((await page.request.post('/api/capability/assets/source-system%3A'+'a'.repeat(24),{headers:{Origin:process.env.DATCO_E2E_BASE_URL!},data:{}})).status()).toBe(400);
+ expect((await page.request.get('/api/capability/catalog/source-system%3A'+'a'.repeat(24))).status()).toBe(400);
  await page.screenshot({path:test.info().outputPath('workbook-selected-registration.png'),fullPage:true});
 });

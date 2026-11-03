@@ -2,10 +2,11 @@ import { NextRequest } from "next/server";
 
 async function proxy(request: NextRequest, context: { params: Promise<{ path?: string[] }> }) {
   const { path = [] } = await context.params;
-  if (path.some(segment => !/^[a-zA-Z0-9_-]+$/.test(segment))) {
+  const sourceClassification = request.method === "GET" && path.length === 2 && path[0] === "assets" && /^source-(system|module):[a-f0-9]{24}$/.test(path[1]);
+  if (!sourceClassification && path.some(segment => !/^[a-zA-Z0-9_-]+$/.test(segment))) {
     return Response.json({ reason: "INVALID_PATH" }, { status: 400 });
   }
-  const target = new URL("/capability" + (path.length ? "/" + path.join("/") : ""), process.env.CAPABILITY_API_ORIGIN ?? process.env.API_ORIGIN ?? "http://127.0.0.1:8000");
+  const target = new URL("/capability" + (path.length ? "/" + path.map(encodeURIComponent).join("/") : ""), process.env.CAPABILITY_API_ORIGIN ?? process.env.API_ORIGIN ?? "http://127.0.0.1:8000");
   target.search = request.nextUrl.search;
   try {
     const text = request.method === "POST" ? await request.text() : undefined;
