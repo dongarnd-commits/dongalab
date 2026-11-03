@@ -396,18 +396,22 @@ def current_lease(out,plan,phase,slot,**extra):
     value=dict(plan=plan['id'],phase=phase,slot=slot,product_head=PRODUCT,custodian=process_identity(os.getpid()),**extra)
     save(out/'state.json',value);return value
 
+def require_clean_resume(lease):
+    require(lease.get('phase') in ('STOPPED','FAILED') and lease.get('cleanup_complete') is True,'HANDOVER_UNCLEAN_LEASE_REQUIRES_TECHNICAL_RECONCILIATION')
+
 def run_owner(plan_path,approval_path,mode='activate',fault=None):
     out=Path(plan_path).resolve().parent;plan=load_plan(plan_path);plan['_out']=str(out)
     approval=read_json(approval_path);validate_approval(plan,approval,mode)
     require(fault is None or (plan['owner']['kind']=='SYNTHETIC_CLONE' and fault in ('api','worker','web')),'HANDOVER_TEST_FAULT_REJECTED')
     validate_control(plan);root,data,m,_=static_owner(plan)
+    m=runtime_manifest(plan) # Exact URL target gate before any legacy stop/fence/write.
     require(not (out/'request.json').exists(),'HANDOVER_PENDING_REQUEST_REJECTED')
     if mode=='activate':
         require(not (out/'state.json').exists(),'HANDOVER_EXISTING_LEASE_REQUIRES_RESUME')
         require(read_json(data/'state.json')==plan['owner']['legacy_state'],'HANDOVER_LEGACY_STATE_CHANGED')
     else:
         require(mode=='resume','HANDOVER_MODE_REJECTED')
-        lease=read_json(out/'state.json')
+        lease=read_json(out/'state.json');require_clean_resume(lease)
         require(lease.get('plan')==plan['id'] and lease.get('stopped_state_sha256'),'HANDOVER_RESUME_ANCHOR_MISSING')
         require(not release.alive(lease['custodian']['pid']),'HANDOVER_CUSTODIAN_STILL_RUNNING_OR_PID_REUSED')
         require(not any(release.alive(v['pid']) for v in lease.get('children',[])),'HANDOVER_PRIOR_CHILD_CLEANUP_UNCONFIRMED')
@@ -419,10 +423,10 @@ def run_owner(plan_path,approval_path,mode='activate',fault=None):
         static_owner(plan,entry)
         if mode=='activate':stopped_hash=stop_legacy(plan,data,m)
         else:stopped_hash=lease['stopped_state_sha256']
+        current_lease(out,plan,'STOPPED',slot,stopped_state_sha256=stopped_hash,children=[],cleanup_complete=True)
         fence=stack.enter_context(FileFence(data/'state.json',exclusive=False))
         require(fence.sha256()==stopped_hash,'HANDOVER_STATE_FENCE_RACE')
         save(out/'active-approval.json',approval)
-        m=runtime_manifest(plan)
         event(out,'LEGACY_HANDED_OVER' if mode=='activate' else 'EXPLICIT_RECONCILIATION',legacy_state_sha256=stopped_hash)
         def begin(selected,inject=None,action=mode):
             nonlocal job,children,slot

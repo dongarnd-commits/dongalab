@@ -166,3 +166,23 @@ def test_job_callback_runs_before_suspended_child_is_resumed(tmp_path):
         p=job.spawn([sys.executable,'-c',"from pathlib import Path;import time;Path('started').write_text('TEST');time.sleep(60)"],tmp_path,os.environ.copy(),on_created=before)
         assert remembered==[p.pid]
     assert job.cleanup_confirmed
+
+
+@pytest.mark.parametrize('lease',[{'phase':'FAILED','cleanup_complete':False},{'phase':'FAILED'},{'phase':'RUNNING'},{'phase':'STARTING','cleanup_complete':True}])
+def test_unclean_resume_cannot_become_success(lease):
+    with pytest.raises(RuntimeError,match='TECHNICAL_RECONCILIATION'):handover.require_clean_resume(lease)
+
+@pytest.mark.parametrize('phase',['STOPPED','FAILED'])
+def test_only_confirmed_cleanup_can_resume(phase):
+    handover.require_clean_resume(dict(phase=phase,cleanup_complete=True))
+
+def test_bad_runtime_url_blocks_before_any_owner_mutation(tmp_path,monkeypatch):
+    p,a,_=approval_pair();p['owner']['kind']='SYNTHETIC_CLONE'
+    monkeypatch.setattr(handover,'load_plan',lambda _:p);monkeypatch.setattr(handover,'read_json',lambda _:a)
+    monkeypatch.setattr(handover,'validate_control',lambda _:None)
+    monkeypatch.setattr(handover,'static_owner',lambda _: (tmp_path,tmp_path,{},{}))
+    def bad(_):raise RuntimeError('HANDOVER_DATABASE_URL_IDENTITY_MISMATCH')
+    monkeypatch.setattr(handover,'runtime_manifest',bad)
+    def forbidden(*_,**__):pytest.fail('No stop/write/event before runtime URL preflight')
+    for name in ('stop_legacy','save','event'):monkeypatch.setattr(handover,name,forbidden)
+    with pytest.raises(RuntimeError,match='URL_IDENTITY'):handover.run_owner(tmp_path/'plan.json',tmp_path/'approval.json')
