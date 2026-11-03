@@ -44,7 +44,7 @@ test('fresh DMP full UI: zero published capabilities, verified assets, generated
   await company.getByLabel('등록 업태',{exact:true}).fill('제조업');await company.getByLabel('등록 종목',{exact:true}).fill('TEST 장비 제조 및 재고 관리');
   await company.getByRole('button',{name:'기업정보 등록',exact:true}).click();await expect(company.getByRole('heading',{name:'기업 · 사업장 관리',exact:true})).toBeVisible({timeout:60000});
   const cid=new URL(company.url()).searchParams.get('company')!;expect(cid).toBeTruthy();
-  await company.reload();await expect(company.getByLabel('기업명',{exact:true})).toHaveValue(c.company_name);await expect(company.getByText(/사업장 1곳이 등록/)).toBeVisible();
+  await company.reload();await expect(company.getByLabel('기업명',{exact:true})).toHaveValue(c.company_name);await expect(company.getByText(/사업장 1곳의 저장된 이름과 주소/)).toBeVisible();
   expect((await read(company,'company/'+cid)).sites).toHaveLength(1);
   await menu(company,'재무 · 사업이력');
   await company.getByLabel('재무 PDF 파일 선택 또는 끌어놓기',{exact:true}).setInputFiles(c.financial_documents);
@@ -349,11 +349,11 @@ test('fresh DMP full UI: zero published capabilities, verified assets, generated
   expect((await read(operator,'proposal/'+proposal.proposal_id)).requests).toHaveLength(1);
   await company.reload();await menu(company,'받은 제안서');
   await company.getByRole('heading',{name:proposalTitle,exact:true}).locator('..').getByRole('button',{name:'제안서 본문 확인',exact:true}).click();
-  await expect(company.getByText('이 전달 Version의 본문 16개 항목',{exact:true})).toBeVisible();
+  await expect(company.getByText('이 전달본의 본문 16개 항목',{exact:true})).toBeVisible();
   await company.getByLabel('검토 의견·수정 요청사항',{exact:true}).fill('TEST 제공범위와 연계 조건의 설명을 보완해 주세요.');
   const revision=company.waitForResponse(r=>r.url().includes('/proposal/approvals/')&&r.url().endsWith('/decision')&&r.request().method()==='POST');
   await company.getByRole('button',{name:'제안서 수정 요청',exact:true}).click();expect((await revision).ok()).toBe(true);
-  await company.reload();await expect(company.getByText(/REVISION_REQUEST · TEST 제공범위/)).toBeVisible();
+  await company.reload();await expect(company.getByText(/수정 요청 전달 · TEST 제공범위/)).toBeVisible();
   expect((await read(admin,'admin/overview')).published_capabilities).toBe(0);expect(capabilityWrites).toEqual([]);
   const final=await read(operator,'proposal/'+proposal.proposal_id);expect(final.decisions[0].outcome).toBe('REVISION_REQUEST');expect(final.files).toHaveLength(2);expect(final.versions[0].id).toBe(proposal.version_id);
   await company.screenshot({path:test.info().outputPath('full-ui-company-revision.png'),fullPage:true});
