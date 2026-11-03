@@ -93,7 +93,7 @@ def setup_switch(tmp_path,monkeypatch):
     monkeypatch.setattr(release,'owner_identity',lambda *a:old['owner'])
     monkeypatch.setattr(release,'selection',lambda *a:dict(current=old['id'],previous=None))
     monkeypatch.setattr(release,'load_record',lambda out,key:{old['id']:old,new['id']:new}[key])
-    monkeypatch.setattr(release,'state',lambda *a:dict(nonce=m['nonce'],phase='RUNNING',head=old['head']))
+    monkeypatch.setattr(release,'state',lambda *a:dict(nonce=m['nonce'],phase='RUNNING',head=old['head'],release=old['id']))
     monkeypatch.setattr(release,'validate_record',lambda owner,m,out,r,**k:seen.append('validate:'+r['id']))
     monkeypatch.setattr(release,'wait_stopped',lambda *a,**k:seen.append('stopped'))
     return m,old,new,seen
@@ -186,7 +186,7 @@ def test_target_cannot_claim_an_unattested_existing_build(tmp_path,monkeypatch):
     monkeypatch.setattr(release,'clean_source',lambda *a:source)
     monkeypatch.setattr(uat,'repository_common_dir',lambda *a:tmp_path)
     monkeypatch.setattr(release,'source_contract',lambda *a:pytest.fail('must reject before dependency or DB inspection'))
-    with pytest.raises(RuntimeError,match='TARGET_BUILD_REQUIRED'):
+    with pytest.raises(RuntimeError,match='FRESH_ARTIFACT_BUILD_REQUIRED'):
         release.prepare(owner,m,tmp_path,source,'b'*40,'.next/datco-e2e-a123456789bc',False)
 
 
@@ -346,3 +346,145 @@ def test_startup_validation_failure_records_zero_children_cleanup_result(tmp_pat
     assert runtime==dict(release=r['id'],phase='FAILED',cleanup_complete=port_free,children=[])
     assert checked==[m['api_port'],m['web_port'],m['https_port']]
     assert json.loads((tmp_path/'state.json').read_text(encoding='utf-8'))['phase']=='FAILED'
+
+
+WEB_DIST='.next/datco-e2e-a123456789bc'
+
+def synthetic_web(source):
+    web=source/'apps/web';dist=web/WEB_DIST
+    (dist/'server').mkdir(parents=True)
+    (dist/'BUILD_ID').write_text('SYNTHETIC_BUILD_V3',encoding='utf-8')
+    (dist/'server/app.js').write_text('synthetic compiled output',encoding='utf-8')
+    (web/'public/roles').mkdir(parents=True)
+    (web/'public/roles/index.html').write_text('synthetic public artifact',encoding='utf-8')
+    (web/'package.json').write_text('{"name":"synthetic"}',encoding='utf-8')
+    (web/'next.config.mjs').write_text('export default {};',encoding='utf-8')
+    return web
+
+
+def artifact_record(source,out):
+    artifact=release.snapshot_web(source,out,WEB_DIST)
+    return dict(schema=release.RECORD_SCHEMA,id='r'+'1'*24,source_root=str(source),head='a'*40,
+        dist_dir=WEB_DIST,web_artifact=artifact,build_hash=artifact['manifest_sha256'])
+
+
+def test_web_execution_cache_changes_cannot_mutate_immutable_artifact_or_next_execution(tmp_path):
+    source=tmp_path/'source';out=tmp_path/'owner';synthetic_web(source)
+    # A private root env is deliberately present, but never selected/copied.
+    (source/'apps/web/.env').write_text('SYNTHETIC_PRIVATE_NOT_FOR_COPY',encoding='utf-8')
+    r=artifact_record(source,out);artifact=release.validate_web_artifact(out,r)
+    original=release.all_files(artifact)
+    one=release.execution_web(out,r);runtime=Path(one['web_root'])
+    assert release.all_files(runtime)==original
+    assert not (runtime/'.env').exists() and not (runtime/'node_modules').exists()
+    assert (runtime/'public/roles/index.html').read_text(encoding='utf-8')=='synthetic public artifact'
+    cache=runtime/WEB_DIST/'server/route-cache/APP_PAGE/SYNTHETIC/login.html'
+    cache.parent.mkdir(parents=True);cache.write_text('new runtime cache',encoding='utf-8')
+    assert release.all_files(runtime)!=original
+    assert release.all_files(release.validate_web_artifact(out,r))==original
+    two=release.execution_web(out,r)
+    assert two['web_root']!=one['web_root'] and not (Path(two['web_root'])/WEB_DIST/'server/route-cache').exists()
+    assert two['initial_manifest_sha256']==one['initial_manifest_sha256']==r['build_hash']
+
+
+def test_route_cache_is_part_of_immutable_artifact_tamper_guard(tmp_path):
+    source=tmp_path/'source';out=tmp_path/'owner';web=synthetic_web(source)
+    route=web/WEB_DIST/'server/route-cache/APP_PAGE/build/login.rsc'
+    route.parent.mkdir(parents=True);route.write_text('initial source route cache',encoding='utf-8')
+    r=artifact_record(source,out);artifact=release.validate_web_artifact(out,r)
+    assert any('route-cache/' in entry['path'] for entry in r['web_artifact']['files'])
+    (artifact/route.relative_to(web)).write_text('tampered immutable route cache',encoding='utf-8')
+    with pytest.raises(RuntimeError,match='IMMUTABLE_ARTIFACT_CHANGED'):release.validate_web_artifact(out,r)
+
+
+def test_private_env_inside_selected_public_tree_is_rejected_before_snapshot_copy(tmp_path):
+    source=tmp_path/'source';web=synthetic_web(source)
+    (web/'public/.env.local').write_text('SYNTHETIC_ONLY',encoding='utf-8')
+    with pytest.raises(RuntimeError,match='SNAPSHOT_FORBIDDEN_FILE'):release.snapshot_web(source,tmp_path/'owner',WEB_DIST)
+
+
+def test_v2_records_are_valid_anchor_material_but_cannot_be_loaded_for_execution(tmp_path):
+    r=record();r['schema']=release.ANCHOR_SCHEMA
+    r.pop('id');r=dict(r,id='r'+release.digest(r)[:24])
+    release.immutable(tmp_path/'releases'/(r['id']+'.json'),r)
+    assert release.load_record(tmp_path,r['id'],anchor_only=True)==r
+    with pytest.raises(RuntimeError,match='SCHEMA_UNSUPPORTED'):release.load_record(tmp_path,r['id'])
+    with pytest.raises(RuntimeError,match='SCHEMA_UNSUPPORTED'):release.validate_record(tmp_path,sample(tmp_path),tmp_path,r)
+
+
+def setup_recover(tmp_path,monkeypatch):
+    m=sample(tmp_path);old=record();old.update(schema=release.ANCHOR_SCHEMA,source_root=str(tmp_path),head=m['head'])
+    new=record(identifier='r'+'2'*24);new.update(source_root=str(tmp_path),head=m['head'],web_artifact={'fresh_build':True})
+    selected=dict(current=old['id'],previous=None);seen=[]
+    monkeypatch.setattr(release,'state',lambda *a:dict(nonce=m['nonce'],phase='STOPPED',head=m['head']))
+    uat.write(tmp_path/'release-runtime.json',dict(phase='STOPPED',cleanup_complete=True,children=[]))
+    monkeypatch.setattr(release,'enrollment',lambda *a:dict(owner=old['owner'],initial_release=old['id']))
+    monkeypatch.setattr(release,'selection',lambda *a:selected)
+    monkeypatch.setattr(release,'owner_identity',lambda *a:old['owner'])
+    monkeypatch.setattr(release,'load_record',lambda out,key,**kwargs:{old['id']:old,new['id']:new}[key])
+    monkeypatch.setattr(release,'alive',lambda *a:False)
+    monkeypatch.setattr(uat,'available',lambda host,port:seen.append('port:'+str(port)))
+    monkeypatch.setattr(release,'ensure_database_running',lambda *a:seen.append('owned-db-start'))
+    monkeypatch.setattr(release,'validate_record',lambda owner,m,out,r,**kwargs:seen.append('validate:'+r['id']))
+    return m,old,new,selected,seen
+
+
+def test_explicit_recover_preserves_old_bytes_and_selects_only_new_immutable_baseline(tmp_path,monkeypatch):
+    m,old,new,selected,seen=setup_recover(tmp_path,monkeypatch)
+    oldfile=tmp_path/'releases'/(old['id']+'.json');release.immutable(oldfile,old);before=oldfile.read_bytes()
+    release.recover(tmp_path,m,tmp_path,new['id'],m['nonce'])
+    assert oldfile.read_bytes()==before
+    choice=json.loads((tmp_path/'release-selection.json').read_text(encoding='utf-8'))
+    assert choice==dict(current=new['id'],previous=None,unusable_previous=old['id'])
+    event=json.loads(next((tmp_path/'release-events').glob('*.json')).read_text(encoding='utf-8'))
+    assert event['previous_selection']==selected and event['unusable_previous']==old['id']
+    assert seen[-2:]==['owned-db-start','validate:'+new['id']]
+
+
+@pytest.mark.parametrize('problem',['running','cleanup','live_child','owner_identity','head','schema','fresh_build'])
+def test_recover_requires_stopped_clean_exact_compatible_new_baseline_before_database_action(tmp_path,monkeypatch,problem):
+    m,old,new,selected,seen=setup_recover(tmp_path,monkeypatch)
+    if problem=='running':monkeypatch.setattr(release,'state',lambda *a:dict(nonce=m['nonce'],phase='RUNNING'))
+    if problem=='cleanup':uat.write(tmp_path/'release-runtime.json',dict(phase='FAILED',cleanup_complete=False,children=[]))
+    if problem=='live_child':
+        uat.write(tmp_path/'release-runtime.json',dict(phase='STOPPED',cleanup_complete=True,children=[123]))
+        monkeypatch.setattr(release,'alive',lambda *a:True)
+    if problem=='owner_identity':monkeypatch.setattr(release,'owner_identity',lambda *a:{'different':'owner'})
+    if problem=='head':new['head']='b'*40
+    if problem=='schema':new['database']={'changed':'schema'}
+    if problem=='fresh_build':new['web_artifact']['fresh_build']=False
+    with pytest.raises(RuntimeError):release.recover(tmp_path,m,tmp_path,new['id'],m['nonce'])
+    assert 'owned-db-start' not in seen
+    assert not (tmp_path/'release-selection.json').exists()
+
+
+def test_copy_manifest_rejects_parent_escape_and_windows_drive_relative_path(tmp_path):
+    import os
+    source=tmp_path/'source';source.mkdir();(source/'payload').write_text('synthetic',encoding='utf-8')
+    entry=dict(size=9,sha256='a'*64)
+    paths=['../payload','/absolute/payload']
+    if os.name=='nt':paths.append('D:payload')
+    for i,unsafe in enumerate(paths):
+        with pytest.raises(RuntimeError,match='MANIFEST_PATH_INVALID'):
+            release.copy_entries(source,tmp_path/('dest'+str(i)),[dict(entry,path=unsafe)])
+
+
+def test_artifact_sidecar_is_checked_by_link_guard_before_read(tmp_path,monkeypatch):
+    source=tmp_path/'source';out=tmp_path/'owner';synthetic_web(source)
+    r=artifact_record(source,out);guard=release.no_links;checked=[]
+    def reject_sidecar(path):
+        checked.append(Path(path))
+        if Path(path).name=='artifact.json':raise RuntimeError('RELEASE_LINKED_PATH_REJECTED')
+        return guard(path)
+    monkeypatch.setattr(release,'no_links',reject_sidecar)
+    with pytest.raises(RuntimeError,match='LINKED_PATH_REJECTED'):release.validate_web_artifact(out,r)
+    assert checked[-1].name=='artifact.json'
+
+
+def test_same_head_running_build_must_match_the_selected_exact_release_before_stop(tmp_path,monkeypatch):
+    m,old,new,seen=setup_switch(tmp_path,monkeypatch)
+    monkeypatch.setattr(release,'state',lambda *a:dict(nonce=m['nonce'],phase='RUNNING',head=old['head'],release='r'+'f'*24))
+    monkeypatch.setattr(release,'launch',lambda *a,**k:pytest.fail('must not launch from mismatched exact build identity'))
+    with pytest.raises(RuntimeError,match='RUNNING_IDENTITY_MISMATCH'):
+        release.switch(tmp_path,m,tmp_path,new['id'],m['nonce'])
+    assert 'stopped' not in seen

@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import re
 import stat as statmod
+import shutil
 import subprocess
 import sys
 import time
@@ -24,7 +25,8 @@ import manual_acceptance as uat
 ROOT = Path(__file__).resolve().parents[3]
 TOOL = Path(__file__).resolve()
 PROTECTED = {8443, 8444, 18445, 49355, 49356}
-RECORD_SCHEMA = 'datco-uat-release-v2'
+RECORD_SCHEMA = 'datco-uat-release-v3'
+ANCHOR_SCHEMA = 'datco-uat-release-v2'
 DATA_FORMAT = 'dmp-workbook-metadata-v1'
 
 
@@ -149,8 +151,9 @@ print(json.dumps({'reader':preserved}))
         writer_may_emit_workbook_provenance=writer)
 
 
-def data_descriptor(record):
-    if record.get('schema')!=RECORD_SCHEMA:fail('RELEASE_RECORD_SCHEMA_UNSUPPORTED')
+def data_descriptor(record,anchor_only=False):
+    allowed=(RECORD_SCHEMA,ANCHOR_SCHEMA) if anchor_only else (RECORD_SCHEMA,)
+    if record.get('schema') not in allowed:fail('RELEASE_RECORD_SCHEMA_UNSUPPORTED')
     descriptor=record.get('source_contract',{}).get('workbook_data')
     if (not isinstance(descriptor,dict) or descriptor.get('format')!=DATA_FORMAT
             or descriptor.get('probe_version')!=1
@@ -246,14 +249,119 @@ def immutable(path,value):
     with path.open('x',encoding='utf-8') as output:json.dump(value,output,ensure_ascii=False,sort_keys=True,indent=2)
 
 
-def load_record(out,identifier):
+def load_record(out,identifier,anchor_only=False):
     if not re.fullmatch('r[a-f0-9]{24}',identifier):fail('RELEASE_ID_INVALID')
     path=no_links(out/'releases'/(identifier+'.json'))
     record=json.loads(path.read_text(encoding='utf-8'))
-    data_descriptor(record)
+    data_descriptor(record,anchor_only=anchor_only)
     body={k:v for k,v in record.items() if k!='id'}
     if record.get('id')!=identifier or identifier!='r'+digest(body)[:24]:fail('RELEASE_RECORD_TAMPERED')
     return record
+
+
+
+def all_files(root):
+    """Full immutable artifact manifest, including every route-cache byte."""
+    root=no_links(root)
+    if not root.is_dir():fail('RELEASE_WEB_ARTIFACT_MISSING')
+    entries=[]
+    for base,dirs,files in os.walk(root,followlinks=False):
+        for name in [*dirs,*files]:
+            item=(Path(base)/name).lstat()
+            if statmod.S_ISLNK(item.st_mode) or getattr(item,'st_file_attributes',0)&0x400:
+                fail('RELEASE_LINKED_PATH_REJECTED')
+            if name=='node_modules' or name=='.env' or name.startswith('.env.'):
+                fail('RELEASE_WEB_SNAPSHOT_FORBIDDEN_FILE')
+        dirs[:]=sorted(dirs)
+        for name in sorted(files):
+            path=Path(base)/name
+            entries.append(dict(path=path.relative_to(root).as_posix(),size=path.stat().st_size,sha256=file_hash(path)))
+    return sorted(entries,key=lambda value:value['path'])
+
+
+def copy_entries(source,destination,entries):
+    source=no_links(source);destination=no_links(destination)
+    destination.mkdir(parents=True,exist_ok=False)
+    for entry in entries:
+        relative=Path(entry['path'])
+        if relative.is_absolute() or relative.drive or relative.root or '..' in relative.parts:fail('RELEASE_ARTIFACT_MANIFEST_PATH_INVALID')
+        origin=source/relative;target=destination/relative
+        item=origin.lstat()
+        if statmod.S_ISLNK(item.st_mode) or getattr(item,'st_file_attributes',0)&0x400:
+            fail('RELEASE_LINKED_PATH_REJECTED')
+        target.parent.mkdir(parents=True,exist_ok=True)
+        with origin.open('rb') as incoming,target.open('xb') as outgoing:shutil.copyfileobj(incoming,outgoing)
+        if target.stat().st_size!=entry['size'] or file_hash(target)!=entry['sha256']:
+            fail('RELEASE_WEB_COPY_CHANGED')
+    if all_files(destination)!=entries:fail('RELEASE_WEB_COPY_MANIFEST_MISMATCH')
+
+
+def snapshot_web(source,out,dist):
+    web=no_links(Path(source)/'apps/web')
+    build=no_links(web/dist)
+    if not (build/'BUILD_ID').is_file():fail('RELEASE_BUILD_INCOMPLETE')
+    entries=[]
+    for name in ('package.json','next.config.mjs'):
+        path=no_links(web/name)
+        if not path.is_file():fail('RELEASE_WEB_RUNTIME_CONFIG_MISSING')
+        entries.append(dict(path=name,size=path.stat().st_size,sha256=file_hash(path)))
+    for relative in (dist,'public'):
+        folder=web/relative
+        if not folder.exists():
+            if relative=='public':continue
+            fail('RELEASE_BUILD_INCOMPLETE')
+        for entry in all_files(folder):entries.append(dict(entry,path=relative+'/'+entry['path']))
+    entries.sort(key=lambda value:value['path'])
+    # copy_entries/all_files traversal ordering is canonical path order.
+    identity=digest(entries);artifact_id='a'+identity[:24]
+    relative_root='release-artifacts/'+artifact_id+'/web'
+    root=no_links(out/relative_root)
+    if root.exists():
+        if all_files(root)!=entries:fail('RELEASE_IMMUTABLE_ARTIFACT_CHANGED')
+    else:copy_entries(web,root,entries)
+    artifact=dict(format='datco-web-artifact-v1',artifact_id=artifact_id,
+        relative_root=relative_root,manifest_sha256=identity,files=entries,
+        build_id=(build/'BUILD_ID').read_text(encoding='utf-8').strip(),fresh_build=True)
+    metadata=no_links(root.parent/'artifact.json')
+    if metadata.exists():
+        if json.loads(metadata.read_text(encoding='utf-8'))!=artifact:fail('RELEASE_ARTIFACT_RECORD_CHANGED')
+    else:immutable(metadata,artifact)
+    return artifact
+
+
+def validate_web_artifact(out,record):
+    artifact=record.get('web_artifact')
+    if (not isinstance(artifact,dict) or artifact.get('format')!='datco-web-artifact-v1'
+            or artifact.get('fresh_build') is not True
+            or not re.fullmatch('a[a-f0-9]{24}',str(artifact.get('artifact_id','')))):
+        fail('RELEASE_IMMUTABLE_ARTIFACT_REQUIRED')
+    expected='release-artifacts/'+artifact['artifact_id']+'/web'
+    if artifact.get('relative_root')!=expected:fail('RELEASE_ARTIFACT_PATH_MISMATCH')
+    root=no_links(out/expected)
+    actual=all_files(root)
+    if (actual!=artifact.get('files') or digest(actual)!=artifact.get('manifest_sha256')
+            or record.get('build_hash')!=artifact.get('manifest_sha256')):
+        fail('RELEASE_IMMUTABLE_ARTIFACT_CHANGED')
+    sidecar=json.loads(no_links(root.parent/'artifact.json').read_text(encoding='utf-8'))
+    if sidecar!=artifact:fail('RELEASE_ARTIFACT_RECORD_CHANGED')
+    if (root/record['dist_dir']/'BUILD_ID').read_text(encoding='utf-8').strip()!=artifact['build_id']:
+        fail('RELEASE_ARTIFACT_BUILD_ID_CHANGED')
+    return root
+
+
+def execution_web(out,record):
+    artifact=validate_web_artifact(out,record)
+    run=uuid4().hex
+    relative='executions/'+record['id']+'/'+run+'/web'
+    root=no_links(out/relative)
+    copy_entries(artifact,root,record['web_artifact']['files'])
+    execution=dict(format='datco-web-execution-v1',release=record['id'],run=run,
+        web_root=str(root),source_root=record['source_root'],head=record['head'],
+        artifact_id=record['web_artifact']['artifact_id'],build_id=record['web_artifact']['build_id'],
+        initial_manifest_sha256=digest(all_files(root)))
+    if execution['initial_manifest_sha256']!=record['build_hash']:fail('RELEASE_EXECUTION_INITIAL_HASH_MISMATCH')
+    immutable(root.parent/'execution.json',execution)
+    return execution
 
 
 def validate_record(owner,m,out,record,check_db=True):
@@ -262,15 +370,14 @@ def validate_record(owner,m,out,record,check_db=True):
     source=clean_source(record['source_root'],record['head'])
     if uat.repository_common_dir(source)!=uat.repository_common_dir(owner):fail('RELEASE_REPOSITORY_MISMATCH')
     if source_contract(source)!=record['source_contract']:fail('RELEASE_DEPS_OR_SCHEMA_CODE_CHANGED')
-    if tree_hash(source/'apps/web'/record['dist_dir'])!=record['build_hash']:fail('RELEASE_BUILD_CHANGED')
-    if not (source/'apps/web'/record['dist_dir']/'BUILD_ID').is_file():fail('RELEASE_BUILD_INCOMPLETE')
+    validate_web_artifact(out,record)
     if file_hash(record['launcher'])!=record['launcher_hash']:fail('RELEASE_LAUNCHER_CHANGED')
     if check_db and db_snapshot(m)!=record['database']:fail('RELEASE_DATABASE_SCHEMA_CHANGED')
     return source
 
 
-def compatible(previous,target):
-    old_data,new_data=data_descriptor(previous),data_descriptor(target)
+def compatible(previous,target,anchor_only=False):
+    old_data,new_data=data_descriptor(previous,anchor_only=anchor_only),data_descriptor(target)
     if ((old_data['writer_may_emit_workbook_provenance'] or new_data['writer_may_emit_workbook_provenance'])
             and not (old_data['reader_preserves_workbook_provenance'] and new_data['reader_preserves_workbook_provenance'])):
         fail('RELEASE_BACKWARD_DATA_CONTRACT_INCOMPATIBLE')
@@ -287,6 +394,7 @@ def release_environment(m,out,source,record):
     env['DATCO_TEST_DIST_DIR']=record['dist_dir']
     env['DATCO_ACCEPTANCE_HEAD']=record['head']
     env['DATCO_ACCEPTANCE_PREPARATION']='1'
+    env['NODE_PATH']=str(Path(source)/'apps/web/node_modules')
     return env
 
 
@@ -309,9 +417,7 @@ def prepare(owner,m,out,source,head,dist=None,do_build=False):
     if uat.repository_common_dir(source)!=uat.repository_common_dir(owner):fail('RELEASE_REPOSITORY_MISMATCH')
     dist=dist or '.next/datco-e2e-'+uuid4().hex[:12]
     if not re.fullmatch(r'\.next/datco-e2e-[a-f0-9]{12}',dist):fail('RELEASE_DIST_PATH_INVALID')
-    if not do_build and not (source==owner and head==m['head']
-                              and dist=='.next/datco-e2e-'+m['nonce']):
-        fail('RELEASE_TARGET_BUILD_REQUIRED')
+    if not do_build:fail('RELEASE_FRESH_ARTIFACT_BUILD_REQUIRED')
     contract=source_contract(source)
     database=db_snapshot(m)
     env=release_environment(m,out,source,dict(head=head,dist_dir=dist))
@@ -322,8 +428,9 @@ def prepare(owner,m,out,source,head,dist=None,do_build=False):
         build(source,m,out,dist)
     if not (source/'apps/web'/dist/'BUILD_ID').is_file():fail('RELEASE_BUILD_INCOMPLETE')
     clean_source(source,head)
+    artifact=snapshot_web(source,out,dist)
     body=dict(schema=RECORD_SCHEMA,source_root=str(source),head=head,dist_dir=dist,
-        source_contract=contract,build_hash=tree_hash(source/'apps/web'/dist),database=database,
+        source_contract=contract,build_hash=artifact['manifest_sha256'],web_artifact=artifact,database=database,
         owner=owner_identity(owner,m,out),launcher=str(TOOL),launcher_hash=file_hash(TOOL))
     record=dict(body,id='r'+digest(body)[:24]);path=out/'releases'/(record['id']+'.json')
     if path.exists():
@@ -435,7 +542,8 @@ def switch(owner,m,out,identifier,confirmation):
         compatible(previous,target);validate_record(owner,m,out,previous);validate_record(owner,m,out,target)
         before=state(out)
         if before.get('nonce')!=m['nonce']:fail('RELEASE_STATE_NONCE_MISMATCH')
-        if before['phase']=='RUNNING' and before.get('head')!=previous['head']:fail('RELEASE_RUNNING_IDENTITY_MISMATCH')
+        if before['phase']=='RUNNING' and (before.get('head'),before.get('release'))!=(previous['head'],previous['id']):
+            fail('RELEASE_RUNNING_IDENTITY_MISMATCH')
         wait_stopped(out,before)
         try:launch(owner,m,out,target)
         except RuntimeError as exc:
@@ -447,6 +555,47 @@ def switch(owner,m,out,identifier,confirmation):
             fail('RELEASE_SWITCH_FAILED_PREVIOUS_RESTORED')
         uat.write(out/'release-selection.json',dict(current=target['id'],previous=previous['id'] if target['id']!=previous['id'] else selected.get('previous')))
         immutable(out/'release-events'/(uuid4().hex+'.json'),dict(action='SWITCHED',previous=previous['id'],current=target['id']))
+
+
+
+def recover(owner,m,out,identifier,confirmation):
+    """Explicit new-owned STOPPED recovery; old v2 records are anchors only."""
+    if confirmation!=m['nonce']:fail('RELEASE_EXPLICIT_NONCE_REQUIRED')
+    with action_lock(out):
+        before=state(out)
+        if before.get('nonce')!=m['nonce'] or before.get('phase')!='STOPPED':
+            fail('RELEASE_RECOVERY_REQUIRES_STOPPED_OWNER')
+        runtime=json.loads((out/'release-runtime.json').read_text(encoding='utf-8'))
+        if runtime.get('cleanup_complete') is not True or runtime.get('phase') not in ('STOPPED','FAILED'):
+            fail('RELEASE_RECOVERY_CLEANUP_UNCONFIRMED')
+        if (out/'stop.request').exists():fail('RELEASE_RECOVERY_STOP_PENDING')
+        pids=set(before.get('children',[]))|set(runtime.get('children',[]))
+        if any(alive(pid) for pid in pids):fail('RELEASE_RECOVERY_CHILD_STILL_RUNNING')
+        for port in (m['api_port'],m['web_port'],m['https_port']):uat.available('127.0.0.1',port)
+        marker=enrollment(out);selected=selection(out)
+        previous=load_record(out,selected['current'],anchor_only=True)
+        initial=load_record(out,marker['initial_release'],anchor_only=True)
+        target=load_record(out,identifier)
+        identity=owner_identity(owner,m,out)
+        if marker['owner']!=identity or initial['owner']!=identity or previous['owner']!=identity:
+            fail('RELEASE_RECOVERY_OWNER_ANCHOR_CHANGED')
+        if selected['current']!=marker['initial_release']:
+            fail('RELEASE_RECOVERY_INITIAL_BASELINE_ONLY')
+        if (target['source_root']!=str(owner) or target['head']!=m['head']
+                or previous['source_root']!=str(owner) or previous['head']!=m['head']):
+            fail('RELEASE_RECOVERY_EXACT_OWNER_SOURCE_REQUIRED')
+        if target.get('web_artifact',{}).get('fresh_build') is not True:
+            fail('RELEASE_RECOVERY_FRESH_ARTIFACT_REQUIRED')
+        compatible(previous,target,anchor_only=True)
+        ensure_database_running(m)
+        validate_record(owner,m,out,target)
+        # Preserve every old byte and selection history. The unusable v2 build
+        # is never launched and cannot become the automatic fallback baseline.
+        immutable(out/'release-events'/(uuid4().hex+'.json'),dict(action='RECOVERED_IMMUTABLE_BASELINE',
+            previous_selection=selected,unusable_previous=previous['id'],current=target['id'],
+            note='Old mutable build retained as an anchor only; no DB restore/migration/seed.'))
+        uat.write(out/'release-selection.json',dict(current=target['id'],previous=None,unusable_previous=previous['id']))
+        return target['id']
 
 
 def configure_source(source,out):
@@ -466,6 +615,7 @@ def serve(owner,m,out,record):
     try:
         source=validate_record(owner,m,out,record)
         configure_source(source,out)
+        execution=execution_web(out,record)
         for port in (m['api_port'],m['web_port'],m['https_port']):uat.available('127.0.0.1',port)
         ready=out/'worker-ready.json';ready.unlink(missing_ok=True)
         spawn('api',[sys.executable,'-B',record['launcher'],'api-child','--owner-root',str(owner),'--nonce',m['nonce'],'--release',record['id'],'--confirm',m['nonce']],source/'apps/api')
@@ -479,7 +629,7 @@ def serve(owner,m,out,record):
             time.sleep(.2)
         worker=json.loads(ready.read_text(encoding='utf-8'))
         if (worker['database'],worker['db_user'],worker['nonce'],worker['head'],str(Path(worker['files']).resolve()))!=expected:fail('RELEASE_WORKER_IDENTITY_MISMATCH')
-        spawn('web',['node','node_modules/next/dist/bin/next','start','--hostname','127.0.0.1','--port',str(m['web_port'])],source/'apps/web')
+        spawn('web',['node',str(source/'apps/web/node_modules/next/dist/bin/next'),'start','--hostname','127.0.0.1','--port',str(m['web_port'])],Path(execution['web_root']))
         uat.wait_url('http://127.0.0.1:'+str(m['web_port']),children)
         # Derive a release-specific gateway file without touching owner Caddyfile
         # or TLS: only its public running-code identity header changes.
@@ -503,8 +653,8 @@ def serve(owner,m,out,record):
             if (response.status!=200 or response.headers.get('X-DATCO-Acceptance')!=m['nonce']
                     or response.headers.get('X-DATCO-Acceptance-Head')!=record['head']):
                 fail('RELEASE_GATEWAY_IDENTITY_MISMATCH')
-        uat.write(out/'state.json',dict(nonce=m['nonce'],phase='RUNNING',head=record['head'],release=record['id'],supervisor=os.getpid(),children=[p.pid for p in children],origin=m['origin']))
-        uat.write(out/'release-runtime.json',dict(release=record['id'],phase='RUNNING',cleanup_complete=False,children=[p.pid for p in children]))
+        uat.write(out/'state.json',dict(nonce=m['nonce'],phase='RUNNING',head=record['head'],release=record['id'],supervisor=os.getpid(),children=[p.pid for p in children],origin=m['origin'],web_execution=execution))
+        uat.write(out/'release-runtime.json',dict(release=record['id'],phase='RUNNING',cleanup_complete=False,children=[p.pid for p in children],web_execution=execution))
         while not (out/'stop.request').exists():
             if any(p.poll() is not None for p in children):fail('RELEASE_CHILD_EXITED')
             time.sleep(.25)
@@ -535,14 +685,14 @@ def serve(owner,m,out,record):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action',choices=('prepare','enroll','switch','rollback','start','status','serve','api-child'))
+    parser.add_argument('action',choices=('prepare','enroll','switch','rollback','start','recover','status','serve','api-child'))
     parser.add_argument('--owner-root',required=True,type=Path);parser.add_argument('--nonce',required=True)
     parser.add_argument('--source-root',type=Path);parser.add_argument('--head');parser.add_argument('--dist-dir')
     parser.add_argument('--build',action='store_true');parser.add_argument('--release');parser.add_argument('--confirm')
     args=parser.parse_args();owner,m,out=owner_context(args.owner_root,args.nonce)
-    if args.action in ('enroll','switch','rollback','start','serve','api-child') and args.confirm!=m['nonce']:
+    if args.action in ('enroll','switch','rollback','start','recover','serve','api-child') and args.confirm!=m['nonce']:
         fail('RELEASE_EXPLICIT_NONCE_REQUIRED')
-    if args.action!='status':ensure_database_running(m)
+    if args.action not in ('status','recover'):ensure_database_running(m)
     if args.action=='prepare':
         if not args.source_root or not args.head:fail('RELEASE_SOURCE_AND_HEAD_REQUIRED')
         record=prepare(owner,m,out,args.source_root,args.head,args.dist_dir,args.build)
@@ -551,6 +701,7 @@ def main():
         selected=selection(out) if (out/'release-selection.json').exists() else None
         print(json.dumps(dict(nonce=m['nonce'],origin=m['origin'],phase=state(out)['phase'],selection=selected)))
     elif args.action=='enroll':enroll(owner,m,out,load_record(out,args.release),args.confirm);print('RELEASE_OWNER_ENROLLED')
+    elif args.action=='recover':recover(owner,m,out,args.release,args.confirm);print('RELEASE_RECOVERED_BASELINE_DATA_PRESERVED')
     elif args.action in ('switch','rollback','start'):
         chosen=selection(out)
         identifier=args.release if args.action=='switch' else chosen['previous'] if args.action=='rollback' else chosen['current']
