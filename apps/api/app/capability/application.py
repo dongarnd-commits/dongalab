@@ -90,12 +90,18 @@ class CapabilityApplication:
         return {'id':imported['id'],'feature_count':len(inventory.features),'replay':False}
     def inventory(self,actor,query='',system='',group='',page=1,limit=25,import_id=None):
         self.authorize(actor)
-        if import_id: imported=self.get(S.imports,import_id)
+        if import_id:
+            imported=self.get(S.imports,import_id)
+            base=S.members.join(S.revisions,S.members.c.revision_id==S.revisions.c.id)
+            basis=[S.members.c.import_id==imported['id']]
         else:
             imported=self.session.execute(select(S.imports).order_by(S.imports.c.created_at.desc(),S.imports.c.id.desc()).limit(1)).mappings().first()
-        if not imported: return {'items':[],'total':0,'page':page,'limit':limit,'import':None,'systems':[],'groups':[]}
-        data=S.revisions.c.data; base=S.members.join(S.revisions,S.members.c.revision_id==S.revisions.c.id)
-        filters=[S.members.c.import_id==imported['id']]
+            # Current inventory includes retained and incrementally registered roots.
+            # Explicit import_id continues to read the immutable original snapshot.
+            latest=select(S.revisions.c.feature_id,func.max(S.revisions.c.ordinal).label('ordinal')).group_by(S.revisions.c.feature_id).subquery()
+            base=S.revisions.join(latest,(S.revisions.c.feature_id==latest.c.feature_id)&(S.revisions.c.ordinal==latest.c.ordinal))
+            basis=[]
+        data=S.revisions.c.data; filters=list(basis)
         if system: filters.append(data['system'].astext==system)
         if group: filters.append(data['feature_group'].astext==group)
         search=terms(query)
@@ -104,8 +110,9 @@ class CapabilityApplication:
             filters.append(or_(*[or_(data['name'].astext.ilike('%'+t+'%'),data['description'].astext.ilike('%'+t+'%')) for t in search]))
         total=self.session.scalar(select(func.count()).select_from(base).where(*filters))
         rows=self.session.execute(select(S.revisions).select_from(base).where(*filters).order_by(data['system'].astext,data['feature_group'].astext,data['name'].astext,S.revisions.c.id).offset((page-1)*limit).limit(limit)).mappings()
-        all_data=self.session.execute(select(data).select_from(base).where(S.members.c.import_id==imported['id'])).scalars().all()
-        return {'items':[dict(r) for r in rows],'total':total,'page':page,'limit':limit,'import':dict(imported),
+        all_data=self.session.execute(select(data).select_from(base).where(*basis)).scalars().all()
+        return {'items':[dict(r) for r in rows],'total':total,'page':page,'limit':limit,'import':dict(imported) if imported else None,
+            'scope':'IMPORT' if import_id else 'CURRENT_CATALOG',
             'systems':sorted({d['system'] for d in all_data}),'groups':sorted({d['feature_group'] for d in all_data if not system or d['system']==system})}
     def feature(self,actor,key):
         self.authorize(actor); root=self.session.execute(select(S.features).where(S.features.c.external_id==key)).mappings().first()

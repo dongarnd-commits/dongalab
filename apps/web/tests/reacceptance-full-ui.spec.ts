@@ -1,6 +1,7 @@
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {test,expect,type Page} from '@playwright/test';
+import {openGlobalRequestList} from './operator-request-navigation';
 test.use({actionTimeout:30000});
 const data=()=>JSON.parse(process.env.DATCO_REACCEPTANCE_CONTEXT!);
 const origin=()=>process.env.DATCO_E2E_BASE_URL!;
@@ -116,7 +117,7 @@ test('fresh full UI: registration, Rule/request/reply, single/composite, Notice,
   await reply.getByLabel('보완 답변',{exact:true}).fill('적용 범위: 본사 창고 1개 사업장의 입고·출고와 재고 조회입니다.\n현재 재고 불일치는 월말 실사로 측정하며 오차율은 8%입니다.\n기존 시스템: 엑셀과 수기 기록입니다. 예산은 미정입니다.');
   const responded=company.waitForResponse(r=>r.url().endsWith('/information-requests/'+request.id+'/responses')&&r.request().method()==='POST');
   await reply.getByRole('button',{name:'보완답변 제출',exact:true}).click();expect((await responded).ok()).toBe(true);
-  await menu(operator,'보완자료 요청');await operator.locator('tr[data-request-id="'+request.id+'"]').getByRole('button',{name:'기업 답변 검토',exact:true}).click();
+  await openGlobalRequestList(operator,cid,v1.id);await operator.locator('tr[data-request-id="'+request.id+'"]').getByRole('button',{name:'기업 답변 검토',exact:true}).click();
   const reviewReply=operator.getByRole('region',{name:'운영자 답변 판단',exact:true});
   await reviewReply.getByLabel('확인 또는 재보완 사유',{exact:true}).fill('TEST 같은 기업·제출본의 답변을 확인했습니다. 기업정보 자동 확정은 하지 않습니다.');
   const verified=operator.waitForResponse(r=>r.url().endsWith('/information-requests/'+request.id+'/review')&&r.request().method()==='POST');
@@ -282,8 +283,8 @@ test('three real portals keep desktop width, mobile keyboard menus and one logou
    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
    await expect(page.getByRole('button',{name:'로그아웃',exact:true})).toHaveCount(1);
    await page.getByRole('button',{name:'로그아웃',exact:true}).click();
-   const confirmation=page.getByRole('dialog',{name:'로그아웃 확인',exact:true});
-   if(await confirmation.isVisible())await confirmation.getByRole('button',{name:'로그아웃',exact:true}).click();
+   const confirmation=page.getByRole('dialog',{name:'저장하지 않은 변경사항이 있습니다',exact:true});
+   if(await confirmation.isVisible())await confirmation.getByRole('button',{name:'변경을 버리고 로그아웃',exact:true}).click();
    await expect(page).toHaveURL(/\/login$/);
    expect((await page.request.get('/api/notice/session')).status()).toBe(401);
   }finally{await context.close();}

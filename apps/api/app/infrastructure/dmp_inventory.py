@@ -48,6 +48,7 @@ class Metadata(SourceModel):
     prepared_date: str | None = None
     availability_assertion: str | None = None
     fields: list[str] | None = None
+    workbook_provenance: dict | None = None
 
 class Inventory(SourceModel):
     metadata: Metadata

@@ -138,11 +138,19 @@ def _pseudo(kind, *parts):
 def _raw_source(revision, member_by_revision, imports, asset_version=None):
     member = member_by_revision.get(revision["id"])
     imported = imports.get(member["import_id"]) if member else None
-    return dict(kind="DMP_IMPORT" if imported else "ADMIN_MANAGED",
+    result = dict(kind="DMP_IMPORT" if imported else "ADMIN_MANAGED",
         import_id=imported["id"] if imported else None,
         digest=imported["digest"] if imported else
             (asset_version["digest"] if asset_version else revision["digest"]),
         revision_digest=revision["digest"])
+    provenance = imported["metadata"].get("workbook_provenance") if imported else None
+    if provenance:
+        location = next((row for row in provenance.get("rows", [])
+                         if row["feature_id"] == revision["data"]["feature_id"]), None)
+        result.update(kind="ADMIN_WORKBOOK", workbook=dict(file_sha256=provenance["file_sha256"],
+            filename=provenance["filename"], parser_version=provenance["parser_version"],
+            location=deepcopy(location)))
+    return result
 
 
 def _project_node(node, version):
@@ -252,7 +260,7 @@ def catalog_snapshot(service):
                     (systems, "SYSTEM", system_name, system_id, None),
                     (modules, "MODULE", module_name, module_id, system_id)):
                 if key not in target:
-                    data = dict(name=name, description="원천 분류이며 관리 등록·제공 검증된 모듈이 아닙니다.",
+                    data = dict(name=name, description=("원천 시스템 분류입니다. 실제 시스템 제공 범위는 관리 등록 후 확인합니다." if kind == "SYSTEM" else "원천 기능그룹 분류입니다. 실제 모듈 소속과 제공 범위는 확인이 필요합니다."),
                         role="", release="", business_areas=[], problems=[], conditions=[],
                         exclusions=[], prerequisites=[], availability="NEEDS_CONFIRMATION",
                         availability_evidence="", relations=[])

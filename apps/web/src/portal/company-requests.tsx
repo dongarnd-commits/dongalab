@@ -1,3 +1,4 @@
+import {usePortalWorkState} from './portal-work-state';
 import {useEffect,useState,useRef,useId,useLayoutEffect} from 'react';
 import type {CompanyWorkflow} from './workflow';
 import {companyRequest,CompanyError} from '../company/client';
@@ -15,7 +16,9 @@ function SendConfirmation({pending,busy,onCancel,onSend,onCheck}:{pending:Pendin
  <div className="request-confirmation-actions"><button ref={cancel} type="button" disabled={busy} onClick={onCancel}>돌아가기</button>{pending.uncertain&&pending.requestId&&<button type="button" disabled={busy} onClick={onCheck}>저장·발송 상태 확인</button>}<button type="button" disabled={busy||pending.uncertain} onClick={onSend}>{busy?'처리 중':'수요기업에 발송하기'}</button></div></dialog>;
 }
 
-export function InformationRequestsPanel({w,operator=false,improvementVersionId,hideComposer=false,requestId,expectedResponseId,onReviewed,onSelectRequest}:{w:CompanyWorkflow;operator?:boolean;improvementVersionId?:string;hideComposer?:boolean;requestId?:string;expectedResponseId?:string;onReviewed?:()=>void;onSelectRequest?:(id:string,responseId?:string)=>void}){
+export function InformationRequestsPanel({w,operator=false,improvementVersionId,hideComposer=false,openComposer=false,requestId,expectedResponseId,onReviewed,onSelectRequest}:{w:CompanyWorkflow;operator?:boolean;improvementVersionId?:string;hideComposer?:boolean;openComposer?:boolean;requestId?:string;expectedResponseId?:string;onReviewed?:()=>void;onSelectRequest?:(id:string,responseId?:string)=>void}){
+ const composer=useRef<HTMLDetailsElement>(null);
+ useEffect(()=>{if(operator&&openComposer){composer.current?.querySelector<HTMLInputElement>('input')?.focus();}},[operator,openComposer]);
  const listContext=w.session.id+':'+w.cid;
  const [listing,setListing]=useState<{context:string;items:Item[]|null;error:string}>(()=>({context:listContext,items:null,error:''}));
  const [refreshing,setRefreshing]=useState(false);
@@ -34,6 +37,7 @@ export function InformationRequestsPanel({w,operator=false,improvementVersionId,
  const alive=useRef(true),sending=useRef(false);const [unknownCreation,setUnknownCreation]=useState(false);
  const [pending,setPending]=useState<Pending|null>(null),[unresolved,setUnresolved]=useState<Pending|null>(null);
  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
+ usePortalWorkState({dirty:operator&&(!!draft.title.trim()||!!draft.message.trim()||!!draft.due),uncertain:unknownCreation||!!unresolved?.uncertain},w.session.id+':'+w.cid+':information-requests:'+(improvementVersionId??'company'));
  const preview=pending?.context===contextKey?pending:null;
  const stillCurrent=(p:Pending)=>alive.current&&currentContext.current===p.context;
  function prepare(){if(!validTarget||unknownCreation||unresolved)return;setPending({context:contextKey,company:w.detail?.company.name??'',versionTitle:targetVersion?.data.title??'기업 공통정보 보완 요청',ordinal:targetVersion?.ordinal,versionId:improvementVersionId,title:draft.title,message:draft.message,due:draft.due});}
@@ -68,7 +72,7 @@ export function InformationRequestsPanel({w,operator=false,improvementVersionId,
   },'요청 저장·발송 상태를 확인했습니다.');
  }
 
- return <>{preview&&<SendConfirmation pending={preview} busy={w.busy} onCancel={()=>setPending(null)} onSend={send} onCheck={checkState}/>} {unknownCreation&&<p role="alert">요청 생성 결과가 불확실합니다. 이력을 조회하고 저장 상태를 확인해 주세요.</p>}{unresolved&&!preview&&<p role="alert">기존 요청의 저장·발송 상태를 먼저 확인하세요. 새 요청을 자동 생성하지 않습니다.{unresolved.requestId&&<button type="button" onClick={()=>setPending({...unresolved})}>기존 요청 확인 계속</button>}</p>}{operator&&!hideComposer&&<details className="request-manual-compose"><summary>{improvementVersionId?'기존 분석과 별도의 수동 요청 작성':'새 기업 공통정보 보완요청 작성'}</summary><BusinessCard title="보완 요청 작성">{improvementVersionId&&<div><p>요청 대상: {w.detail?.company.name} · {targetVersion?.data.title??'제출본 확인 필요'} · 제출본 v{targetVersion?.ordinal??'미확인'}</p><details><summary>기술 상세정보</summary><p>Version ID: {improvementVersionId}</p></details></div>}<form onSubmit={e=>{e.preventDefault();prepare();}}><BusinessField label="요청 제목"><input required className={input} maxLength={300} value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})}/></BusinessField><BusinessField label="확인·보완할 내용"><textarea required className={input} maxLength={10000} value={draft.message} onChange={e=>setDraft({...draft,message:e.target.value})}/></BusinessField><BusinessField label="응답 기한"><input className={input} type="date" value={draft.due} onChange={e=>setDraft({...draft,due:e.target.value})}/></BusinessField><button className={primary} disabled={w.busy||!validTarget||unknownCreation||!!unresolved}>보완 요청 발송</button></form></BusinessCard></details>}
+ return <>{preview&&<SendConfirmation pending={preview} busy={w.busy} onCancel={()=>setPending(null)} onSend={send} onCheck={checkState}/>} {unknownCreation&&<p role="alert">요청 생성 결과가 불확실합니다. 이력을 조회하고 저장 상태를 확인해 주세요.</p>}{unresolved&&!preview&&<p role="alert">기존 요청의 저장·발송 상태를 먼저 확인하세요. 새 요청을 자동 생성하지 않습니다.{unresolved.requestId&&<button type="button" onClick={()=>setPending({...unresolved})}>기존 요청 확인 계속</button>}</p>}{operator&&!hideComposer&&<details ref={composer} open={openComposer} className="request-manual-compose"><summary>{improvementVersionId?'기존 분석과 별도의 수동 요청 작성':'새 기업 공통정보 보완요청 작성'}</summary><BusinessCard title="보완 요청 작성">{improvementVersionId&&<div><p>요청 대상: {w.detail?.company.name} · {targetVersion?.data.title??'제출본 확인 필요'} · 제출본 v{targetVersion?.ordinal??'미확인'}</p><details><summary>기술 상세정보</summary><p>Version ID: {improvementVersionId}</p></details></div>}<form onSubmit={e=>{e.preventDefault();prepare();}}><BusinessField label="요청 제목"><input required className={input} maxLength={300} value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})}/></BusinessField><BusinessField label="확인·보완할 내용"><textarea required className={input} maxLength={10000} value={draft.message} onChange={e=>setDraft({...draft,message:e.target.value})}/></BusinessField><BusinessField label="응답 기한"><input className={input} type="date" value={draft.due} onChange={e=>setDraft({...draft,due:e.target.value})}/></BusinessField><button className={primary} disabled={w.busy||!validTarget||unknownCreation||!!unresolved}>보완 요청 발송</button></form></BusinessCard></details>}
  {!operator&&<p className="mb-4 text-sm text-slate-600">선택한 기업에 발송된 보완 요청입니다. 같은 기업의 입력 담당자가 함께 확인·답변하는 목록이며, 현재 계정에만 지정된 제안서 목록과는 다릅니다.</p>}
  {((items===null&&!listError)||refreshing)&&<p role="status">보완 요청을 불러오고 있습니다.</p>}
  {listError&&<p role="alert">{listError}</p>}

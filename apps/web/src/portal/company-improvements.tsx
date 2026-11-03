@@ -1,3 +1,4 @@
+import {usePortalWorkState} from './portal-work-state';
 import {FileSelection} from './file-selection';
 import {useEffect,useState} from 'react';
 import type {CompanyWorkflow} from './workflow';
@@ -10,6 +11,7 @@ import {storeAttachment} from './company-attachments';
 type Improvement=Detail['improvements'][number]['versions'][number]['data'];
 function CompanyStructureAck({w,version}:{w:CompanyWorkflow;version:Detail['improvements'][number]['versions'][number]}){
  const [checked,setChecked]=useState(false),[note,setNote]=useState('');const acknowledged=version.reviews?.some(r=>r.outcome==='ACKNOWLEDGE');
+ usePortalWorkState({dirty:!acknowledged&&(checked||!!note.trim())});
  return <section className="my-5 rounded-xl border border-slate-200 p-5" aria-label="기업 구조화본 확인"><h3 className="font-bold">DATCO 구조화본 v{version.ordinal} 확인</h3><p>제출 원문을 바탕으로 DATCO가 정리한 내용입니다. 원문·문제·목표·기능·근거를 확인해 주세요. 기업 확인 후에도 운영자의 공식 확정은 별도로 진행합니다.</p>{([['problem','구조화한 문제'],['goal','구조화한 목표'],['required_functions','필요 기능'],['missing','남은 확인사항']] as const).map(([field,label])=><div key={field}><h4 className="font-bold">{label}</h4><p className="whitespace-pre-wrap">{version.data[field]||'입력된 내용 없음'}</p></div>)}{acknowledged?<p role="status">이 정확한 구조화 Version의 기업 확인이 기록되어 있습니다.</p>:<><BusinessField label="구조화본 기업 확인 의견"><textarea aria-label="구조화본 기업 확인 의견" className={input} value={note} onChange={e=>setNote(e.target.value)} maxLength={5000}/></BusinessField><label className="my-4 block"><input type="checkbox" checked={checked} disabled={w.busy} onChange={e=>setChecked(e.target.checked)}/>이 Version의 내용·연결 근거를 직접 확인했습니다.</label><button className={primary} disabled={w.busy||!checked||!note.trim()} onClick={()=>void w.run(async()=>{await w.request('/improvements/'+version.id+'/actions',{action:'ACKNOWLEDGE',note});await w.reload();setChecked(false);},'정확한 구조화 Version을 기업이 확인했습니다. 운영자 공식 확정은 별도입니다.')}>이 구조화 Version 기업 확인</button></>}</section>;
 }
 const needState=(root:Detail['improvements'][number])=>root.state==='DRAFT'&&root.versions.some(v=>v.reviews?.some(r=>r.outcome==='SUBMIT'))?'수정 중 · 재제출 대기':improvementStateLabel(root.state);
@@ -23,8 +25,9 @@ function ImprovementForm({w,rootId,done}:{w:CompanyWorkflow;rootId:string;done:(
  const [attachmentNotice,setAttachmentNotice]=useState('');
  const originalFiles=w.detail!.evidence.filter(e=>draft.base.evidence_ids.includes(e.id)&&e.file_id).map(e=>e.file_id!);
  const dirty=JSON.stringify(p)!==JSON.stringify(draft.base)||draft.files.length>0||[...draft.fileIds].sort().join('|')!==originalFiles.sort().join('|');
+ const clearLogoutDraft=usePortalWorkState({dirty},w.session.id+':'+w.cid+':need-v13:'+(rootId||'new'));
  useEffect(()=>{if(!dirty)return;const protect=(event:BeforeUnloadEvent)=>{event.preventDefault();event.returnValue='';};window.addEventListener('beforeunload',protect);return()=>window.removeEventListener('beforeunload',protect);},[dirty]);
- function close(){if(dirty&&!window.confirm('저장하지 않은 개선요구 내용을 버리고 닫을까요?'))return;w.drafts.delete((w.cid??'new')+':need-v13:'+(rootId||'new'));done(rootId);}
+ function close(){if(dirty&&!window.confirm('저장하지 않은 개선요구 내용을 버리고 닫을까요?'))return;w.drafts.delete((w.cid??'new')+':need-v13:'+(rootId||'new'));clearLogoutDraft();done(rootId);}
  const submitReasons=[!p.site_id?'관련 사업장을 선택해 주세요.':'',!p.as_is.trim()?'현재 업무와 불편한 점을 입력해 주세요.':'',!p.to_be.trim()?'개선하고 싶은 모습을 입력해 주세요.':'',inactive.length?'취소·교체된 첨부자료를 해제하거나 유효한 자료로 바꿔 주세요.':''].filter(Boolean);
  function select(files:File[]){if(files.length>10||files.some(f=>!f.size||f.size>maxUpload||!(/\.(pdf|docx|xlsx|txt|png|jpe?g)$/i.test(f.name)))){setDraft({...draft,error:'20MB 이하의 지원 파일을 최대 10개 선택해 주세요.'});return;}setDraft({...draft,files,error:''});}
  async function save(submit=false){
@@ -41,7 +44,7 @@ function ImprovementForm({w,rootId,done}:{w:CompanyWorkflow;rootId:string;done:(
   }
   actual=(await w.reload())!;const stored=actual.improvements.find(i=>i.id===current.rootId);if(!stored?.versions.some(v=>v.id===current.versionId))throw Error('저장한 개선요구를 다시 확인하지 못했습니다.');
   if(submit){if(stored.state==='DRAFT')await w.request('/improvements/'+current.versionId+'/actions',{action:'SUBMIT',note:'기업 사용자가 작성 내용을 확인하고 DATCO에 제출함'});actual=(await w.reload())!;const checked=actual.improvements.find(i=>i.id===current.rootId);if(checked?.state!=='SUBMITTED'||!checked.versions.find(v=>v.id===current.versionId)?.reviews?.some(r=>r.outcome==='SUBMIT'))throw Error('초안은 저장되었지만 제출 결과를 확인하지 못했습니다.');}
-  await w.business.choose({site:p.site_id,site_version:null,improvement:current.rootId,version:current.versionId});if(!rootId)w.drafts.delete((w.cid??'new')+':need-v13:new');done(current.rootId);
+  await w.business.choose({site:p.site_id,site_version:null,improvement:current.rootId,version:current.versionId});if(!rootId)w.drafts.delete((w.cid??'new')+':need-v13:new');clearLogoutDraft();done(current.rootId);
  }
  return <BusinessCard title={draft.rootId?'개선요구 수정':'새 개선요구 작성'}><p className="mb-5 text-sm text-slate-500">현재 업무의 불편과 원하는 변화를 입력하세요. 첨부자료와 제약사항은 필요한 경우에만 추가합니다.</p><form onSubmit={e=>{e.preventDefault();void w.run(()=>save(false),'개선요구 초안을 저장했습니다.');}}>
  {w.detail!.sites.length===1?<p className="mb-4">관련 사업장: {w.detail!.sites[0].name}</p>:<BusinessField label="관련 사업장 (필수)"><select aria-label="관련 사업장" required className={input} disabled={!!draft.rootId} value={p.site_id} onChange={e=>setDraft({...draft,data:{...p,site_id:e.target.value},fileIds:[],files:[]})}><option value="">사업장 선택</option>{w.detail!.sites.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></BusinessField>}

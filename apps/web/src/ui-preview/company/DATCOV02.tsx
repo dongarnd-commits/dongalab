@@ -1,3 +1,5 @@
+import {PreviewExitProvider,usePreviewExit} from '../../portal/preview-exit';
+import {usePortalWorkState} from '../../portal/portal-work-state';
 import {PortalMenu} from '../../portal/portal-menu';
 import {CompanyHomeSummary} from '../../portal/company-home-summary';
 import {CompanyBusinessScreen} from "../../portal/company-business";
@@ -147,7 +149,8 @@ function IntakeFiles({disabled=false,stage,documents,onFiles,onReference,onManag
   {documents.some(d=>d.usedIn.includes(stage))&&<ul className="space-y-1 text-[12px] text-slate-600">{documents.filter(d=>d.usedIn.includes(stage)).map(d=><li key={d.id}>{d.name} · {d.category} · 파싱 미연결</li>)}</ul>}
  </div>;
 }
-export const DATCOV02 = ({session,onLogout,business,workflow}:PortalProps) => {
+export const DATCOV02=(props:PortalProps)=>props.session?<CompanyPortalView {...props}/>:<PreviewExitProvider><CompanyPortalView {...props}/></PreviewExitProvider>;
+const CompanyPortalView = ({session,onLogout,business,workflow}:PortalProps) => {
   const authenticated=!!session;const screenChanged=workflow?.screenChanged;
   const [loggedIn, setLoggedIn] = useState(() => authenticated || new URLSearchParams(window.location.search).get('screen') !== null && new URLSearchParams(window.location.search).get('screen') !== 'login');
   const [loginId, setLoginId] = useState('');
@@ -194,6 +197,9 @@ export const DATCOV02 = ({session,onLogout,business,workflow}:PortalProps) => {
   const [proposalOpen, setProposalOpen] = useState(false);
   const [toaster, setToaster] = useState('');
   const [confirm, setConfirm] = useState(false);
+  const requestPreviewExit=usePreviewExit();const [documentBaselines,setDocumentBaselines]=useState(()=>new Map<number,Doc>());
+  const previewValues={profile:{company:previewData.company,reg:previewData.reg,industry:previewData.industry,address:previewData.address,person:previewData.person,site:previewData.site},sites:sites.map(({id,name,address,person})=>({id,name,address,person})),finance:{revenue:previewData.revenue,employees:previewData.employees,financeYear,historyStatus,projects},need:{problem:previewProblem,goal:previewGoal,limits:previewLimits},opinion};
+  const [previewBaseline,setPreviewBaseline]=useState(()=>structuredClone(previewValues));
   const upload = useRef<HTMLInputElement>(null);
   const replace = useRef<HTMLInputElement>(null);
   const scroller = useRef<HTMLElement>(null);
@@ -218,6 +224,7 @@ export const DATCOV02 = ({session,onLogout,business,workflow}:PortalProps) => {
   };
   const logout = () => {
     if(authenticated){onLogout?.();return;}
+    setData({...previewBaseline.profile,revenue:previewBaseline.finance.revenue,employees:previewBaseline.finance.employees});setSites(previewBaseline.sites.map(site=>({...site,open:true})));setFinanceYear(previewBaseline.finance.financeYear);setHistoryStatus(previewBaseline.finance.historyStatus);setProjects(structuredClone(previewBaseline.finance.projects));setProblem(previewBaseline.need.problem);setGoal(previewBaseline.need.goal);setLimits(previewBaseline.need.limits);setOpinion(previewBaseline.opinion);setDocuments(current=>current.flatMap(doc=>{const stored=documentBaselines.get(doc.id);return stored?[isDirty(doc)?{...stored,usedIn:doc.usedIn,editing:doc.editing}:doc]:[];}));
     setLoggedIn(false);
     setPassword('');
     setLoginErr('');
@@ -244,14 +251,15 @@ export const DATCOV02 = ({session,onLogout,business,workflow}:PortalProps) => {
     notify(errors.length?errors.join(' '):'파일명·크기 미리보기만 표시합니다. 업로드·파싱·서버 저장은 다음 단계에서 연결합니다.');
   };
   const infoOf=(doc:Doc)=>({category:doc.category,description:doc.description,siteId:doc.siteId,improvement:doc.improvement});
-  const isDirty=(doc:Doc)=>!doc.savedInfo||JSON.stringify(infoOf(doc))!==JSON.stringify(doc.savedInfo);
+  const isDirty=(doc:Doc)=>{const stored=documentBaselines.get(doc.id);return !stored||stored.file!==doc.file||JSON.stringify(infoOf(doc))!==JSON.stringify(infoOf(stored));};
+  usePortalWorkState({dirty:!authenticated&&(JSON.stringify(previewValues)!==JSON.stringify(previewBaseline)||documents.some(isDirty))});
   const removeSite=(id:number)=>{
     if(!window.confirm('이 사업장 입력 카드를 미리보기에서 삭제할까요? 연결된 자료는 사업장을 다시 선택해야 합니다. 실제 DB는 변경하지 않습니다.'))return;
     setSites(a=>a.filter(x=>x.id!==id));
     setDocuments(a=>a.map(x=>x.siteId===id||x.savedInfo?.siteId===id?{...x,siteId:x.siteId===id?null:x.siteId,savedInfo:x.savedInfo?{...x.savedInfo,siteId:x.savedInfo.siteId===id?null:x.savedInfo.siteId}:undefined,siteRemoved:true}:x));
   };
   const saveDocumentInfo=(id:number)=>{
-    setDocuments(a=>a.map(x=>x.id===id?{...x,savedInfo:infoOf(x),siteRemoved:x.siteRemoved&&x.siteId===null}:x));
+    const doc=documents.find(x=>x.id===id);if(!doc)return;const reflected={...doc,savedInfo:infoOf(doc),siteRemoved:doc.siteRemoved&&doc.siteId===null};setDocumentBaselines(previous=>new Map(previous).set(id,reflected));setDocuments(a=>a.map(x=>x.id===id?reflected:x));
     notify('자료정보를 현재 UI 미리보기 세션에 반영했습니다. PostgreSQL·서버 저장은 수행하지 않았습니다.');
   };
   const onUpload = async (ev: React.ChangeEvent<HTMLInputElement>) => {
@@ -320,7 +328,7 @@ export const DATCOV02 = ({session,onLogout,business,workflow}:PortalProps) => {
    <div className="flex items-center gap-3 border-t border-slate-100 px-5 py-4"><div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-blue-50 text-blue-600"><UserRound size={18} /></div><div className="min-w-0 flex-1"><p title={companyUserLabel} className="truncate text-[12px] font-bold">{companyUserLabel||"수요기업 사용자"}</p><p className="truncate text-[11px] text-slate-400">{authenticated?"수요기업 담당자":"회사 담당자"}</p></div></div>
   </aside>
   <div className="flex min-w-0 flex-1 flex-col">
-   <header className="flex h-[75px] shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-8"><div className="flex items-center gap-3"><PortalMenu collapsed={collapsed} onCollapse={()=>setCollapsed(v=>!v)} mobileOpen={mobileMenu} onMobile={setMobileMenu}/><span className="hidden text-[12px] text-slate-400 sm:block">수요기업 포털</span><ChevronRight size={15} className="hidden text-slate-300 sm:block" /><span className="text-[13px] font-bold">{menu.flatMap(x => x.items).find(x => x.id === page)?.name}</span></div><div className="flex items-center gap-3"><Chip color="blue">{authenticated?<span className="block max-w-[160px] truncate" title={workflow?.detail?.company.name||data.company||'기업 선택 필요'}>{workflow?.detail?.company.name||data.company||'기업 선택 필요'}</span>:data.company || '기업정보 입력 중'}</Chip><div className="grid h-8 w-8 place-items-center rounded-full bg-[#EAF3FF] text-[12px] font-bold text-[#1767C7]">기</div><button onClick={logout} aria-label="로그아웃" className={S}><LogOut size={15} /> 로그아웃</button></div></header>
+   <header className="flex h-[75px] shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-8"><div className="flex items-center gap-3"><PortalMenu collapsed={collapsed} onCollapse={()=>setCollapsed(v=>!v)} mobileOpen={mobileMenu} onMobile={setMobileMenu}/><span className="hidden text-[12px] text-slate-400 sm:block">수요기업 포털</span><ChevronRight size={15} className="hidden text-slate-300 sm:block" /><span className="text-[13px] font-bold">{menu.flatMap(x => x.items).find(x => x.id === page)?.name}</span></div><div className="flex items-center gap-3"><Chip color="blue">{authenticated?<span className="block max-w-[160px] truncate" title={workflow?.detail?.company.name||data.company||'기업 선택 필요'}>{workflow?.detail?.company.name||data.company||'기업 선택 필요'}</span>:data.company || '기업정보 입력 중'}</Chip><div className="grid h-8 w-8 place-items-center rounded-full bg-[#EAF3FF] text-[12px] font-bold text-[#1767C7]">기</div><button onClick={()=>requestPreviewExit(logout)} aria-label={authenticated?"로그아웃":"미리보기 종료"} className={S}><LogOut size={15} /> {authenticated?'로그아웃':'미리보기 종료'}</button></div></header>
    <main ref={scroller} className="min-h-0 flex-1 overflow-y-auto"><div className="mx-auto max-w-[1190px] px-4 pb-14 pt-7 md:px-8">
     {business&&<CompanyContextStatus business={business} hideEmpty/>}
      {toaster && <div role="status" className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-[12px] text-blue-800"><div className="flex items-center gap-2"><Info size={16} /><span>{toaster}</span></div><button onClick={() => setToaster('')} aria-label="알림 닫기"><X size={16} /></button></div>}
@@ -431,7 +439,7 @@ export const DATCOV02 = ({session,onLogout,business,workflow}:PortalProps) => {
                     notify('기업명을 입력해 주세요.');
                     return;
                   }
-                  setSaved(true);notify('미리보기 입력값을 현재 세션에 보관했습니다. 실제 서버 저장은 미연결입니다.');
+                  setPreviewBaseline(previous=>({...previous,profile:structuredClone(previewValues.profile)}));setSaved(true);notify('미리보기 입력값을 현재 세션에 보관했습니다. 실제 서버 저장은 미연결입니다.');
                 }}><Check size={15} /> 기업정보 저장</button><button className={S} onClick={() => goto('finance')}>재무정보 이동 <ArrowRight size={15} /></button></div></Card>
 {business?<Card className="mt-5 p-6"><h3 className="mb-4 text-[16px] font-bold">사업장 목록 · 읽기 전용</h3>{business.state.value?.sites.map(site=>{const ordinal=site.id===business.state.value?.selection.site_id?business.state.value.selection.site_ordinal:site.current_ordinal;const version=site.versions.find(v=>v.ordinal===ordinal);return <section key={site.id} data-site-id={site.id} className="mb-4 rounded-xl border border-slate-200 p-4"><h4 className="mb-3 font-bold">{version?.data.name??site.name}</h4><div className="grid gap-4 sm:grid-cols-2">{(['address','industry','process'] as const).map((field,i)=><Label key={field} name={['소재지','업종','공정'][i]}><textarea disabled className={I} value={version?.data[field]??''} readOnly/></Label>)}</div></section>})}{business.state.status==='ready'&&business.state.value?.sites.length===0&&<p>등록된 사업장이 없습니다.</p>}<button className={S} onClick={()=>goto('needs')}>사업장별 개선요구 확인</button><p className="text-xs text-slate-500">사업장 등록·수정·삭제는 후속 단계에서 연결합니다.</p></Card>:<Card className="mt-5 p-6"><div className="flex flex-wrap items-center justify-between gap-3"><h3 className="text-[16px] font-bold">사업장 목록</h3><button disabled={authenticated} className={P} onClick={()=>setSites(a=>[...a,{id:Date.now(),name:'',address:'',person:'',open:true}])}><Plus size={15}/> 사업장 추가</button></div><p className="mt-3 text-[12px] text-slate-500">미리보기 입력 · 현재 화면 세션에서만 유지되며 실제 DB에 저장되지 않습니다.</p><div className="mt-5 space-y-4">{sites.map((site,i)=><section key={site.id} aria-label={'사업장 '+(i+1)} className="rounded-xl border border-slate-200 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><h4 className="text-[14px] font-bold">사업장 {i+1} — {site.name||'이름 입력 필요'}</h4><button disabled={authenticated} className={S} onClick={()=>removeSite(site.id)}><Trash2 size={15}/> 사업장 삭제</button><button disabled={authenticated} className={S} aria-expanded={site.open} onClick={()=>setSites(a=>a.map(x=>x.id===site.id?{...x,open:!x.open}:x))}>{site.open?'접기':'수정 · 펼치기'}</button></div>{site.open&&<div className="mt-4 grid gap-4 sm:grid-cols-2">{([{key:'name',label:'사업장명'},{key:'address',label:'사업장 소재지'},{key:'person',label:'사업장 담당자'}] as const).map(f=><Label key={f.key} name={f.label}><input disabled={authenticated} className={I} value={site[f.key]} onChange={e=>setSites(a=>a.map(x=>x.id===site.id?{...x,[f.key]:e.target.value}:x))}/></Label>)}</div>}</section>)}</div></Card>}    </>}
 
@@ -443,7 +451,7 @@ export const DATCOV02 = ({session,onLogout,business,workflow}:PortalProps) => {
      {financeReview&&<Card className="mb-5 p-5"><h3 className="text-[15px] font-bold">재무 자료 추출·입력내용 검토</h3><p className="mt-3 text-[12px] leading-6 text-amber-800">파싱 미연결 · 추출 후보가 없습니다. 자동 입력·후보 적용은 수행하지 않았습니다.</p><ul className="mt-3 text-[12px]">{documents.filter(d=>d.usedIn.includes('finance')).map(d=><li key={d.id}>{d.name} · {d.category}</li>)}</ul><button className={P+' mt-4'} disabled={authenticated || (true)}>추출 후보 적용 (파싱 미연결)</button><button disabled={authenticated} className={S+' ml-2 mt-4'} onClick={()=>document.getElementById('finance-direct')?.scrollIntoView({block:'start'})}>직접 입력폼 확인</button></Card>}
      <div id="finance-direct"/>
      <Card className="p-6"><h3 className="mb-5 text-[15px] font-bold">재무정보</h3><div className="grid gap-4 sm:grid-cols-3"><Label name="기준 연도"><select disabled={authenticated} className={I} value={financeYear} onChange={e=>setFinanceYear(e.target.value)}><option>2025</option><option>2024</option><option>2023</option></select></Label><Label name="매출액 (원)"><input disabled={authenticated} type="text" className={I} value={data.revenue} placeholder="금액 입력" onChange={e => update('revenue', e.target.value)} /></Label><Label name="상시근로자 수 (명)"><input disabled={authenticated} type="text" className={I} value={data.employees} placeholder="인원 입력" onChange={e => update('employees', e.target.value)} /></Label></div><Sep /><div className="mt-6"><h3 className="text-[14px] font-bold">정부지원사업 수행이력</h3><fieldset className="mt-4"><legend className="text-[12px] font-semibold text-slate-700">수행이력 여부</legend><div className="mt-3 flex flex-wrap gap-4">{([{value:'yes',label:'수행이력 있음'},{value:'none',label:'수행이력 없음'},{value:'unknown',label:'아직 확인하지 못함'}] as const).map(x=><label key={x.value} className="flex items-center gap-2 text-[13px]"><input disabled={authenticated} type="radio" name="history-status" checked={historyStatus===x.value} onChange={()=>setHistoryStatus(x.value)}/>{x.label}</label>)}</div></fieldset>{historyStatus==='yes'?<div className="mt-5 space-y-4">{projects.map((item,i)=><section key={item.id} aria-label={'수행이력 '+(i+1)} className="rounded-xl border border-slate-200 p-4"><div className="mb-4 flex items-center justify-between"><h4 className="text-[14px] font-bold">수행사업 {i+1}</h4><button disabled={authenticated} className={S} onClick={()=>setProjects(a=>a.filter(x=>x.id!==item.id))}><Trash2 size={15}/> 제외</button></div><div className="grid gap-4 sm:grid-cols-2">{([{key:'name',label:'수행사업명'},{key:'period',label:'수행연도 또는 기간'},{key:'agency',label:'지원기관'},{key:'details',label:'주요 수행내용'},{key:'evidence',label:'관련 증빙 메모 (선택)'}] as const).map(f=><Label key={f.key} name={f.label}>{f.key==='details'?<textarea disabled={authenticated} className={I+' min-h-[100px]'} value={item[f.key]} onChange={e=>setProjects(a=>a.map(x=>x.id===item.id?{...x,[f.key]:e.target.value}:x))}/>:<input disabled={authenticated} className={I} value={item[f.key]} onChange={e=>setProjects(a=>a.map(x=>x.id===item.id?{...x,[f.key]:e.target.value}:x))}/>}</Label>)}</div></section>)}<button disabled={authenticated} className={S} onClick={()=>setProjects(a=>[...a,{id:Date.now(),name:'',period:'',agency:'',details:'',evidence:''}])}><Plus size={15}/> 수행사업 추가</button><p className="text-[12px] text-slate-500">자료 업로드 없이 직접 입력할 수 있습니다. 실제 저장은 미연결입니다.</p></div>:<p className="mt-4 rounded-xl bg-slate-50 p-5 text-[13px] text-slate-600">{historyStatus==='none'?'수행이력 없음으로 선택했습니다.':'수행이력 미확인입니다. 이력이 없는 것으로 간주하지 않습니다.'}</p>}</div><div className="mt-5 flex justify-end gap-2"><button disabled={authenticated} className={P} onClick={() => {
-                  setFinanceSaved(true);notify('재무·사업이력 입력을 현재 미리보기 세션에 보관했습니다. 실제 서버 저장은 미연결입니다.');
+                  setPreviewBaseline(previous=>({...previous,finance:structuredClone(previewValues.finance)}));setFinanceSaved(true);notify('재무·사업이력 입력을 현재 미리보기 세션에 보관했습니다. 실제 서버 저장은 미연결입니다.');
                 }}><Check size={15} /> 저장</button><button className={S} onClick={() => goto('needs')}>개선요구 등록 <ArrowRight size={15} /></button></div></Card>
     </>}
 
@@ -459,7 +467,7 @@ export const DATCOV02 = ({session,onLogout,business,workflow}:PortalProps) => {
                       setNeedSaved(false);
                     }} /></Label><Label name="적용 제약 및 확인 필요사항"><textarea disabled={authenticated} aria-label="적용 제약 및 확인 필요사항" className={I + ' min-h-[90px] resize-y'} value={limits} onChange={e => setLimits(e.target.value)} /></Label></div><div className="mt-6 flex flex-wrap justify-end gap-2"><button className={S} onClick={() => openFiles('needs')}>관련자료 첨부 <Paperclip size={15} /></button><button disabled={authenticated} className={P} onClick={() => {
                     if (!problem.trim() || !goal.trim()) return notify('현재 문제와 개선목표를 입력해 주세요.');
-                    setNeedSaved(true);setInputChecked(false);goto('review');notify('개선요구를 미리보기 세션에 보관했습니다. 실제 분석·서버 저장·DATCO 전송은 미연결입니다.');
+                    setPreviewBaseline(previous=>({...previous,need:structuredClone(previewValues.need)}));setNeedSaved(true);setInputChecked(false);goto('review');notify('개선요구를 미리보기 세션에 보관했습니다. 실제 분석·서버 저장·DATCO 전송은 미연결입니다.');
                   }}><Check size={15} /> 개선요구 저장</button></div></Card><Card className="h-fit p-5"><div className="flex items-center gap-2 text-blue-600"><Sparkles size={20} /><h3 className="text-[14px] font-bold text-slate-800">작성 가이드</h3></div><div className="mt-4 space-y-4">{['어떤 문제가 반복되고 있나요?', '현재 어떤 방법으로 관리하나요?', '개선 후 무엇을 확인하고 싶나요?', '현재 시스템이나 예산 제약이 있나요?'].map((q, i) => <div className="flex items-start gap-3" key={q}><span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-blue-50 text-[11px] font-bold text-blue-700">{i + 1}</span><p className="text-[12px] leading-6 text-slate-500">{q}</p></div>)}</div></Card></div>
     </>}
 

@@ -1,6 +1,8 @@
+import {usePortalWorkState} from './portal-work-state';
 import {useEffect} from 'react';
 /** URL references are navigation hints only. Each consumer validates scoped API results. */
 export function useMvpDirty(onDirty:((value:boolean)=>void)|undefined,value:boolean){
+ usePortalWorkState({dirty:value});
  useEffect(()=>{onDirty?.(value);return()=>onDirty?.(false);},[onDirty,value]);
 }
 export function readMvpSelection(company:string,version:string,key:string){

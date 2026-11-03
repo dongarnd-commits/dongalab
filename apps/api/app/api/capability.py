@@ -38,6 +38,7 @@ class FeatureDetail(BaseModel):
     root:FeatureRoot
     revisions:list[FeatureRecord]
 class InventoryPage(BaseModel):
+    scope:Literal['CURRENT_CATALOG','IMPORT']
     items:list[FeatureRecord]
     total:int
     page:int

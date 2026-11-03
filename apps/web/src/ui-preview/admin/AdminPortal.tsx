@@ -1,4 +1,6 @@
 "use client";
+import {PreviewExitProvider,usePreviewExit,usePreviewDiscard} from '../../portal/preview-exit';
+import {usePortalWorkState} from '../../portal/portal-work-state';
 import type {AdminCatalogRead} from "../../portal/admin";
 /**
  * DATCO ONE 관리자 포털 참조 UI · 별도 시연용 소스.
@@ -70,7 +72,7 @@ function SafeAction({ children, onClick, disabled = false, kind = "outline", nav
  const {available}=React.useContext(Availability);
  return <button type="button" className={`ad-btn ad-btn-${kind}`} disabled={disabled||(!available&&!navigation)} title={!available&&!navigation?"데이터 연결과 대상 선택이 필요합니다.":undefined} onClick={available||navigation?onClick:undefined}>{children}</button>;
 }
-function AdminDetails({sample,isTest,page,onNavigate}:{sample:Fixture;isTest:boolean;page:Page;onNavigate:(page:Page)=>void}) {
+function AdminDetails({sample,isTest,page,onNavigate,preview=false}:{sample:Fixture;isTest:boolean;page:Page;onNavigate:(page:Page)=>void;preview?:boolean}) {
  const [toast, setToast] = useState("");
  const [features] = useState<Feature[]>(() => deepClone(sample.features));
  const [capabilities, setCapabilities] = useState<Capability[]>(() => deepClone(sample.capabilities));
@@ -100,6 +102,8 @@ function AdminDetails({sample,isTest,page,onNavigate}:{sample:Fixture;isTest:boo
  const reviewNote = memoDrafts[memoKey] ?? "";
  const setReviewNote = (text:string) => setMemoDrafts(prev=>({...prev,[memoKey]:text}));
  const [savedReviewNotes, setSavedReviewNotes] = useState<Record<string, string>>({});
+ const [memoBaselines,setMemoBaselines]=useState<Record<string,string>>({});
+ const [accessBaseline,setAccessBaseline]=useState("조회 접근 검토 요청");
  const [accessCompany, setAccessCompany] = useState("COMP-001");
  const [accessIntent, setAccessIntent] = useState("조회 접근 검토 요청");
  const [showPublishConfirm, setShowPublishConfirm] = useState(false);
@@ -112,6 +116,9 @@ function AdminDetails({sample,isTest,page,onNavigate}:{sample:Fixture;isTest:boo
  const selectedJob = jobs.find(j => j.id === selectedJobId) ?? jobs[0] ?? BLANK.job;
  const selectedIssue = issues.find(i => i.id === selectedIssueId) ?? issues[0] ?? BLANK.issue;
  const selectedIntegration = integrations.find(i => i.id === selectedIntegrationId) ?? integrations[0] ?? BLANK.integration;
+ const changedMemo=Object.entries(memoDrafts).some(([key,value])=>value.trim()!==(memoBaselines[key]??''));
+ usePortalWorkState({dirty:preview&&(changedMemo||accessIntent!==accessBaseline||selectedCap.releaseState!=='PUBLISHED'&&(draftDescription!==selectedCap.description||JSON.stringify([...draftFeatureIds].sort())!==JSON.stringify([...selectedCap.featureIds].sort())))});
+ usePreviewDiscard(()=>{if(!preview)return;setMemoDrafts(previous=>Object.fromEntries(Object.keys(previous).map(key=>[key,memoBaselines[key]??''])));setDraftDescription(selectedCap.description);setDraftFeatureIds([...selectedCap.featureIds]);setAccessIntent(accessBaseline);});
  const titleOfCompany = (id: string) => sample.companies.find(c => c.id === id)?.name ?? id;
  const go = (newPage:Page) => {onNavigate(newPage);setToast("");setSearch("");};
  const log = (action: string, target: string, detail: string) => setAudit(prev => [{ id: uid("UIAUD"), actor: "화면 체험 관리자", action, target, at: time(), detail, source: "LOCAL_UI_ONLY" }, ...prev]);
@@ -138,7 +145,8 @@ function AdminDetails({sample,isTest,page,onNavigate}:{sample:Fixture;isTest:boo
  };
  const saveDraft = () => {
    if(selectedCap.releaseState==="PUBLISHED") return show("발행된 버전은 직접 변경할 수 없습니다. '개정안 생성'을 선택하세요.");
-   setCapabilities(prev=>prev.map(c=>c.id===selectedCap.id?{...c,description:draftDescription.trim() || c.description,featureIds:draftFeatureIds,changeHistory:[...c.changeHistory,`v${c.version} 초안 편집(화면)`]}:c));
+   const description=draftDescription.trim()||selectedCap.description;setDraftDescription(description);
+   setCapabilities(prev=>prev.map(c=>c.id===selectedCap.id?{...c,description,featureIds:draftFeatureIds,changeHistory:[...c.changeHistory,`v${c.version} 초안 편집(화면)`]}:c));
    log("CAPABILITY_DRAFT_EDITED",selectedCap.id,"근거와 권한 검증 전인 화면의 개정안 저장");show("개정안 변경이 화면 상태에 반영되었습니다. 실제 DB는 변경하지 않았습니다.");
  };
  const publishSample = () => {
@@ -153,6 +161,7 @@ function AdminDetails({sample,isTest,page,onNavigate}:{sample:Fixture;isTest:boo
  const markRequirement = (rid:string)=>{
   if(!reviewNote.trim()) return show("검토 메모를 먼저 입력하세요. 공고를 공식 승인하는 동작이 아닙니다.");
   setNotices(prev=>prev.map(n=>n.id!==selectedNotice.id?n:{...n,requirements:n.requirements.map(req=>req.id===rid?{...req,status:"REVIEWED_SAMPLE"}:req)}));
+  setMemoBaselines(previous=>({...previous,[memoKey]:reviewNote.trim()}));
   log("NOTICE_REQUIREMENT_REVIEW_SAMPLE",rid,"가상 요건 검토 메모: "+reviewNote.trim());
   show("공고 요건에 '예시 검토' 표시를 남겼습니다. 실제 공식 공고·정책을 확정하지 않았습니다.");
  };
@@ -160,11 +169,11 @@ function AdminDetails({sample,isTest,page,onNavigate}:{sample:Fixture;isTest:boo
   if(selectedUser.role==="DATCO_ADMIN") return show("관리자 본인에게 임의로 기업 업무권한을 추가할 수 없습니다.");
   if(accessRequests.some(r=>r.userId===selectedUser.id&&r.companyId===accessCompany&&r.intent===accessIntent)) return show("동일 내용의 접근 검토 요청이 이미 존재합니다.");
   const request:AccessRequest={id:uid("ACCREQ"),userId:selectedUser.id,companyId:accessCompany,intent:accessIntent,status:"승인 전 요청",at:time()};
-  setAccessRequests(prev=>[request,...prev]);
+  setAccessRequests(prev=>[request,...prev]);setAccessBaseline(accessIntent);
   log("ACCESS_CHANGE_REQUEST",selectedUser.id,`${titleOfCompany(accessCompany)} - ${accessIntent}; 실제 권한 미부여`);
   show("접근권한 변경 검토 요청을 화면에 기록했습니다. 실제 접근권한은 변경되지 않았습니다.");
  };
- const saveMemo = ()=>{ if(!reviewNote.trim())return show("검토 메모를 입력하세요.");setSavedReviewNotes(prev=>({...prev,[selectedIssue.id]:reviewNote.trim()}));log("QUALITY_NOTE_SAVED",selectedIssue.id,reviewNote.trim());show("검토 메모를 화면 상태에 보관했습니다. 품질 이슈의 해결 상태는 변경하지 않았습니다."); };
+ const saveMemo = ()=>{ if(!reviewNote.trim())return show("검토 메모를 입력하세요.");setSavedReviewNotes(prev=>({...prev,[selectedIssue.id]:reviewNote.trim()}));setMemoBaselines(previous=>({...previous,[memoKey]:reviewNote.trim()}));log("QUALITY_NOTE_SAVED",selectedIssue.id,reviewNote.trim());show("검토 메모를 화면 상태에 보관했습니다. 품질 이슈의 해결 상태는 변경하지 않았습니다."); };
  const auditFiltered = audit.filter(a=>[a.target,a.detail,a.actor,a.action,a.at].some(v=>v.toLowerCase().includes(auditFilter.toLowerCase())));
  const featureFiltered = features.filter(f=>(featureFilter==="전체"||f.category===featureFilter)&&[f.id,f.name,f.category,f.description].some(v=>v.toLowerCase().includes(search.toLowerCase())));
  const capFiltered = capabilities.filter(c=>(capFilter==="전체"||c.releaseState===capFilter)&&[c.id,c.title,c.description].some(v=>v.toLowerCase().includes(search.toLowerCase())));
@@ -273,9 +282,12 @@ const BLANK = {
  integration:{id:"",name:"연동 대상 선택",category:"",status:"",desc:"",prerequisites:[],owner:""} as Integration,
 };
 const DISCONNECTED:Fixture={schemaVersion:"",dataNature:"",admin:{id:"",displayName:"",roleLabel:""},features:[],capabilities:[],notices:[],users:[],companies:[],aiRuns:[],qualityIssues:[],integrations:[],audit:[]};
-export default function AdminPortal({testData,session,onLogout,catalogRead,renderLive}:PortalProps & {testData?:AdminPreviewData;catalogRead?:AdminCatalogRead;renderLive?:React.ComponentProps<typeof AdminControlCenter>['renderLive']}){
+export default function AdminPortal(props:React.ComponentProps<typeof AdminPortalView>){return props.session?<AdminPortalView {...props}/>:<PreviewExitProvider><AdminPortalView {...props}/></PreviewExitProvider>;}
+function AdminPortalView({testData,session,onLogout,catalogRead,renderLive}:PortalProps & {testData?:AdminPreviewData;catalogRead?:AdminCatalogRead;renderLive?:React.ComponentProps<typeof AdminControlCenter>['renderLive']}){
  const [started,setStarted]=useState(!!session);
- const logout=()=>{if(session)onLogout?.();else setStarted(false);};
- if(!started)return <div className="datco-admin-details ad-auth-layout"><div className="ad-brand-side"><div className="ad-auth-logo"><Layers3 size={24}/><strong>DATCO ONE</strong></div><div className="ad-brand-hero"><small>SYSTEM ADMINISTRATION PORTAL</small><h1>더 정확한 기준,<br/>더 신뢰할 수 있는 운영.</h1><p>기준정보·사용자 접근범위·분석품질을 검토하는 관리자 화면</p></div></div><main className="ad-login-stage"><div className="ad-login-card"><div className="ad-login-icon"><LockKeyhole size={24}/></div><h2>관리자 UI 미리보기</h2><p>실제 로그인·인증 없이 화면을 확인합니다.</p><SafeAction kind="primary" onClick={()=>setStarted(true)}>미리보기 시작 <ArrowRight size={16}/></SafeAction></div></main></div>;
- return <AdminControlCenter renderLive={renderLive} catalogRead={catalogRead} session={session} onLogout={logout} renderDetails={(page,onNavigate)=><AdminDetails sample={session?DISCONNECTED:testData??DISCONNECTED} isTest={!session&&testData!==undefined} page={page} onNavigate={onNavigate}/>}/>;
+ const requestPreviewExit=usePreviewExit();
+ const logout=()=>{if(session)onLogout?.();else requestPreviewExit(()=>setStarted(false));};
+ const startScreen=<div className="datco-admin-details ad-auth-layout"><div className="ad-brand-side"><div className="ad-auth-logo"><Layers3 size={24}/><strong>DATCO ONE</strong></div><div className="ad-brand-hero"><small>SYSTEM ADMINISTRATION PORTAL</small><h1>더 정확한 기준,<br/>더 신뢰할 수 있는 운영.</h1><p>기준정보·사용자 접근범위·분석품질을 검토하는 관리자 화면</p></div></div><main className="ad-login-stage"><div className="ad-login-card"><div className="ad-login-icon"><LockKeyhole size={24}/></div><h2>관리자 UI 미리보기</h2><p>실제 로그인·인증 없이 화면을 확인합니다.</p><SafeAction kind="primary" onClick={()=>setStarted(true)}>미리보기 시작 <ArrowRight size={16}/></SafeAction></div></main></div>;
+ const control=<AdminControlCenter renderLive={renderLive} catalogRead={catalogRead} session={session} onLogout={logout} renderDetails={(page,onNavigate)=><AdminDetails sample={session?DISCONNECTED:testData??DISCONNECTED} isTest={!session&&testData!==undefined} preview={!session} page={page} onNavigate={onNavigate}/>}/>;
+ return session?control:<>{!started&&startScreen}<div hidden={!started}>{control}</div></>;
 }

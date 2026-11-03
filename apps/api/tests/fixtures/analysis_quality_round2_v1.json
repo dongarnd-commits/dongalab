@@ -1,0 +1,534 @@
+{
+  "schema": "datco-quality-exposed-regression-round2-v1",
+  "criteria": "Human literal source roles, explicit exclusions and responses; Decimal/unit/year linkage; required and excluded business scopes. Frozen before fixes, no live company source. Unsupported cases stay in denominator.",
+  "cases": [
+    {
+      "id": "H01",
+      "kind": "rules",
+      "input": {
+        "spans": [
+          {
+            "kind": "DOCUMENT",
+            "version_id": "TEST_HOLDOUT_VERSION",
+            "field": "original_text",
+            "quote": "제약사항: 야간에는 장비를 멈출 수 없습니다.",
+            "descriptor": "TEST holdout original field original_text"
+          }
+        ]
+      },
+      "gold": {
+        "structures": [
+          [
+            "constraints",
+            "야간에는 장비를 멈출 수 없습니다."
+          ]
+        ]
+      }
+    },
+    {
+      "id": "H02",
+      "kind": "rules",
+      "input": {
+        "spans": [
+          {
+            "kind": "RESPONSE",
+            "version_id": "TEST_HOLDOUT_VERSION",
+            "field": "original_text",
+            "quote": "제외 범위: 인사 급여의 도입은 이번 범위에서 제외합니다.",
+            "descriptor": "TEST holdout original field original_text"
+          }
+        ]
+      },
+      "gold": {
+        "structures": [
+          [
+            "constraints",
+            "인사 급여의 도입은 이번 범위에서 제외합니다."
+          ]
+        ]
+      }
+    },
+    {
+      "id": "H03",
+      "kind": "rules",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "TEST_HOLDOUT_VERSION",
+            "field": "original_text",
+            "quote": "급여계산은 원하지 않습니다. 창고 재고 수량은 조회하려고 합니다.",
+            "descriptor": "TEST holdout original field original_text"
+          }
+        ]
+      },
+      "gold": {
+        "absent_function_labels": [
+          "급여·인사 관리"
+        ],
+        "required_function_labels": [
+          "재고 관리"
+        ]
+      }
+    },
+    {
+      "id": "H04",
+      "kind": "rules",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "TEST_HOLDOUT_VERSION",
+            "field": "original_text",
+            "quote": "전자결재는 추천하지 않습니다. 검사 기록을 조회하려고 합니다.",
+            "descriptor": "TEST holdout original field original_text"
+          }
+        ]
+      },
+      "gold": {
+        "absent_function_labels": [
+          "전자결재·문서 관리"
+        ]
+      }
+    },
+    {
+      "id": "H05",
+      "kind": "rules",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "TEST_HOLDOUT_VERSION",
+            "field": "constraints",
+            "quote": "예산은 현장 견적을 확인한 뒤 정하며 현재 미정입니다.",
+            "descriptor": "TEST holdout original field constraints"
+          }
+        ]
+      },
+      "gold": {
+        "diagnostic": {
+          "R06": "DECLARED_UNKNOWN"
+        }
+      }
+    },
+    {
+      "id": "H06",
+      "kind": "rules",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "TEST_HOLDOUT_VERSION",
+            "field": "constraints",
+            "quote": "도입 시점은 2028년 2월로 정했습니다.",
+            "descriptor": "TEST holdout original field constraints"
+          }
+        ]
+      },
+      "gold": {
+        "diagnostic": {
+          "R07": "FOUND"
+        }
+      }
+    },
+    {
+      "id": "H07",
+      "kind": "rules",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "TEST_HOLDOUT_VERSION",
+            "field": "as_is",
+            "quote": "현재 작업은 엑셀로 집계하며 일평균 재입력에 45분이 걸립니다.",
+            "descriptor": "TEST holdout original field as_is"
+          }
+        ]
+      },
+      "gold": {
+        "no_missing_rules": [
+          "R02",
+          "R05"
+        ]
+      }
+    },
+    {
+      "id": "H08",
+      "kind": "rules",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "TEST_HOLDOUT_VERSION",
+            "field": "goal",
+            "quote": "목표는 집계시간을 10분으로 줄이는 것입니다.",
+            "descriptor": "TEST holdout original field goal"
+          }
+        ]
+      },
+      "gold": {
+        "no_missing_rules": [
+          "R02"
+        ]
+      }
+    },
+    {
+      "id": "H09",
+      "kind": "rules",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "TEST_HOLDOUT_VERSION",
+            "field": "constraints",
+            "quote": "대상은 2개 현장의 검사 담당자 7명입니다.",
+            "descriptor": "TEST holdout original field constraints"
+          }
+        ]
+      },
+      "gold": {
+        "no_missing_rules": [
+          "R04"
+        ]
+      }
+    },
+    {
+      "id": "H10",
+      "kind": "scalars",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "TEST_HOLDOUT_VERSION",
+            "field": "original_text",
+            "quote": "2024년 매출: 1,250백만원",
+            "descriptor": "TEST holdout original field original_text"
+          }
+        ]
+      },
+      "gold": {
+        "values": [
+          "1250000000"
+        ],
+        "groups": 1
+      },
+      "support_status": "UNSUPPORTED_FREE_TEXT_SCALAR_GRAMMAR",
+      "support_limit": "This supplied free-text grammar is not supported by the bounded scalar parser. Original gold stays unchanged; failure remains in the denominator."
+    },
+    {
+      "id": "H11",
+      "kind": "scalars",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "TEST_HOLDOUT_VERSION",
+            "field": "original_text",
+            "quote": "2023년 영업이익: (35)백만원",
+            "descriptor": "TEST holdout original field original_text"
+          }
+        ]
+      },
+      "gold": {
+        "values": [
+          "-35000000"
+        ],
+        "groups": 1
+      },
+      "support_status": "UNSUPPORTED_FREE_TEXT_SCALAR_GRAMMAR",
+      "support_limit": "This supplied free-text grammar is not supported by the bounded scalar parser. Original gold stays unchanged; failure remains in the denominator."
+    },
+    {
+      "id": "H12",
+      "kind": "scalars",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "TEST_HOLDOUT_VERSION",
+            "field": "original_text",
+            "quote": "2026년 처리시간: 12.5분",
+            "descriptor": "TEST holdout original field original_text"
+          }
+        ]
+      },
+      "gold": {
+        "values": [
+          "750.0"
+        ],
+        "groups": 1
+      },
+      "support_status": "UNSUPPORTED_FREE_TEXT_SCALAR_GRAMMAR",
+      "support_limit": "This supplied free-text grammar is not supported by the bounded scalar parser. Original gold stays unchanged; failure remains in the denominator."
+    },
+    {
+      "id": "H13",
+      "kind": "scalars",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "TEST_HOLDOUT_VERSION",
+            "field": "original_text",
+            "quote": "2024년 비용: 300천원",
+            "descriptor": "TEST holdout original field original_text"
+          }
+        ]
+      },
+      "gold": {
+        "values": [
+          "300000"
+        ],
+        "groups": 1
+      },
+      "support_status": "UNSUPPORTED_FREE_TEXT_SCALAR_GRAMMAR",
+      "support_limit": "This supplied free-text grammar is not supported by the bounded scalar parser. Original gold stays unchanged; failure remains in the denominator."
+    },
+    {
+      "id": "H14",
+      "kind": "scalars",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "TEST_HOLDOUT_VERSION",
+            "field": "original_text",
+            "quote": "2024년 오류율: 3.4%\n2025년 오류율: 1.7%",
+            "descriptor": "TEST holdout original field original_text"
+          }
+        ]
+      },
+      "gold": {
+        "values": [
+          "3.4",
+          "1.7"
+        ],
+        "groups": 2
+      },
+      "support_status": "UNSUPPORTED_FREE_TEXT_SCALAR_GRAMMAR",
+      "support_limit": "This supplied free-text grammar is not supported by the bounded scalar parser. Original gold stays unchanged; failure remains in the denominator."
+    },
+    {
+      "id": "H15",
+      "kind": "assets",
+      "input": {
+        "text": "회계 전표를 확인하려고 하며 급여계산은 제외합니다.",
+        "catalog_profile": "default"
+      },
+      "gold": {
+        "names": [
+          "전표등록"
+        ],
+        "top_max_modules": 1
+      }
+    },
+    {
+      "id": "H16",
+      "kind": "assets",
+      "input": {
+        "text": "품질 검사와 불량 현황 조회가 필요합니다.",
+        "catalog_profile": "default"
+      },
+      "gold": {
+        "names": [
+          "불량현황"
+        ],
+        "top_max_modules": 1
+      }
+    },
+    {
+      "id": "H17",
+      "kind": "assets",
+      "input": {
+        "text": "재고 현황 조회와 회계 전표 결산이 각각 필요합니다.",
+        "catalog_profile": "default"
+      },
+      "gold": {
+        "names": [
+          "재고현황",
+          "전표등록"
+        ],
+        "top_max_modules": 2
+      }
+    },
+    {
+      "id": "H18",
+      "kind": "assets",
+      "input": {
+        "text": "관광객의 항공권 예약을 개선하려고 합니다.",
+        "catalog_profile": "default"
+      },
+      "gold": {
+        "names": [],
+        "top_max_modules": 0
+      }
+    },
+    {
+      "id": "H19",
+      "kind": "assets",
+      "input": {
+        "text": "직원 출퇴근을 기록하지만 급여계산은 도입하지 않습니다.",
+        "catalog_profile": "default"
+      },
+      "gold": {
+        "names": [
+          "근태등록"
+        ],
+        "top_max_modules": 1
+      }
+    },
+    {
+      "id": "H20",
+      "kind": "assets",
+      "input": {
+        "text": "문서 기안과 재고 수량 조회가 필요합니다.",
+        "catalog_profile": "default"
+      },
+      "gold": {
+        "names": [
+          "문서 기안",
+          "재고현황"
+        ],
+        "top_max_modules": 2
+      }
+    },
+    {
+      "id": "H21",
+      "kind": "parser",
+      "input": {
+        "filename": "TEST-script.exe",
+        "text": "text"
+      },
+      "gold": {
+        "error": "UNSUPPORTED_FORMAT"
+      }
+    },
+    {
+      "id": "H22",
+      "kind": "parser",
+      "input": {
+        "filename": "TEST.xlsx",
+        "text": "not a ZIP"
+      },
+      "gold": {
+        "error": "FORMAT_MISMATCH"
+      }
+    },
+    {
+      "id": "H23",
+      "kind": "parser",
+      "input": {
+        "filename": "TEST.pdf",
+        "text": "not PDF"
+      },
+      "gold": {
+        "error": "FORMAT_MISMATCH"
+      }
+    },
+    {
+      "id": "H24",
+      "kind": "parser",
+      "input": {
+        "filename": "TEST-general.txt",
+        "text": "TEST unrelated general attachment\nNo company facts asserted."
+      },
+      "gold": {
+        "locations": 2,
+        "parser": "company-local-parser-v1",
+        "texts": [
+          "TEST unrelated general attachment",
+          "No company facts asserted."
+        ]
+      }
+    }
+  ],
+  "evaluation_status": "EXPOSED_REGRESSION_NOT_UNSEEN_HOLDOUT",
+  "source_corpus": {
+    "path": "apps/api/tests/fixtures/analysis_quality_holdout_v1.json",
+    "sha256": "e2d0d22e91515bc46d11e4daac2ab3c3934ded49621b5d5bca2a80a688933cab",
+    "preserved": true
+  },
+  "round2_corrections": [
+    {
+      "id": "H07",
+      "original_gold": {
+        "diagnostic": {
+          "R02": "FOUND",
+          "R05": "FOUND"
+        }
+      },
+      "round2_gold": {
+        "no_missing_rules": [
+          "R02",
+          "R05"
+        ]
+      },
+      "reason": "입력에는 해당 측정 기준·기존 구성 질문의 적용 조건이 명시되지 않습니다. NOT_APPLICABLE도 질문을 만들지 않는 정상 업무 결과이므로 FOUND 진단 강제를 제거하고 실제 반복 질문 부재를 검사합니다.",
+      "classification": "EVALUATION_DESIGN_ERROR"
+    },
+    {
+      "id": "H08",
+      "original_gold": {
+        "diagnostic": {
+          "R02": "NOT_FOUND_IN_SCOPE"
+        }
+      },
+      "round2_gold": {
+        "no_missing_rules": [
+          "R02"
+        ]
+      },
+      "reason": "목표의 10분은 현재 기준값이 아닙니다. 적용 조건이 없는 질문에 NOT_FOUND_IN_SCOPE를 강제하지 않고 실제 반복 질문 부재를 검사합니다.",
+      "classification": "EVALUATION_DESIGN_ERROR"
+    },
+    {
+      "id": "H09",
+      "original_gold": {
+        "diagnostic": {
+          "R04": "FOUND"
+        }
+      },
+      "round2_gold": {
+        "no_missing_rules": [
+          "R04"
+        ]
+      },
+      "reason": "현장·담당자 수는 명시되어 있지만 해당 적용범위 질문의 트리거가 없습니다. FOUND 진단을 강제하지 않고 실제 반복 질문 부재를 검사합니다.",
+      "classification": "EVALUATION_DESIGN_ERROR"
+    },
+    {
+      "id": "H24",
+      "original_gold": {
+        "locations": 1,
+        "parser": "company-local-parser-v1"
+      },
+      "round2_gold": {
+        "locations": 2,
+        "parser": "company-local-parser-v1",
+        "texts": [
+          "TEST unrelated general attachment",
+          "No company facts asserted."
+        ]
+      },
+      "reason": "지원되는 TXT의 두 비어 있지 않은 원문 줄은 각각 별도 위치입니다. 위치 개수만 1로 기대했던 평가 설계 오류를 정정하고 두 원문 줄의 내용·순서를 함께 검사합니다.",
+      "classification": "EVALUATION_DESIGN_ERROR"
+    }
+  ],
+  "limitations": [
+    "All 24 cases have already been exposed; round2 is regression evaluation, not a new holdout.",
+    "H10-H14 retain original scalar gold and unsupported grammar failures; no claim of complete extraction.",
+    "H07/H08/H09 change four diagnostic assertions in three cases; H24 corrects the TXT location count and adds exact original-line checks.",
+    "Original corpus and first-evaluation before/after JSON are preserved; changed gold and changed code are reported separately.",
+    "No real-company data, OCR execution, human effort, operator time or user acceptance is evaluated."
+  ],
+  "preserved_original_results": [
+    {
+      "path": "apps/api/tests/fixtures/analysis_quality_holdout_before_v1.json",
+      "sha256": "f714d0ebaf700b2fe7a18940260ee3cb4d3d9d9ee6f9f04dd132830de87bbe47"
+    },
+    {
+      "path": "apps/api/tests/fixtures/analysis_quality_holdout_after_v1.json",
+      "sha256": "817deac1017affc8f0032af3709d3d926daed85f394378ce26c99691eff266fb"
+    }
+  ]
+}

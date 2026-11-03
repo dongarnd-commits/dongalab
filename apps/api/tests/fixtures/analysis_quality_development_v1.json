@@ -1,0 +1,637 @@
+{
+  "schema": "analysis-quality-development-v1",
+  "source": "Hand-authored synthetic development cases; not real-company evaluation",
+  "gold_authority": "Literal supplied field roles, explicit reply state and same-period Decimal arithmetic; synthetic catalog exact descriptions. Authored before product changes.",
+  "operator_metric": "Count of gold assertion mismatches is a correction proxy; operator time/rewrite was not measured.",
+  "cases": [
+    {
+      "id": "role-1",
+      "kind": "rules",
+      "input": {
+        "spans": [
+          {
+            "kind": "DOCUMENT",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "제약사항: 기존 자료 입력 방식 유지",
+            "descriptor": "SYNTHETIC line 1"
+          }
+        ]
+      },
+      "gold": {
+        "structures": [
+          [
+            "constraints",
+            "기존 자료 입력 방식 유지"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "role-2",
+      "kind": "rules",
+      "input": {
+        "spans": [
+          {
+            "kind": "DOCUMENT",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "제약: 기존 장비 교체 불가",
+            "descriptor": "SYNTHETIC line 1"
+          }
+        ]
+      },
+      "gold": {
+        "structures": [
+          [
+            "constraints",
+            "기존 장비 교체 불가"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "role-3",
+      "kind": "rules",
+      "input": {
+        "spans": [
+          {
+            "kind": "RESPONSE",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "제외 범위: 급여계산은 제외",
+            "descriptor": "SYNTHETIC line 1"
+          }
+        ]
+      },
+      "gold": {
+        "structures": [
+          [
+            "constraints",
+            "급여계산은 제외"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "role-4",
+      "kind": "rules",
+      "input": {
+        "spans": [
+          {
+            "kind": "DOCUMENT",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "적용 범위: 창고 한 곳만 대상",
+            "descriptor": "SYNTHETIC line 1"
+          }
+        ]
+      },
+      "gold": {
+        "structures": [
+          [
+            "constraints",
+            "창고 한 곳만 대상"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "role-5",
+      "kind": "rules",
+      "input": {
+        "spans": [
+          {
+            "kind": "DOCUMENT",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "현황: 검사 결과를 수기로 집계",
+            "descriptor": "SYNTHETIC line 1"
+          }
+        ]
+      },
+      "gold": {
+        "structures": [
+          [
+            "as_is",
+            "검사 결과를 수기로 집계"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "role-6",
+      "kind": "rules",
+      "input": {
+        "spans": [
+          {
+            "kind": "RESPONSE",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "목표: 불량 현황을 조회",
+            "descriptor": "SYNTHETIC line 1"
+          }
+        ]
+      },
+      "gold": {
+        "structures": [
+          [
+            "goal",
+            "불량 현황을 조회"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "answer-1",
+      "kind": "rules",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "시스템 도입을 원하지 않습니다",
+            "descriptor": "SYNTHETIC line 1"
+          }
+        ]
+      },
+      "gold": {
+        "diagnostic": {
+          "R05": "NOT_APPLICABLE"
+        }
+      }
+    },
+    {
+      "id": "answer-2",
+      "kind": "rules",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "시스템 연계를 추천하지 않습니다",
+            "descriptor": "SYNTHETIC line 1"
+          }
+        ]
+      },
+      "gold": {
+        "diagnostic": {
+          "R05": "NOT_APPLICABLE"
+        }
+      }
+    },
+    {
+      "id": "answer-3",
+      "kind": "rules",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "설비 도입은 불필요합니다",
+            "descriptor": "SYNTHETIC line 1"
+          }
+        ]
+      },
+      "gold": {
+        "diagnostic": {
+          "R05": "NOT_APPLICABLE"
+        }
+      }
+    },
+    {
+      "id": "answer-4",
+      "kind": "rules",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "사업비 검토",
+            "descriptor": "SYNTHETIC line 1"
+          },
+          {
+            "kind": "RESPONSE",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "예산: 미확정",
+            "descriptor": "SYNTHETIC line 1"
+          }
+        ]
+      },
+      "gold": {
+        "diagnostic": {
+          "R06": "DECLARED_UNKNOWN"
+        }
+      }
+    },
+    {
+      "id": "answer-5",
+      "kind": "rules",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "희망 일정 검토",
+            "descriptor": "SYNTHETIC line 1"
+          },
+          {
+            "kind": "RESPONSE",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "도입시점: 미정",
+            "descriptor": "SYNTHETIC line 1"
+          }
+        ]
+      },
+      "gold": {
+        "diagnostic": {
+          "R07": "DECLARED_UNKNOWN"
+        }
+      }
+    },
+    {
+      "id": "answer-6",
+      "kind": "rules",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "희망 일정 검토",
+            "descriptor": "SYNTHETIC line 1"
+          },
+          {
+            "kind": "RESPONSE",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "도입 시점: 2028년 2월",
+            "descriptor": "SYNTHETIC line 1"
+          }
+        ]
+      },
+      "gold": {
+        "diagnostic": {
+          "R07": "FOUND"
+        }
+      }
+    },
+    {
+      "id": "answer-7",
+      "kind": "rules",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "물류 시스템 연계",
+            "descriptor": "SYNTHETIC line 1"
+          },
+          {
+            "kind": "RESPONSE",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "기존 시스템: 없음",
+            "descriptor": "SYNTHETIC line 1"
+          }
+        ]
+      },
+      "gold": {
+        "diagnostic": {
+          "R05": "FOUND"
+        }
+      }
+    },
+    {
+      "id": "answer-8",
+      "kind": "rules",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "업무 처리시간 개선",
+            "descriptor": "SYNTHETIC line 1"
+          },
+          {
+            "kind": "RESPONSE",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "목표: 처리시간 7분",
+            "descriptor": "SYNTHETIC line 1"
+          }
+        ]
+      },
+      "gold": {
+        "diagnostic": {
+          "R02": "NOT_FOUND_IN_SCOPE"
+        }
+      }
+    },
+    {
+      "id": "scalar-1",
+      "kind": "scalars",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "예산(2027년,창고): 1,200천원",
+            "descriptor": "SYNTHETIC line 1"
+          },
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "예산(2027년,창고): 120만원",
+            "descriptor": "SYNTHETIC line 1"
+          }
+        ]
+      },
+      "gold": {
+        "values": [
+          "1200000"
+        ],
+        "groups": 1
+      }
+    },
+    {
+      "id": "scalar-2",
+      "kind": "scalars",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "사업비(2027년,물류): 2백만원",
+            "descriptor": "SYNTHETIC line 1"
+          },
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "사업비(2027년,물류): 210만원",
+            "descriptor": "SYNTHETIC line 1"
+          }
+        ]
+      },
+      "gold": {
+        "values": [
+          "2000000",
+          "2100000"
+        ],
+        "groups": 1
+      }
+    },
+    {
+      "id": "scalar-3",
+      "kind": "scalars",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "처리시간(2027년,물류): 2분",
+            "descriptor": "SYNTHETIC line 1"
+          },
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "처리시간(2027년,물류): 120초",
+            "descriptor": "SYNTHETIC line 1"
+          }
+        ]
+      },
+      "gold": {
+        "values": [
+          "120"
+        ],
+        "groups": 1
+      }
+    },
+    {
+      "id": "scalar-4",
+      "kind": "scalars",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "예산(2027년,물류): 10만원",
+            "descriptor": "SYNTHETIC line 1"
+          },
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "예산(2028년,물류): 12만원",
+            "descriptor": "SYNTHETIC line 1"
+          }
+        ]
+      },
+      "gold": {
+        "values": [
+          "100000",
+          "120000"
+        ],
+        "groups": 2
+      }
+    },
+    {
+      "id": "scalar-5",
+      "kind": "scalars",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "예산(2027년,물류): 1,20만원",
+            "descriptor": "SYNTHETIC line 1"
+          }
+        ]
+      },
+      "gold": {
+        "values": [],
+        "groups": 0
+      }
+    },
+    {
+      "id": "scalar-6",
+      "kind": "scalars",
+      "input": {
+        "spans": [
+          {
+            "kind": "IMPROVEMENT",
+            "version_id": "SYNTHETIC_SUBMIT_V1",
+            "field": "original_text",
+            "quote": "사업비(기간 미상): 10만원",
+            "descriptor": "SYNTHETIC line 1"
+          }
+        ]
+      },
+      "gold": {
+        "values": [],
+        "groups": 0
+      }
+    },
+    {
+      "id": "asset-1",
+      "kind": "assets",
+      "input": {
+        "text": "생산 실적과 작업실적 기록",
+        "catalog_profile": "duplicate"
+      },
+      "gold": {
+        "names": [
+          "생산실적"
+        ],
+        "top_max_modules": 1
+      }
+    },
+    {
+      "id": "asset-2",
+      "kind": "assets",
+      "input": {
+        "text": "입고 출고 기록",
+        "catalog_profile": "default"
+      },
+      "gold": {
+        "names": [
+          "입고등록",
+          "출고등록"
+        ],
+        "top_max_modules": 2
+      }
+    },
+    {
+      "id": "asset-3",
+      "kind": "assets",
+      "input": {
+        "text": "근태 출퇴근 기록",
+        "catalog_profile": "default"
+      },
+      "gold": {
+        "names": [
+          "근태등록"
+        ],
+        "top_max_modules": 1
+      }
+    },
+    {
+      "id": "asset-4",
+      "kind": "assets",
+      "input": {
+        "text": "급여계산은 제외하고 근태 기록을 조회",
+        "catalog_profile": "default"
+      },
+      "gold": {
+        "names": [
+          "근태등록"
+        ],
+        "top_max_modules": 1
+      }
+    },
+    {
+      "id": "asset-5",
+      "kind": "assets",
+      "input": {
+        "text": "의료 영상 질환 진단",
+        "catalog_profile": "default"
+      },
+      "gold": {
+        "names": [],
+        "top_max_modules": 0
+      }
+    },
+    {
+      "id": "reviewed-correction",
+      "kind": "assets",
+      "input": {
+        "text": "문서 기안이 분리됨",
+        "catalog_profile": "default",
+        "reviewed": [
+          {
+            "candidate_id": "SYNTHETIC_CANDIDATE",
+            "category": "STRUCTURE",
+            "subject": "goal",
+            "content": "전자결재 문서 기안 기록 조회",
+            "evidence": [
+              {
+                "kind": "RESPONSE",
+                "version_id": "SYNTHETIC_SUBMIT_V1",
+                "field": "original_text",
+                "quote": "목표: 전자결재 문서 기안 기록 조회",
+                "descriptor": "SYNTHETIC line 1",
+                "response_id": "SYNTHETIC_RESPONSE_V2",
+                "review_id": "SYNTHETIC_VERIFIED_REVIEW_V2"
+              }
+            ]
+          }
+        ]
+      },
+      "gold": {
+        "names": [
+          "문서 기안"
+        ],
+        "reviewed_evidence": {
+          "kind": "RESPONSE",
+          "version_id": "SYNTHETIC_SUBMIT_V1",
+          "field": "original_text",
+          "quote": "목표: 전자결재 문서 기안 기록 조회",
+          "descriptor": "SYNTHETIC line 1",
+          "response_id": "SYNTHETIC_RESPONSE_V2",
+          "review_id": "SYNTHETIC_VERIFIED_REVIEW_V2"
+        }
+      }
+    },
+    {
+      "id": "parser-text",
+      "kind": "parser",
+      "input": {
+        "filename": "synthetic.txt",
+        "text": "제약: 기존 입력 유지\n예산(2027년,물류): 1,200천원"
+      },
+      "gold": {
+        "locations": 2,
+        "parser": "company-local-parser-v1"
+      }
+    },
+    {
+      "id": "parser-unsupported",
+      "kind": "parser",
+      "input": {
+        "filename": "synthetic.hwp",
+        "text": "not a supported document"
+      },
+      "gold": {
+        "error": "UNSUPPORTED_FORMAT"
+      }
+    },
+    {
+      "id": "parser-damaged",
+      "kind": "parser",
+      "input": {
+        "filename": "synthetic.pdf",
+        "text": "bad document"
+      },
+      "gold": {
+        "error": "FORMAT_MISMATCH"
+      }
+    }
+  ]
+}

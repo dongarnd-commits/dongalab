@@ -7,7 +7,8 @@ ALIASES = {"to_be": "goal", "현황": "as_is", "현재 업무": "as_is",
            "현재 문제점": "as_is", "문제": "problem", "문제점": "problem",
            "목표": "goal", "개선 목표": "goal", "희망 개선목표": "goal",
            "필요 기능": "required_functions", "요구 기능": "required_functions",
-           "제약사항": "constraints", "원인": "원인 후보"}
+           "제약사항": "constraints", "제약 사항": "constraints", "제약": "constraints",
+           "제외범위": "constraints", "제외 범위": "constraints", "적용 범위": "constraints", "원인": "원인 후보"}
 ISSUE = r"불일치|일치하지|누락|오류|지연|중복|분리|불량|하자|어려|불편|일치하지"
 FUNCTIONS = (
     ("STOCK_HISTORY", "입출고 이력 관리", r"(?:입출고|입고|출고).{0,25}(?:이력|기록|등록|관리)"),
@@ -100,7 +101,7 @@ def extract(data, spans):
         else:
             emit(field, value, group)
 
-    labels = r"현황|현재 업무|문제|문제점|개선 목표|목표|필요 기능|요구 기능|원인 후보|원인"
+    labels = r"현황|현재 업무|문제|문제점|개선 목표|목표|필요 기능|요구 기능|제약사항|제약 사항|제약|제외범위|제외 범위|적용 범위|원인 후보|원인"
     for source in spans:
         if source.get("kind") not in ("DOCUMENT", "IMPROVEMENT", "EVIDENCE", "RESPONSE"):
             continue
