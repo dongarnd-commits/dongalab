@@ -211,7 +211,7 @@ def load_plan(path):
 
 def validate_product(record,out):
     require(record['head'] in (PRODUCT,RECOVERY),'HANDOVER_FIXED_PRODUCT_REQUIRED')
-    source=release.clean_source(record['source_root'],PRODUCT)
+    source=release.clean_source(record['source_root'],record['head'])
     require(release.source_contract(source)==record['source_contract'],'HANDOVER_PRODUCT_CONTRACT_CHANGED')
     require(record['source_contract']['workbook_data']['reader_preserves_workbook_provenance'] is True,'HANDOVER_INCOMPATIBLE_RECOVERY_READER')
     require(not any((source/x).exists() for x in ('.env','apps/api/.env','apps/api/.env.local','apps/web/.env','apps/web/.env.local')),'HANDOVER_UNEXPECTED_RUNTIME_ENV_FILE')

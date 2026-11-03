@@ -204,3 +204,12 @@ def test_failed_tcp_database_probe_blocks_before_owner_mutation(tmp_path,monkeyp
 def test_same_target_is_not_claimed_as_previous_version():
     with pytest.raises(RuntimeError,match='EXACT_TARGET_AND_PREVIOUS'):
         handover.compatible_pair({'head':handover.PRODUCT},{'head':handover.PRODUCT})
+
+
+def test_previous_source_is_validated_against_its_exact_previous_head(tmp_path,monkeypatch):
+    class Observed(Exception):pass
+    def clean(source,head):
+        assert head==handover.RECOVERY
+        raise Observed()
+    monkeypatch.setattr(handover.release,'clean_source',clean)
+    with pytest.raises(Observed):handover.validate_product({'head':handover.RECOVERY,'source_root':str(tmp_path)},tmp_path)
