@@ -43,6 +43,7 @@ def test_projection_bounds_and_unicode(tmp_path):
     with pytest.raises(ProjectionRejected):project_manifest(path)
 
 
+@pytest.mark.skipif(os.name!='nt',reason='Windows handover OS contract; execute on Windows')
 def test_exclusive_fence_blocks_legacy_entrypoint_without_edit(tmp_path):
     script=tmp_path/'legacy.py';marker=tmp_path/'started';script.write_text("from pathlib import Path\nPath('started').write_text('SYNTHETIC')\n",encoding='utf-8');before=script.read_bytes()
     with FileFence(script,exclusive=True) as fence:
@@ -54,6 +55,7 @@ def test_exclusive_fence_blocks_legacy_entrypoint_without_edit(tmp_path):
     assert r.returncode==0 and marker.read_text()=='SYNTHETIC'
 
 
+@pytest.mark.skipif(os.name!='nt',reason='Windows handover OS contract; execute on Windows')
 def test_stopped_state_fence_allows_read_and_refuses_replacement(tmp_path):
     state=tmp_path/'state.json';other=tmp_path/'state.tmp';state.write_bytes(b'{"phase":"STOPPED"}');other.write_bytes(b'{"phase":"STARTING"}');before=state.read_bytes()
     with FileFence(state,exclusive=False) as fence:
@@ -63,6 +65,7 @@ def test_stopped_state_fence_allows_read_and_refuses_replacement(tmp_path):
     assert state.read_bytes()==before
 
 
+@pytest.mark.skipif(os.name!='nt',reason='Windows handover OS contract; execute on Windows')
 def test_identity_is_read_only_and_has_no_command_or_environment():
     identity=process_identity(os.getpid())
     assert identity['pid']==os.getpid() and int(identity['created'])>0
@@ -95,6 +98,7 @@ def test_exact_bounded_approval_and_protected_set_are_preserved():
     p,a,now=approval_pair();handover.validate_approval(p,a,'activate',now)
     assert handover.release.PROTECTED=={8443,8444,18445,49355,49356}
 
+@pytest.mark.skipif(os.name!='nt',reason='Windows handover OS contract; execute on Windows')
 def test_listener_projection_handles_windows_powershell_array_output():
     import socket
     from acceptance_handover_fence import listener_owners
@@ -106,6 +110,7 @@ def test_listener_projection_handles_windows_powershell_array_output():
         assert rows[b]==[dict(address='127.0.0.1',pid=os.getpid())]
         assert listener_owners([a])[a]==rows[a]
 
+@pytest.mark.skipif(os.name!='nt',reason='Windows handover OS contract; execute on Windows')
 def test_owned_job_terminates_only_own_child(tmp_path):
     from acceptance_handover_job import OwnedJob
     from acceptance_release import alive
@@ -117,6 +122,7 @@ def test_owned_job_terminates_only_own_child(tmp_path):
     assert alive(os.getpid())
 
 
+@pytest.mark.skipif(os.name!='nt',reason='Windows handover OS contract; execute on Windows')
 def test_job_hard_custodian_exit_kills_descendants(tmp_path):
     from acceptance_release import alive
     import time
@@ -139,6 +145,7 @@ def test_approval_gate_precedes_control_or_owner_access(tmp_path,monkeypatch):
     monkeypatch.setattr(handover,'static_owner',forbidden)
     with pytest.raises(RuntimeError,match='SEPARATE_APPLY_DECISION'):handover.run_owner(tmp_path/'plan.json',tmp_path/'approval.json')
 
+@pytest.mark.skipif(os.name!='nt',reason='Windows handover OS contract; execute on Windows')
 def test_failed_cleanup_is_sticky_and_cannot_become_success(tmp_path,monkeypatch):
     from acceptance_handover_job import OwnedJob,Child
     job=OwnedJob();job.spawn([sys.executable,'-c','import time;time.sleep(60)'],tmp_path,os.environ.copy())
@@ -147,3 +154,15 @@ def test_failed_cleanup_is_sticky_and_cannot_become_success(tmp_path,monkeypatch
     with pytest.raises(RuntimeError,match='EXIT_UNCONFIRMED'):job.close()
     assert not job.cleanup_confirmed and job.cleanup_error
     with pytest.raises(RuntimeError,match='CLEANUP_UNCONFIRMED'):job.close()
+
+@pytest.mark.skipif(os.name!='nt',reason='Windows handover OS contract; execute on Windows')
+def test_job_callback_runs_before_suspended_child_is_resumed(tmp_path):
+    from acceptance_handover_job import OwnedJob
+    marker=tmp_path/'started';remembered=[]
+    def before(child):
+        assert not marker.exists()
+        remembered.append(child.pid)
+    with OwnedJob() as job:
+        p=job.spawn([sys.executable,'-c',"from pathlib import Path;import time;Path('started').write_text('TEST');time.sleep(60)"],tmp_path,os.environ.copy(),on_created=before)
+        assert remembered==[p.pid]
+    assert job.cleanup_confirmed

@@ -51,7 +51,7 @@ class OwnedJob:
         limit=Limits();limit.basic.flags=0x2000 # KILL_ON_JOB_CLOSE; handle is non-inheritable.
         try:check(self.k.SetInformationJobObject(self.handle,9,C.byref(limit),C.sizeof(limit)),'HANDOVER_JOB_POLICY_FAILED')
         except BaseException:self.close();raise
-    def spawn(self,command,cwd,env):
+    def spawn(self,command,cwd,env,on_created=None):
         import msvcrt
         inputs=os.open(os.devnull,os.O_RDONLY);outputs=os.open(os.devnull,os.O_WRONLY)
         handles=[msvcrt.get_osfhandle(f) for f in (inputs,outputs)]
@@ -66,6 +66,7 @@ class OwnedJob:
         child=Child(ph,pid);self.children.append(child)
         try:
             check(self.k.AssignProcessToJobObject(self.handle,ph),'HANDOVER_JOB_ASSIGN_FAILED_NO_BREAKAWAY')
+            if on_created is not None:on_created(child)
             check(self.k.ResumeThread(th)!=0xffffffff,'HANDOVER_CHILD_RESUME_FAILED')
             return child
         except BaseException:

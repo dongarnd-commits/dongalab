@@ -332,10 +332,13 @@ def child_main(plan_path,component):
     lease=read_json(out/'state.json')
     require(lease.get('plan')==plan['id'] and lease.get('phase')=='STARTING','HANDOVER_CHILD_HANDSHAKE_REQUIRED')
     require(process_matches(lease['custodian']),'HANDOVER_CUSTODIAN_MISSING')
-    require(process_identity(os.getpid())['parent']==lease['custodian']['pid'],'HANDOVER_CHILD_PARENT_MISMATCH')
+    parent=process_identity(os.getpid())['parent']
+    if parent!=lease['custodian']['pid']:
+        ancestors={v['pid']:v for v in lease.get('children',[])}
+        require(parent in ancestors and process_matches(ancestors[parent]) and ancestors[parent]['parent']==lease['custodian']['pid'],'HANDOVER_CHILD_PARENT_MISMATCH')
     validate_approval(plan,read_json(out/'active-approval.json'),lease['approval_action'])
     validate_control(plan)
-    m=runtime_manifest(plan);rec=plan[lease['slot'].lower()];source=Path(rec['source_root'])
+    m=runtime_manifest(plan);rec=plan['product' if lease['slot']=='TARGET' else 'recovery'];source=Path(rec['source_root'])
     env=runtime_environment(plan,rec,m);os.environ.clear();os.environ.update(env)
     sys.path[:0]=[str(source/'apps/api'),str(source/'apps/api/tests')]
     uat.ROOT=source;uat.API=source/'apps/api';uat.WEB=source/'apps/web';uat.BASE=Path(plan['owner']['data_root']).parent
@@ -348,13 +351,15 @@ def child_main(plan_path,component):
 
 def start_slot(plan,slot,m,fault=None):
     from acceptance_handover_job import OwnedJob
-    out=Path(plan['_out']);rec=plan[slot.lower()];source=validate_product(rec,out)
+    out=Path(plan['_out']);rec=plan['product' if slot=='TARGET' else 'recovery'];source=validate_product(rec,out)
     if fault:require(plan['owner']['kind']=='SYNTHETIC_CLONE' and fault in ('api','worker','web'),'HANDOVER_TEST_FAULT_REJECTED')
     ports_free(m);execution=release.execution_web(out,rec);ready=out/'worker-ready.json';ready.unlink(missing_ok=True)
     env=runtime_environment(plan,rec,m);job=OwnedJob()
     def spawn(label,command,cwd):
         if label==fault:command=[rec['interpreters']['python_launcher'],'-c','raise SystemExit(73)']
-        return job.spawn(command,cwd,env)
+        def remember(_):
+            lease=read_json(out/'state.json');lease['children']=[process_identity(p.pid) for p in job.children];save(out/'state.json',lease)
+        return job.spawn(command,cwd,env,on_created=remember)
     try:
         python=rec['interpreters']['python_launcher']
         spawn('api',[python,'-B',TOOL,'api-child','--plan',out/'plan.json'],source/'apps/api')
@@ -426,7 +431,7 @@ def run_owner(plan_path,approval_path,mode='activate',fault=None):
             job,execution=start_slot(plan,slot,m,inject)
             children=[process_identity(p.pid) for p in job.children]
             current_lease(out,plan,'RUNNING',slot,stopped_state_sha256=stopped_hash,approval_action=action,children=children,web_execution=execution)
-            event(out,'RUNNING',slot=slot,release=plan[slot.lower()]['id'])
+            event(out,'RUNNING',slot=slot,release=plan['product' if slot=='TARGET' else 'recovery']['id'])
         try:
             try:begin(slot,fault)
             except RuntimeError as exc:
