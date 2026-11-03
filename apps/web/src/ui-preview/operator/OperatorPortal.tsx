@@ -154,7 +154,8 @@ function OperatorPortalView({session,onLogout,business,workflow,examples=[]}:Ope
 
   const notify = (message: string) => setToast(message);
   const navigate = (next: Page) => { setPage(next); setToast(""); setMobileNav(false); };
-  const chooseCompany = (companyId: string, next: Page = "workspace") => { setSelectedId(companyId); setSiteIndex(0); setTaskIndex(0); setSelectedEvidence(null); setNewRequest("");setRequestBaseline("");setRequestBaseline(""); navigate(next); };
+  const resetRequest = () => { setNewRequest(""); setRequestBaseline(""); };
+  const chooseCompany = (companyId: string, next: Page = "workspace") => { setSelectedId(companyId); setSiteIndex(0); setTaskIndex(0); setSelectedEvidence(null); resetRequest(); navigate(next); };
   const updateCompany = (fn: (c: Company) => Company) => setContextRecords((prev) => ({ ...prev, [contextKey]: fn(current) }));
   const logAction = (type: string, text: string) => setAudit((prev) => [{ id: idGen("LOG"), companyId: contextKey, at: today(), type, text }, ...prev]);
   const logOut = () => { if(authenticated){onLogout?.();return;} setEditedImprovement({});setProposalEditor({});setNewRequest(requestBaseline);setSignedIn(false); };
@@ -241,7 +242,7 @@ function OperatorPortalView({session,onLogout,business,workflow,examples=[]}:Ope
   const clearExamples = () => {
     setRecords([]); setSelectedId(""); setContextRecords({}); setAudit([]); setRequests([]);
     setSelectedCapabilities({}); setSelectedComposition({}); setSelectedGrant({});
-    setEditedImprovement({}); setProposalEditor({}); setSelectedEvidence(null); setNewRequest("");
+    setEditedImprovement({}); setProposalEditor({}); setSelectedEvidence(null); resetRequest();
     setSiteIndex(0); setTaskIndex(0); setQuery(""); setCompanyFilter("전체"); navigate("dashboard");
   };
   const loadExamples = (count: number) => { if(authenticated)return; clearExamples(); const loaded = structuredClone(examples.slice(0,count)); setRecords(loaded); setSelectedId(loaded[0]?.id ?? ""); };
@@ -261,7 +262,7 @@ function OperatorPortalView({session,onLogout,business,workflow,examples=[]}:Ope
           <div className="op-content">
             {business&&!workflow&&<BusinessContextBar business={business}/>}
             {business&&!workflow&&!["dashboard","companies"].includes(page)&&<ContextReadout value={business.state.value}/>}
-            {baseCompany && <div className="op-context-selectors"><label>사업장<select aria-label="사업장 선택" value={siteIndex} onChange={e=>{setSiteIndex(Number(e.target.value));setTaskIndex(0);setSelectedEvidence(null);setNewRequest("");}}><option value={0}>{baseCompany.site}</option><option value={1}>제2사업장 (가상 예시)</option></select></label><label>개선과제<select aria-label="개선과제 선택" value={taskIndex} onChange={e=>{setTaskIndex(Number(e.target.value));setSelectedEvidence(null);setNewRequest("");}}><option value={0}>{siteIndex === 0 ? baseCompany.improvement.title : "제2사업장 작업기록 개선 (예시)"}</option><option value={1}>자료 통합·조회 개선 (예시)</option></select></label><span>선택한 기업·사업장·과제의 시연 맥락</span></div>}
+            {baseCompany && <div className="op-context-selectors"><label>사업장<select aria-label="사업장 선택" value={siteIndex} onChange={e=>{setSiteIndex(Number(e.target.value));setTaskIndex(0);setSelectedEvidence(null);resetRequest();}}><option value={0}>{baseCompany.site}</option><option value={1}>제2사업장 (가상 예시)</option></select></label><label>개선과제<select aria-label="개선과제 선택" value={taskIndex} onChange={e=>{setTaskIndex(Number(e.target.value));setSelectedEvidence(null);resetRequest();}}><option value={0}>{siteIndex === 0 ? baseCompany.improvement.title : "제2사업장 작업기록 개선 (예시)"}</option><option value={1}>자료 통합·조회 개선 (예시)</option></select></label><span>선택한 기업·사업장·과제의 시연 맥락</span></div>}
             {authenticated&&(!workflow||!["workspace","evidence","facts","improvement"].includes(page))&&!["dashboard","companies"].includes(page)&&<Heading eyebrow="OPERATIONS WORKSPACE" title={links.flatMap(g=>g.pages).find(x=>x.id===page)?.name??"운영자 업무"} desc="데이터 연결 후 표시됩니다. 실제 업무 처리는 아직 연결되지 않았습니다."/>}
             {!business&&!records.length && <Empty title={authenticated?"업무 데이터 미연결":"등록된 수요기업이 없습니다"} detail={authenticated?"데이터 연결 후 표시됩니다. 업무 저장·검토·제출은 미연결입니다.":"실제 DB 미연결 상태입니다. 예시 화면 보기에서 업무 동선을 시연할 수 있습니다."}/>}
 
