@@ -186,3 +186,16 @@ def test_bad_runtime_url_blocks_before_any_owner_mutation(tmp_path,monkeypatch):
     def forbidden(*_,**__):pytest.fail('No stop/write/event before runtime URL preflight')
     for name in ('stop_legacy','save','event'):monkeypatch.setattr(handover,name,forbidden)
     with pytest.raises(RuntimeError,match='URL_IDENTITY'):handover.run_owner(tmp_path/'plan.json',tmp_path/'approval.json')
+
+
+def test_failed_tcp_database_probe_blocks_before_owner_mutation(tmp_path,monkeypatch):
+    p,a,_=approval_pair();p['owner'].update(kind='SYNTHETIC_CLONE',database={'alembic':['EXPECTED']})
+    monkeypatch.setattr(handover,'load_plan',lambda _:p);monkeypatch.setattr(handover,'read_json',lambda _:a)
+    monkeypatch.setattr(handover,'validate_control',lambda _:None)
+    monkeypatch.setattr(handover,'static_owner',lambda _: (tmp_path,tmp_path,{},{}))
+    monkeypatch.setattr(handover,'runtime_manifest',lambda _: {'url':'SYNTHETIC_NO_CONNECTION'})
+    def bad(_):raise RuntimeError('RELEASE_DATABASE_IDENTITY_MISMATCH')
+    monkeypatch.setattr(handover.release,'db_snapshot',bad)
+    def forbidden(*_,**__):pytest.fail('No stop/write/event on failed TCP authentication')
+    for name in ('stop_legacy','save','event'):monkeypatch.setattr(handover,name,forbidden)
+    with pytest.raises(RuntimeError,match='DATABASE_IDENTITY'):handover.run_owner(tmp_path/'plan.json',tmp_path/'approval.json')

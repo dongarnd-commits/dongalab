@@ -405,6 +405,7 @@ def run_owner(plan_path,approval_path,mode='activate',fault=None):
     require(fault is None or (plan['owner']['kind']=='SYNTHETIC_CLONE' and fault in ('api','worker','web')),'HANDOVER_TEST_FAULT_REJECTED')
     validate_control(plan);root,data,m,_=static_owner(plan)
     m=runtime_manifest(plan) # Exact URL target gate before any legacy stop/fence/write.
+    require(release.db_snapshot(m)['alembic']==plan['owner']['database']['alembic'],'HANDOVER_RUNTIME_DATABASE_PROBE_MISMATCH')
     require(not (out/'request.json').exists(),'HANDOVER_PENDING_REQUEST_REJECTED')
     if mode=='activate':
         require(not (out/'state.json').exists(),'HANDOVER_EXISTING_LEASE_REQUIRES_RESUME')
