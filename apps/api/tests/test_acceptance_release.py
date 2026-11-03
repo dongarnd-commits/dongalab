@@ -279,3 +279,70 @@ def test_reader_that_accepts_but_discards_workbook_json_is_not_compatible(tmp_pa
     descriptor=release.workbook_data_contract(tmp_path)
     assert descriptor['reader_preserves_workbook_provenance'] is False
     assert descriptor['writer_may_emit_workbook_provenance'] is False
+
+
+def canonical_old_tree_hash(directory):
+    # Exact pre-optimization order, exclusions, ancestor guard and digest recipe.
+    import os
+    directory=release.no_links(directory)
+    if not directory.is_dir():release.fail('RELEASE_ARTIFACT_MISSING')
+    entries=[]
+    for base,dirs,files in os.walk(directory,followlinks=False):
+        for name in [*dirs,*files]:release.no_links(Path(base)/name)
+        dirs[:]=sorted(d for d in dirs if d not in ('cache','.cache','__pycache__'))
+        for name in sorted(files):
+            path=Path(base)/name
+            if name in ('trace','.DS_Store') or name.endswith(('.pyc','.log')):continue
+            entries.append((path.relative_to(directory).as_posix(),release.file_hash(path)))
+    if not entries:release.fail('RELEASE_ARTIFACT_EMPTY')
+    return release.digest(entries)
+
+
+def test_linear_tree_hash_is_identical_to_canonical_old_order_exclusions_and_digest(tmp_path,monkeypatch):
+    for relative,content in [('z/root.bin',b'\x00first'),('a/deep/one.txt',b'one'),('a/deep/two.txt',b'two'),
+            ('a/trace',b'ignore'),('a/cache/ignored.bin',b'ignore'),('.cache/x',b'ignore'),
+            ('__pycache__/x.pyc',b'ignore'),('z/debug.log',b'ignore'),('z/.DS_Store',b'ignore'),('BUILD_ID',b'fixed')]:
+        path=tmp_path/relative;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(content)
+    expected=canonical_old_tree_hash(tmp_path)
+    original=release.no_links;checks=[]
+    monkeypatch.setattr(release,'no_links',lambda value:(checks.append(Path(value)),original(value))[1])
+    assert release.tree_hash(tmp_path)==expected
+    assert checks==[tmp_path]
+    (tmp_path/'a/deep/two.txt').write_bytes(b'changed')
+    assert release.tree_hash(tmp_path)!=expected
+
+
+@pytest.mark.parametrize('relative',['a/deep/link','a/cache'])
+def test_linear_hash_rejects_nested_links_even_before_excluding_cache(tmp_path,relative):
+    import os,subprocess
+    target=tmp_path/'real';target.mkdir();(target/'value').write_text('synthetic',encoding='utf-8')
+    link=tmp_path/relative;link.parent.mkdir(parents=True,exist_ok=True)
+    if os.name=='nt':
+        result=subprocess.run(['cmd.exe','/c','mklink','/J',str(link),str(target)],capture_output=True,text=True)
+        assert result.returncode==0,'Owned temporary NTFS junction creation failed'
+    else:link.symlink_to(target,target_is_directory=True)
+    try:
+        with pytest.raises(RuntimeError,match='LINKED_PATH_REJECTED'):release.tree_hash(tmp_path)
+        with pytest.raises(RuntimeError,match='LINKED_PATH_REJECTED'):canonical_old_tree_hash(tmp_path)
+    finally:
+        if os.name=='nt':os.rmdir(link)
+        else:link.unlink()
+
+
+@pytest.mark.parametrize('port_free',[True,False])
+def test_startup_validation_failure_records_zero_children_cleanup_result(tmp_path,monkeypatch,port_free):
+    m=sample(tmp_path);r=record()
+    uat.write(tmp_path/'state.json',dict(phase='STARTING',release=r['id']))
+    def invalid(*args,**kwargs):raise RuntimeError('RELEASE_SOURCE_HEAD_MISMATCH')
+    monkeypatch.setattr(release,'validate_record',invalid)
+    monkeypatch.setattr(release.subprocess,'Popen',lambda *a,**k:pytest.fail('validation failure must spawn zero children'))
+    checked=[]
+    def available(host,port):
+        checked.append(port)
+        if not port_free and port==m['api_port']:raise OSError('owned test occupied listener')
+    monkeypatch.setattr(uat,'available',available)
+    with pytest.raises(RuntimeError,match='SOURCE_HEAD_MISMATCH'):release.serve(tmp_path,m,tmp_path,r)
+    runtime=json.loads((tmp_path/'release-runtime.json').read_text(encoding='utf-8'))
+    assert runtime==dict(release=r['id'],phase='FAILED',cleanup_complete=port_free,children=[])
+    assert checked==[m['api_port'],m['web_port'],m['https_port']]
+    assert json.loads((tmp_path/'state.json').read_text(encoding='utf-8'))['phase']=='FAILED'

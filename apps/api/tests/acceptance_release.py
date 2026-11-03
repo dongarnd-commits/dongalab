@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path
 import re
+import stat as statmod
 import subprocess
 import sys
 import time
@@ -55,7 +56,11 @@ def tree_hash(directory):
     entries=[]
     for base,dirs,files in os.walk(directory,followlinks=False):
         for name in [*dirs,*files]:
-            no_links(Path(base)/name)
+            # Root ancestors are checked once above. Each walked entry needs
+            # only its own lstat, avoiding repeated ancestor resolution per file.
+            entry=(Path(base)/name).lstat()
+            if statmod.S_ISLNK(entry.st_mode) or getattr(entry,'st_file_attributes',0)&0x400:
+                fail('RELEASE_LINKED_PATH_REJECTED')
         dirs[:]=sorted(d for d in dirs if d not in ('cache','.cache','__pycache__'))
         for name in sorted(files):
             path=Path(base)/name
@@ -425,7 +430,8 @@ def switch(owner,m,out,identifier,confirmation):
         registered=enrollment(out)
         if registered['owner']!=owner_identity(owner,m,out):fail('RELEASE_OWNER_CHANGED')
         selected=selection(out);previous=load_record(out,selected['current']);target=load_record(out,identifier)
-        # All potentially expensive checks/builds happen before the stop request.
+        # Full preflight happens before stop. Supervisor/API children revalidate
+        # the same immutable inputs at startup; no validation is skipped.
         compatible(previous,target);validate_record(owner,m,out,previous);validate_record(owner,m,out,target)
         before=state(out)
         if before.get('nonce')!=m['nonce']:fail('RELEASE_STATE_NONCE_MISMATCH')
@@ -451,8 +457,6 @@ def configure_source(source,out):
 
 def serve(owner,m,out,record):
     if state(out).get('release')!=record['id'] or state(out)['phase']!='STARTING':fail('RELEASE_START_HANDSHAKE_REQUIRED')
-    source=validate_record(owner,m,out,record)
-    configure_source(source,out)
     children=[];logs=[];error=None;stopped=False
     def spawn(label,command,cwd):
         log=(out/('release-'+label+'.log')).open('a',encoding='utf-8');logs.append(log)
@@ -460,6 +464,8 @@ def serve(owner,m,out,record):
         children.append(process)
         return process
     try:
+        source=validate_record(owner,m,out,record)
+        configure_source(source,out)
         for port in (m['api_port'],m['web_port'],m['https_port']):uat.available('127.0.0.1',port)
         ready=out/'worker-ready.json';ready.unlink(missing_ok=True)
         spawn('api',[sys.executable,'-B',record['launcher'],'api-child','--owner-root',str(owner),'--nonce',m['nonce'],'--release',record['id'],'--confirm',m['nonce']],source/'apps/api')
