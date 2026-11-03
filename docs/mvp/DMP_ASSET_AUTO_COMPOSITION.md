@@ -387,3 +387,32 @@ a4ada3c의 DATCO CI는 Backend438 PASS/1 SKIP/5 integration deselected, PostgreS
 v3 정식 복구 전에 자체 소스의 Web 복사본만 별도 비민감 보호 경로에서 점검하던 중 Windows 긴 경로의 파일 쓰기가 `FileNotFoundError`로 실패했다. deep server/app segment 파일에서 발생했으며 Node·DB·release 전환은 아직 시작하지 않았다. 이 실패도 보존하고 시스템 long-path 정책/권한을 바꾸지 않은 파일 I/O 보완과 실제260자 초과 경로 회귀를 먼저 확인한다. 기존 owner·원본 산출물·계정/TLS·자료는 변경하지 않았다.
 a4ada3c의 Public E2E 실패7건은 d27aa88의 test-only 보완으로 동결했다. 현재 기업·제출 Version을 유지하는 메뉴 이동을 먼저 검증한 뒤 기존 수요기업 목록으로 명시 재선택하며, 보완답변 검토의 실제 요청목록 복귀는 POST200·빈 context·VERIFIED와 정확 Version/메모로 확인한다. Catalog의 CURRENT_CATALOG/현재 등록 건수 문구와 요청목록 검색·필터 복원도 기존 업무 경로로 검증한다. 원본bytes·Scope·저장 결과 기대는 유지하며 독립 소스 대조/TypeScript/대상 ESLint를 통과했다. 수정 후 실제 재실행은 최신 전체 CI 결과로 구분한다. 원로그 SHA256은8edbe95d6ddee777064c875e5a040afb42b4f37756329cb3fecf30b09cddc55a다.
 Windows I/O 보완 후 동일 비민감 소스의 full manifest snapshot→새 execution copy→source Next 절대 실행파일+NODE_PATH→익명 `/login`200을 실제 확인했고 자기 Node 종료도 확인했다(runtime-copy-proof-71fbd75b94a7). 이 보조 점검은 DB·계정·release 선택 없이 모듈 탐색/복사본 기동만 검증한 것이며 정식 전환의 fresh build 증거로 대체하지 않는다. 파일 경로·owner 식별·manifest 항목과 해시는 일반 경로로 유지하고 확장 namespace는 Windows 파일 I/O에만 적용한다. 시스템 설정/권한 변경·링크·의존성 복제는 없으며 원래 route-cache까지 전체 파일 검사를 유지한다. 이어 같은2002c1fabb87의 fresh 빌드·guarded recover·전환·새 저장·복귀·실패복귀를 수행한다.
+#### Q06 최종 동일 환경 실행 결과와 적용 판정
+
+원래 실패 회차d2a876874a67→a6d5b0f3d32b의 summary 바이트 해시와 불변 enrollment/초기 record를 확인하고 같은 합성 owner2002c1fabb87 / https://127.0.0.1:19451에서 재개했다. 새 DB·볼륨·계정·인수환경을 만들지 않았다. 정식 회차18f6ca8bbe75는 **PASS**이며 source `917cb924d39357c3ca5fc8c465bcf454daba2bde`, 불변 launcher `997d5a0a37f0c7fda6ab670ddb2afd96af8b111a`, 호환 이전 source `9b8d0e0f9eb79aaaa2b973f7e3455df78b8a046e`를 각각 고정했다. 의도한 API 시작 실패 source `a0f5d53c91861f23776fb7be009982efaeaac0da`는 로컬 시험용이며 Push 대상이 아니다. build는 중지 전에 fresh 수행했고 고정2048MB V8 제한은 해당 시험 build에만 적용했다. 런타임까지 같은 제한이라고 주장하지 않는다.
+
+| 단계 | CLI 전체 시간(초) | 마지막200→연속3회 정상응답 중 첫200 간격(초) |
+| --- | ---: | ---: |
+| 새 source 전환 |61.369|31.915|
+| 같은 현재 DB에서 이전 source 복귀 |66.296|38.055|
+| 의도한 시작 실패 후 이전 source 자동 복구 |111.313|81.414|
+
+1초 간격·요청 timeout2초의 HTTPS 익명 `/login` 상태/공개 nonce·HEAD 관측이다. 명령 시간에는 중지 전 검사가 포함되며 공백은 표본 오차가 있는 관측값이다. 실제18445의 중단 시간이나 SLA로 일반화하지 않는다. source별 API/Worker의 HEAD·DB·Role·files와 Web의 실제 cwd/실행 복사본·원본 artifact/build ID가 일치했다. snapshot의 route-cache·public까지 full manifest가 유지됐으며 새 실행 폴더의 캐시만 변했다.
+
+원래 manifest·계정 안내 파일·공개 TLS CA·gateway 설정의 해시와 URL/쿠키 namespace를 유지했고 네 역할의 기존 세션을 전환·복귀·실패 복구 동안 그대로 검증했다. 첫 source에서 만든 합성 회사/사업장/첨부1건과 새 source에서 만든 추가1건, 합성 XLSX 기능1개가 복귀·자동 복구 뒤에도 유지됐다. 현재 목록650건과 명시한 원래 import649건 전체 Snapshot, XLSX 원본 SHA·provenance·200 응답을 모두 확인했다. 업무 테이블별 내용 해시와 물리 Schema 지문도 동일했다. Migration/seed/초기화/과거 DB 복원은0이며 원문을 출력하지 않았다.
+
+추가로 정식 PASS 후 DB 컨테이너까지 STOPPED임을 확인한 뒤 동일 container ID/volume을 정상 start했다. owned-stop-resume-e29ee3c010a5도 **PASS**다. 새 인증4역할, 저장된2회사/2사업장/2첨부와 원본바이트, 현재650/원래649 Snapshot·Excel 원본/Metadata·업무 내용/Schema 해시를 재검증했다. 이전 쿠키를 읽거나 복원하지 않았고 새 인증 세션 증가는 업무 내용 비교와 구분했다. 다시 정상 STOP했고 같은 볼륨·파일·계정/CA·불변 산출물을 보존했다. 시험 URL19451은 최종 중지 상태이며 실제 인수 주소가 아니다. 소유 디스크 시험 볼륨이나 실패 자료는 삭제하지 않았다.
+
+Windows 파일 I/O 관련 순수 회귀는103 PASS/0 SKIP이며 실제260자 초과 경로·artifact root·sidecar·복사·기록 identity·기존 junction/link 차단과 fixed build 옵션/실패 시 next-env 원복을 포함한다. 초기 timeout, build 변이 차단, 긴 경로 복사 실패를 없었던 일로 만들지 않고 앞선 보호 로그와 새 회차를 구분했다. 추가 private checker의 소스/합성 guard 검토는 실제 실행 PASS와 별도다.
+
+**실제18445 적용은 미실행이며 현재 수단으로 바로 실행할 수 없다.** 도구는 보호 포트18445/8443/8444를 거부하고 기존725에는 opt-in owner 계약과 새 workbook JSON reader가 없다. 현재725를 새 자료의 무조건적인 fallback으로 사용하지 않는다. 실제 적용 전 단일 결정표의 정확 Commit/시각과 함께, 호환 이전 실행물·원래 data-owner/START 계약을 보존 문서2개·manifest 변경 없이 정합화할 별도 검토 가능한 절차를 확정해야 한다. 이 조건이 없으면 적용을 보류한다. 일반 START·manifest·HEAD·상태 파일을 고치거나 문서를 지워 가드를 우회하지 않는다. 새 source에서 저장한 자료를 옛 DB로 되감는 복귀는 허용하지 않는다.
+
+실제 기존 검수환경은 최종 격리 점검에서 익명 login200(31ms), 공개 nonce9ca49b473812/HEAD725987f4a375d4f77028e35361e4fcdb05aac4ee, 알려진5프로세스의 기존 cwd, 보존 문서2개 SHA 일치를 확인했다. 원래 dirty 상태도 유지했다. 기존 DB 내용·기업자료·계정/세션을 열거나 자동 로그인/주입하지 않았으므로 이 점검을 현재 실기업 자료의 전수 보존 검증이라고 부르지 않는다. Docker/WSL 재시작·기존8443/8444·백업·보안/권한 설정 변경은 하지 않았다. 보호 근거는 quality-20261103/isolation.json이다.
+
+#### 후속 Git·전체 회귀와 남은 상태
+
+구분 가능한 구현 근거는 분석/원문 계보fa5af07·55ca6f5, Excel24e6975, 포털01acb2a·3c02b84, Preview6454ca3, 전환f49dbd8·9b8d0e0·a4ada3c·daa4af7·997d5a0, 회귀 준비d27aa88이다. 변경 영역은 `apps/api/app/capability/{workbook_import,asset_imports,api,asset_solutions}.py`와 기존 분석/Worker 경로, Web portal/common session·UI·proxy 및 생성 API 타입, `apps/api/tests/acceptance_release.py`와 대응 시험·고정 합성 품질 자료다. Source/Evidence/Version/Review·기업 ACK·운영자 CONFIRM·제공/필수 연계·정식 제안/전달 Guard, Role/Company Scope·물리 Schema는 유지했다. 외부AI/새 OCR·연계 면제·공고 없는 제안 정책은 추가하지 않았다.
+
+이번 최종 기록 이후 Commit은 문서만 추가하고 실행 제품·lock·Schema·전환 도구가 정식 source917과 동일함을 검사한다. 별도 Feature Branch `fix/portal-analysis-quality-20261103`의 [Draft PR20](https://github.com/dongarnd-commits/dongalab/pull/20)은 PR19/0b6f56a88131a10fdc9c4cb16ed7658250275b03을 base로 하며 PR17→18→19의 포함 관계를 유지한다. 기존 PR17/18/19는 open Draft/미병합, main10d3d8b0f0142b0d6cbb992acb07bb34ed40c049를 유지한 원격 메타데이터도 확인했다. 보호 로그·원본649·실자료·계정·실행 비밀은 Git/CI에 넣지 않는다. 정확 최종 HEAD와 최신 전체7개 Job의 완료 결과는 같은 PR 본문/Checks에 기록한다. 예전 성공이나 로컬 부분 실행을 최신 전체 성공으로 대신하지 않는다.
+
+남은 항목은 단일 결정표의 실제 적용/저장 보호·개인 접근/보존·정리/공고 조건, 제공 담당자의 실제 추천 범위·릴리스/연계 근거, 실기업에서만 확인할 수 있는 추출/추천 품질과 고객 문안이다. 유한한 합성 회귀의 자유문장 숫자/기간5실패, 개발 도구 minimatch18 moderate/ESLint EOL과 호환 업그레이드 대기, BitLocker 미확인·자동 만료/완전 정리 부재도 남긴다. 개발 범위 구현/자동검증, 합성 전환 검증, 기존 환경 적용, A 실기업 평가, B 정식 제안·최종 인수는 서로 구분하며 범위를 늘리는 새 기능은 시작하지 않는다.
