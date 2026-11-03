@@ -1,1 +1,4 @@
 *.pdf binary
+
+# Frozen synthetic evidence keeps its original bytes on every platform.
+apps/api/tests/fixtures/analysis_quality_*.json -text
