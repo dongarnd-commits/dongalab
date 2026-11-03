@@ -144,3 +144,37 @@ ConvertTo-Json -InputObject $r -Compress
         if port not in mapping or pid<=0:fail('HANDOVER_LISTENER_RESULT_INVALID')
         mapping[port].append(dict(address=str(row['LocalAddress']),pid=pid))
     return {port:sorted(rows,key=lambda r:(r['address'],r['pid'])) for port,rows in mapping.items()}
+
+def process_parent_map():
+    k,_=apis();snapshot=k.CreateToolhelp32Snapshot(2,0)
+    if snapshot in (None,C.c_void_p(-1).value):fail('HANDOVER_PROCESS_SNAPSHOT_FAILED')
+    try:
+        entry=ProcessEntry();entry.size=C.sizeof(entry);found=k.Process32FirstW(snapshot,C.byref(entry));result={}
+        while found:
+            result[int(entry.pid)]=int(entry.parent);found=k.Process32NextW(snapshot,C.byref(entry))
+        return result
+    finally:k.CloseHandle(snapshot)
+
+
+def descendant_identities(pid):
+    """All current descendants, excluding stale parent-PID reuse relationships."""
+    root=process_identity(pid);parents=process_parent_map();known={pid:root}
+    for _ in range(16):
+        additions=[]
+        for candidate,parent in sorted(parents.items()):
+            if candidate in known or parent not in known:continue
+            child=process_identity(candidate)
+            if child['parent']!=parent:fail('HANDOVER_PROCESS_TREE_CHANGED')
+            if int(child['created'])<int(known[parent]['created']):continue
+            additions.append(child)
+        if not additions:return {str(p):v for p,v in known.items()}
+        for child in additions:known[child['pid']]=child
+        if len(known)>64:fail('HANDOVER_PROCESS_TREE_TOO_LARGE')
+    fail('HANDOVER_PROCESS_TREE_TOO_DEEP')
+
+
+def trusted_console_host(identity):
+    k,_=apis();function=k.GetSystemDirectoryW;function.argtypes=[W.LPWSTR,W.UINT];function.restype=W.UINT
+    directory=C.create_unicode_buffer(32768);length=function(directory,len(directory))
+    if not 0<length<len(directory):fail('HANDOVER_SYSTEM_DIRECTORY_UNAVAILABLE')
+    return Path(identity['exe'])==Path(directory.value)/'conhost.exe'

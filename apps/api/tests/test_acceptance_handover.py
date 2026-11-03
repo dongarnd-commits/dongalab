@@ -213,3 +213,27 @@ def test_previous_source_is_validated_against_its_exact_previous_head(tmp_path,m
         raise Observed()
     monkeypatch.setattr(handover.release,'clean_source',clean)
     with pytest.raises(Observed):handover.validate_product({'head':handover.RECOVERY,'source_root':str(tmp_path)},tmp_path)
+
+
+def test_descendant_graph_excludes_stale_reused_parent_ids(monkeypatch):
+    import acceptance_handover_fence as f
+    values={10:dict(pid=10,parent=1,created='100'),20:dict(pid=20,parent=10,created='110'),30:dict(pid=30,parent=20,created='120'),40:dict(pid=40,parent=10,created='50')}
+    monkeypatch.setattr(f,'process_identity',lambda p:values[p]);monkeypatch.setattr(f,'process_parent_map',lambda:{p:v['parent'] for p,v in values.items()})
+    assert set(f.descendant_identities(10))=={'10','20','30'}
+
+@pytest.mark.skipif(os.name!='nt',reason='Windows handover OS contract; execute on Windows')
+def test_non_listener_python_grandchildren_are_bound_and_reaped(tmp_path):
+    import time
+    from acceptance_handover_job import OwnedJob
+    from acceptance_handover_fence import descendant_identities
+    from acceptance_release import alive
+    script=tmp_path/'child.py';marker=tmp_path/'descendant'
+    script.write_text("import subprocess,sys,time\nfrom pathlib import Path\np=subprocess.Popen([sys.executable,'-c','import time;time.sleep(60)'])\nPath('descendant').write_text(str(p.pid))\ntime.sleep(60)\n",encoding='utf-8')
+    with OwnedJob() as job:
+        child=job.spawn([sys.executable,'-B',script],tmp_path,os.environ.copy());until=time.monotonic()+10
+        while not marker.exists():
+            assert child.poll() is None and time.monotonic()<until
+            time.sleep(.05)
+        graph=descendant_identities(child.pid);assert str(int(marker.read_text())) in graph
+        assert len(graph)>=2
+    assert not any(alive(v['pid']) for v in graph.values())

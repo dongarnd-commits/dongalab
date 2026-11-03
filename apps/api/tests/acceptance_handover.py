@@ -23,7 +23,7 @@ from uuid import uuid4
 import acceptance_release as release
 import manual_acceptance as uat
 from acceptance_handover_projection import project_manifest
-from acceptance_handover_fence import FileFence,process_identity,listener_owners
+from acceptance_handover_fence import FileFence,process_identity,listener_owners,descendant_identities,trusted_console_host
 
 ROOT=Path(__file__).resolve().parents[3]
 TOOL=Path(__file__).resolve()
@@ -172,6 +172,15 @@ def capture_owner(root,nonce,kind):
                 if key not in processes:
                     processes[key]=process_identity(pid);processes[key]['exe_sha256']=release.file_hash(Path(processes[key]['exe']).resolve())
                 pid=processes[key]['parent']
+    complete=descendant_identities(state['supervisor'])
+    require(set(processes)<=set(complete),'HANDOVER_PROCESS_TREE_CHANGED')
+    initial_images={Path(processes[str(pid)]['exe']) for pid in state_pids}
+    for key,identity in complete.items():
+        console=trusted_console_host(identity)
+        require(Path(identity['exe']) in initial_images or console,'HANDOVER_UNKNOWN_DESCENDANT_EXECUTABLE')
+        require(str(Path(identity['cwd']).resolve()) in allowed_cwds or console,'HANDOVER_UNKNOWN_DESCENDANT_CWD')
+        identity['exe_sha256']=release.file_hash(Path(identity['exe']).resolve())
+    processes=complete
     tls=ssl.create_default_context(cafile=str(out/'tls/pki/authorities/local/root.crt'))
     with socket.create_connection(('127.0.0.1',m['https_port']),timeout=5) as raw:
         with tls.wrap_socket(raw,server_hostname='127.0.0.1') as peer:certificate=sha256(peer.getpeercert(binary_form=True)).hexdigest()
@@ -294,6 +303,8 @@ def stop_legacy(plan,data,m):
     expected=plan['owner']['processes']
     require(read_json(data/'state.json')==plan['owner']['legacy_state'],'HANDOVER_LEGACY_STATE_CHANGED')
     require(all(process_matches(v) for v in expected.values()),'HANDOVER_LEGACY_PROCESS_MISSING')
+    require(set(descendant_identities(plan['owner']['legacy_state']['supervisor']))==set(expected),'HANDOVER_NEW_OR_UNKNOWN_LEGACY_DESCENDANT')
+    require(all(release.file_hash(Path(v['exe']).resolve())==v['exe_sha256'] for v in expected.values()),'HANDOVER_LEGACY_EXECUTABLE_BYTES_CHANGED')
     require(not (data/'stop.request').exists(),'HANDOVER_EXISTING_STOP_REQUEST')
     # This is the legacy supervisor's normal protocol, not a state rewrite or DB stop.
     (data/'stop.request').write_text(m['nonce'],encoding='utf-8')
