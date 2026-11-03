@@ -76,8 +76,8 @@ test('MVP real matching review to 16-section documents, safe native send confirm
  await open.click();const sending=page.waitForResponse(r=>r.url().endsWith('/approval')&&r.request().method()==='POST');await modal.getByRole('button',{name:'최종 확인·기업 검토 요청',exact:true}).evaluate(el=>{(el as HTMLButtonElement).click();(el as HTMLButtonElement).click();});expect((await sending).ok()).toBe(true);await expect(page.getByRole('status')).toContainText('정확한 ProposalVersion을 지정된 기업 계정에 전달했습니다');expect(sends).toHaveLength(1);
  await page.reload();await expect(page.getByRole('heading',{name:title+' · v1',exact:true})).toBeVisible();
  const companyContext=await browser.newContext({baseURL:origin()}),company=await companyContext.newPage();await login(company,c.company_editor,c.password,'company');await company.locator('aside').getByRole('button',{name:'받은 제안서',exact:true}).click();
- const card=company.getByRole('heading',{name:title,exact:true}).locator('..');await card.getByRole('button',{name:'제안서 본문 확인',exact:true}).click();await expect(company.getByText('이 전달 Version의 본문 16개 항목',{exact:true})).toBeVisible();
+ const card=company.getByRole('heading',{name:title,exact:true}).locator('..');await card.getByRole('button',{name:'제안서 본문 확인',exact:true}).click();await expect(company.getByText('이 전달본의 본문 16개 항목',{exact:true})).toBeVisible();
  await company.getByLabel('검토 의견·수정 요청사항',{exact:true}).fill('TEST company requests a revised integration scope.');await company.getByRole('button',{name:'제안서 수정 요청',exact:true}).click();await expect(company.getByRole('status')).toContainText('제안서 수정 요청을 기록했습니다.');
- await company.reload();await expect(company.getByText(/REVISION_REQUEST · TEST company requests/)).toBeVisible();
+ await company.reload();await expect(company.getByText(/수정 요청 전달 · TEST company requests/)).toBeVisible();
  const after=await(await page.request.get('/api/proposal/'+created.proposal_id)).json();expect(after.versions[0].id).toBe(created.version_id);expect(after.decisions[0].outcome).toBe('REVISION_REQUEST');expect(after.files).toHaveLength(2);await companyContext.close();
 });

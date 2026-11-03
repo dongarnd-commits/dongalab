@@ -320,7 +320,7 @@ export const DATCOV02 = ({session,onLogout,business,workflow}:PortalProps) => {
    <div className="flex items-center gap-3 border-t border-slate-100 px-5 py-4"><div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-blue-50 text-blue-600"><UserRound size={18} /></div><div className="min-w-0 flex-1"><p title={companyUserLabel} className="truncate text-[12px] font-bold">{companyUserLabel||"수요기업 사용자"}</p><p className="truncate text-[11px] text-slate-400">{authenticated?"수요기업 담당자":"회사 담당자"}</p></div></div>
   </aside>
   <div className="flex min-w-0 flex-1 flex-col">
-   <header className="flex h-[75px] shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-8"><div className="flex items-center gap-3"><PortalMenu collapsed={collapsed} onCollapse={()=>setCollapsed(v=>!v)} mobileOpen={mobileMenu} onMobile={setMobileMenu}/><span className="hidden text-[12px] text-slate-400 sm:block">수요기업 포털</span><ChevronRight size={15} className="hidden text-slate-300 sm:block" /><span className="text-[13px] font-bold">{menu.flatMap(x => x.items).find(x => x.id === page)?.name}</span></div><div className="flex items-center gap-3"><Chip color="blue">{authenticated?<span className="block max-w-[160px] truncate" title={companyUserLabel}>{companyUserLabel}</span>:data.company || '기업정보 입력 중'}</Chip><div className="grid h-8 w-8 place-items-center rounded-full bg-[#EAF3FF] text-[12px] font-bold text-[#1767C7]">기</div><button onClick={logout} aria-label="로그아웃" className={S}><LogOut size={15} /> 로그아웃</button></div></header>
+   <header className="flex h-[75px] shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-8"><div className="flex items-center gap-3"><PortalMenu collapsed={collapsed} onCollapse={()=>setCollapsed(v=>!v)} mobileOpen={mobileMenu} onMobile={setMobileMenu}/><span className="hidden text-[12px] text-slate-400 sm:block">수요기업 포털</span><ChevronRight size={15} className="hidden text-slate-300 sm:block" /><span className="text-[13px] font-bold">{menu.flatMap(x => x.items).find(x => x.id === page)?.name}</span></div><div className="flex items-center gap-3"><Chip color="blue">{authenticated?<span className="block max-w-[160px] truncate" title={workflow?.detail?.company.name||data.company||'기업 선택 필요'}>{workflow?.detail?.company.name||data.company||'기업 선택 필요'}</span>:data.company || '기업정보 입력 중'}</Chip><div className="grid h-8 w-8 place-items-center rounded-full bg-[#EAF3FF] text-[12px] font-bold text-[#1767C7]">기</div><button onClick={logout} aria-label="로그아웃" className={S}><LogOut size={15} /> 로그아웃</button></div></header>
    <main ref={scroller} className="min-h-0 flex-1 overflow-y-auto"><div className="mx-auto max-w-[1190px] px-4 pb-14 pt-7 md:px-8">
     {business&&<CompanyContextStatus business={business} hideEmpty/>}
      {toaster && <div role="status" className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-[12px] text-blue-800"><div className="flex items-center gap-2"><Info size={16} /><span>{toaster}</span></div><button onClick={() => setToaster('')} aria-label="알림 닫기"><X size={16} /></button></div>}
@@ -328,8 +328,9 @@ export const DATCOV02 = ({session,onLogout,business,workflow}:PortalProps) => {
 
     {workflow&&['onboarding','company','finance','files','extraction','needs','review','requests','proposals'].includes(page)&&<CompanyBusinessScreen key={(workflow.cid??'new')+':'+page} screen={page} workflow={workflow} goto={target=>goto(target as Screen)}/>}
      {page === 'home' && <>
-     <Header eyebrow={authenticated?"":"COMPANY DASHBOARD"} title="기업 홈" sub="우리 기업의 업무 진행 현황과 다음 할 일을 확인하세요." />{workflow&&<CompanyHomeSummary key={workflow.cid} w={workflow}/>}
+     <Header eyebrow={authenticated?"":"COMPANY DASHBOARD"} title="기업 홈" sub="우리 기업의 업무 진행 현황과 다음 할 일을 확인하세요." />{workflow&&<CompanyHomeSummary key={workflow.cid} w={workflow} onNavigate={target=>goto(target as Screen)}/>}
 
+     {!workflow&&<>
      <Card className="p-6"><div className="mb-4 flex items-center justify-between"><h3 className="text-[15px] font-bold">업무 진행 단계</h3><span className="text-[12px] font-semibold text-blue-600">{authenticated?'':progress.filter(Boolean).length+' / 5'}</span></div>{!authenticated&&<div className="mb-5 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-blue-600" style={{
                   width: progress.filter(Boolean).length * 20 + '%'
                 }} /></div>}<div aria-label="5단계 업무 진행" className="grid gap-2 sm:grid-cols-5">{[{
@@ -382,6 +383,7 @@ export const DATCOV02 = ({session,onLogout,business,workflow}:PortalProps) => {
                   d: '서비스·지원사업 검토 내용',
                   s: 'proposals'
                 }].map(x => <button key={x.t} onClick={() => goto(x.s as Screen)} className="flex w-full items-center justify-between gap-3 border-b border-slate-100 py-4 text-left last:border-0"><div><p className="text-[12px] font-bold">{x.t}</p><p className="mt-1 text-[11px] text-slate-500">{x.d}</p></div><ChevronRight size={17} className="text-slate-400" /></button>)}</Card></div>
+     </>}
     </>}
 
 

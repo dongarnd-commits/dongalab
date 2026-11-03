@@ -1,5 +1,6 @@
 import {useRef,useState,useEffect} from 'react';
-import {CompanyError} from '../company/client';
+import {CompanyError,uploadAccept} from '../company/client';
+import {FileSelection} from './file-selection';
 import type {CompanyWorkflow} from './workflow';
 import {storeAttachment} from './company-attachments';
 import {BusinessCard,BusinessField,useBusinessDraft,input,primary,secondary} from './business-ui';
@@ -85,8 +86,10 @@ export function InformationResponse({item,w,operator,load,command,onReviewed,exp
  {(uncertain||localError)&&<button className={secondary} disabled={w.busy} onClick={()=>work(check)}>답변·검토 저장 상태 확인</button>}
  {editable&&<section aria-label="현재 답변 작성"><h4>작성 중인 최신 답변</h4><p role="status">{w.busy?'저장 중':uncertain?'저장 결과 확인 필요':unchanged&&!latest.submitted?'답변 초안 저장 완료':unchanged&&latest.submitted&&item.state==='REVISION_REQUESTED'?'이전 제출 답변을 불러왔습니다. 수정 후 다시 제출해 주세요.':'저장되지 않은 변경사항'}</p><BusinessField label="보완 답변"><textarea aria-label="보완 답변" className={input} disabled={w.busy||uncertain} value={answer.message} maxLength={10000} onChange={e=>setAnswer({...answer,message:e.target.value})}/></BusinessField>
  <p>현재 답변에 포함할 첨부자료 {answer.fileIds.length}건</p>{answer.fileIds.map(id=><p key={id}>{w.detail?.files.find(f=>f.id===id)?.name??'저장된 첨부자료'} <button className={secondary} disabled={w.busy||uncertain} onClick={()=>setAnswer({...answer,fileIds:answer.fileIds.filter(v=>v!==id)})}>현재 답변에서 제외</button></p>)}
- <BusinessField label="답변 첨부자료"><input type="file" multiple disabled={w.busy||uncertain} onChange={e=>{setAnswer({...answer,files:[...answer.files,...Array.from(e.target.files??[])]});e.target.value='';}}/></BusinessField>
- <p>선택 파일 {answer.files.length}건</p>{answer.files.map((file,i)=><p key={i}>{file.name} · {file.size.toLocaleString()} bytes {uploadedFiles.has(file)&&'· 업로드 완료, 답변 연결 저장 확인 필요'} <button className={secondary} disabled={w.busy||uncertain} aria-label={file.name+' 선택 취소'} onClick={()=>setAnswer({...answer,files:answer.files.filter((_,n)=>n!==i)})}>선택 취소</button></p>)}
+ <p className="my-3 text-sm text-slate-500">‘현재 답변에서 제외’는 아래 초안 저장·제출 후 반영됩니다. 이전에 제출한 답변과 원본은 보존합니다.</p>
+ <FileSelection label="답변 첨부자료" accept={uploadAccept} files={answer.files} disabled={w.busy||uncertain} maxFiles={100} hint="파일 선택은 미전송 상태입니다. 아래 초안 저장·제출 버튼으로 답변에 연결합니다" onFiles={files=>setAnswer({...answer,files:[...answer.files,...files]})} onRemove={index=>setAnswer({...answer,files:answer.files.filter((_,n)=>n!==index)})}/>
+ <p>선택 파일 {answer.files.length}건</p>{answer.files.filter(file=>uploadedFiles.has(file)).map((file,index)=><p key={index}>{file.name} · 업로드 완료, 답변 연결 저장 확인 필요</p>)}
+ <p className="my-3 text-sm text-slate-500">‘선택 취소’는 이번 답변에 추가할 선택만 취소합니다. 이미 업로드된 원본이나 저장된 답변을 삭제하지 않습니다.</p>
  {[false,true].map(submit=><button key={String(submit)} disabled={w.busy||uncertain||!answer.message.trim()} className={submit?primary:secondary} onClick={()=>work(()=>respond(submit),submit?'보완 답변을 제출했습니다.':'보완 답변 초안을 저장했습니다.')}>{submit?'보완답변 제출':'답변 초안 저장'}</button>)}</section>}
  {operator&&item.state==='REVIEW_REQUIRED'&&latest?.submitted&&<section aria-label="운영자 답변 판단"><BusinessField label="확인 또는 재보완 사유"><textarea className={input} value={answer.message} disabled={w.busy||uncertain} maxLength={5000} onChange={e=>setAnswer({...answer,message:e.target.value})}/></BusinessField>{['VERIFIED','REVISION_REQUESTED'].map(outcome=><button key={outcome} className={outcome==='VERIFIED'?primary:secondary} disabled={w.busy||uncertain||!answer.message.trim()||!!expectedResponseId&&latest.id!==expectedResponseId} onClick={()=>work(()=>review(outcome))}>{outcome==='VERIFIED'?'확인 완료':'재보완 요청'}</button>)}</section>}
  <details><summary>보완요청 및 답변 이력</summary><p className="whitespace-pre-wrap">{item.message}</p>{item.responses.filter(r=>r.id!==current?.id).map(reply=><section key={reply.id}><h4>작성 이력 v{reply.ordinal} · {reply.submitted?'제출한 답변':'저장한 초안'}</h4><p className="whitespace-pre-wrap">{reply.message}</p>{files(reply)}</section>)}{item.reviews.map(r=><p key={r.id}>{requestLabels[r.outcome]} · {r.note}{operator&&' · '+r.actor_id}</p>)}</details>

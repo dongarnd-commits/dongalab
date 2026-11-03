@@ -1,7 +1,7 @@
 name: DATCO CI
 on:
   pull_request:
-    branches: [main]
+    branches: [main, feat/mvp-dmp-assets-auto-composition]
   push:
     branches: [main]
   workflow_dispatch:
