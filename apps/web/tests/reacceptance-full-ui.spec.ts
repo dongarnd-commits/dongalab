@@ -28,7 +28,7 @@ test('fresh full UI: registration, Rule/request/reply, single/composite, Notice,
   await company.getByLabel('등록 업태',{exact:true}).fill('제조업');await company.getByLabel('등록 종목',{exact:true}).fill('TEST 장비 제조 및 재고 관리');
   await company.getByRole('button',{name:'기업정보 등록',exact:true}).click();await expect(company.getByRole('heading',{name:'기업 · 사업장 관리',exact:true})).toBeVisible({timeout:60000});
   const cid=new URL(company.url()).searchParams.get('company')!;expect(cid).toBeTruthy();
-  await company.reload();await expect(company.getByLabel('기업명',{exact:true})).toHaveValue(c.company_name);await expect(company.getByText(/사업장 1곳이 등록/)).toBeVisible();
+  await company.reload();await expect(company.getByLabel('기업명',{exact:true})).toHaveValue(c.company_name);await expect(company.getByText(/사업장 1곳의 저장된 이름과 주소/)).toBeVisible();
   expect((await read(company,'company/'+cid)).sites).toHaveLength(1);
   await menu(company,'재무 · 사업이력');
   await company.getByLabel('재무 PDF 파일 선택 또는 끌어놓기',{exact:true}).setInputFiles(c.financial_documents);

@@ -7,7 +7,7 @@ export function isolated(){
  if(!['localhost','127.0.0.1'].includes(origin.hostname)||['18445','8443','8444','57425','57426','57427'].includes(origin.port)||c.nonce==='9ca49b473812'||!process.env.DATCO_TEST_NONCE)throw Error('SEPARATE_COMPANY_UX_TEST_ENVIRONMENT_REQUIRED');
  return c;
 }
-export async function login(page:Page,role='editor'){
+export async function login(page:Page,role='ux_editor'){
  const c=isolated();await page.goto('/login');
  await page.getByLabel('아이디',{exact:true}).fill(c.accounts[role]);
  await page.getByLabel('비밀번호',{exact:true}).fill(c.password);

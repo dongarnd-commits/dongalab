@@ -147,3 +147,12 @@ test('company lookup loading, failure, empty and multiple unselected companies s
  await expect(page.getByRole('heading',{name:'기업을 선택해 주세요',exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:'등록된 기업정보가 없습니다',exact:true})).toHaveCount(0);await page.getByLabel('업무 기업 선택',{exact:true}).selectOption(first.cid);
  await expect(page.getByLabel('실제 기업 현황')).toContainText(first.profile.name);
 });
+
+test('saved site is clean before adding the next site, regardless of JSON property order',async({page})=>{
+ const {cid}=await company(page,'site-clean');await goto(page,cid,'company');await page.getByRole('button',{name:'사업장 추가',exact:true}).click();
+ const form=page.getByRole('form',{name:'사업장 입력',exact:true});await form.getByLabel('사업장명',{exact:true}).fill('TEST second site');await form.getByLabel('소재지',{exact:true}).fill('TEST second address');
+ await form.getByRole('button',{name:'새 사업장 저장',exact:true}).click();await expect(page.getByRole('status').filter({hasText:'사업장을 저장했습니다.'})).toBeVisible();
+ const saved=await detail(page,cid);expect(saved.sites).toHaveLength(2);
+ const prompts:string[]=[];page.on('dialog',async dialog=>{prompts.push(dialog.message());await dialog.dismiss();});
+ await page.getByRole('button',{name:'사업장 추가',exact:true}).click();expect(prompts).toEqual([]);await expect(form.getByLabel('사업장명',{exact:true})).toHaveValue('');await expect(form.getByRole('button',{name:'새 사업장 저장',exact:true})).toBeVisible();
+});
