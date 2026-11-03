@@ -77,7 +77,7 @@ test('MVP real matching review to 16-section documents, safe native send confirm
  await page.reload();await expect(page.getByRole('heading',{name:title+' · v1',exact:true})).toBeVisible();
  const companyContext=await browser.newContext({baseURL:origin()}),company=await companyContext.newPage();await login(company,c.company_editor,c.password,'company');await company.locator('aside').getByRole('button',{name:'받은 제안서',exact:true}).click();
  const card=company.getByRole('heading',{name:title,exact:true}).locator('..');await card.getByRole('button',{name:'제안서 본문 확인',exact:true}).click();await expect(company.getByText('이 전달본의 본문 16개 항목',{exact:true})).toBeVisible();
- await company.getByLabel('검토 의견·수정 요청사항',{exact:true}).fill('TEST company requests a revised integration scope.');await company.getByRole('button',{name:'제안서 수정 요청',exact:true}).click();await expect(company.getByRole('status')).toContainText('제안서 수정 요청을 기록했습니다.');
+ await company.getByLabel('검토 의견·수정 요청사항',{exact:true}).fill('TEST company requests a revised integration scope.');await company.getByRole('button',{name:'제안서 수정 요청',exact:true}).click();await expect(company.getByRole('status').filter({hasText:'제안서 수정 요청을 기록했습니다.'})).toContainText('제안서 수정 요청을 기록했습니다.');
  await company.reload();await expect(company.getByText(/수정 요청 전달 · TEST company requests/)).toBeVisible();
  const after=await(await page.request.get('/api/proposal/'+created.proposal_id)).json();expect(after.versions[0].id).toBe(created.version_id);expect(after.decisions[0].outcome).toBe('REVISION_REQUEST');expect(after.files).toHaveLength(2);await companyContext.close();
 });
