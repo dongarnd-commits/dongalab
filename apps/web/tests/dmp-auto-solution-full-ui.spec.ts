@@ -1,6 +1,7 @@
 import {readFile,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {test,expect,type Page} from '@playwright/test';
+import {openGlobalRequestList} from './operator-request-navigation';
 test.use({actionTimeout:30000});
 const data=()=>JSON.parse(process.env.DATCO_REACCEPTANCE_CONTEXT!);
 const origin=()=>process.env.DATCO_E2E_BASE_URL!;
@@ -70,6 +71,9 @@ test('fresh DMP full UI: zero published capabilities, verified assets, generated
   }
   // Only source inputs exist. Management and verification are explicit UI actions.
   const originalImport=await read(admin,'capability/features?limit=100');
+  expect(originalImport.scope).toBe('CURRENT_CATALOG');
+  const originalImportPath='capability/features?limit=100&import_id='+encodeURIComponent(originalImport.import.id);
+  const originalSnapshot=await read(admin,originalImportPath);expect(originalSnapshot.scope).toBe('IMPORT');expect(originalSnapshot.total).toBe(2);expect(originalSnapshot.import).toEqual(originalImport.import);expect(originalSnapshot.items).toEqual(originalImport.items);
   expect(originalImport.total).toBe(2);expect((await read(admin,'capability/catalog')).length).toBe(0);
   const capabilityWrites:string[]=[];admin.on('request',r=>{if(r.method()==='POST'&&new URL(r.url()).pathname.startsWith('/api/capability/catalog'))capabilityWrites.push(r.url());});
   await admin.getByRole('navigation',{name:'관리자 메뉴'}).getByRole('button',{name:'기준정보·버전',exact:true}).click();
@@ -118,8 +122,8 @@ test('fresh DMP full UI: zero published capabilities, verified assets, generated
   }
   expect((await read(admin,'admin/overview')).published_capabilities).toBe(0);
   expect(await read(admin,'capability/catalog')).toEqual([]);expect(capabilityWrites).toEqual([]);
-  const preservedImport=await read(admin,'capability/features?limit=100');
-  expect(preservedImport.import).toEqual(originalImport.import);expect(preservedImport.items).toEqual(originalImport.items);
+  const preservedImport=await read(admin,originalImportPath);
+  expect(preservedImport).toEqual(originalSnapshot);
   console.log('ASSET_FULL_UI_STAGE: verified_assets_zero_capabilities');
   await menu(company,'개선요구 등록');await company.getByRole('button',{name:'새 개선요구 작성',exact:true}).click();
   const asIs='창고 입출고 내역을 엑셀과 수기로 관리하고, 재고 수량이 실제 재고와 일치하지 않는 경우가 발생합니다.';
@@ -171,7 +175,7 @@ test('fresh DMP full UI: zero published capabilities, verified assets, generated
   await reply.getByLabel('보완 답변',{exact:true}).fill('적용 범위: 본사 창고 1개 사업장의 입고·출고와 재고 조회입니다.\n현재 재고 불일치는 월말 실사로 측정하며 오차율은 8%입니다.\n기존 시스템: 엑셀과 수기 기록입니다. 예산은 미정입니다.');
   const responded=company.waitForResponse(r=>r.url().endsWith('/information-requests/'+request.id+'/responses')&&r.request().method()==='POST');
   await reply.getByRole('button',{name:'보완답변 제출',exact:true}).click();expect((await responded).ok()).toBe(true);
-  await menu(operator,'보완자료 요청');await operator.locator('tr[data-request-id="'+request.id+'"]').getByRole('button',{name:'기업 답변 검토',exact:true}).click();
+  await openGlobalRequestList(operator,cid,v1.id);await operator.locator('tr[data-request-id="'+request.id+'"]').getByRole('button',{name:'기업 답변 검토',exact:true}).click();
   const reviewReply=operator.getByRole('region',{name:'운영자 답변 판단',exact:true});
   await reviewReply.getByLabel('확인 또는 재보완 사유',{exact:true}).fill('TEST 같은 기업·제출본의 답변을 확인했습니다. 기업정보 자동 확정은 하지 않습니다.');
   const verified=operator.waitForResponse(r=>r.url().endsWith('/information-requests/'+request.id+'/review')&&r.request().method()==='POST');
@@ -385,7 +389,7 @@ test('fresh DMP full UI: zero published capabilities, verified assets, generated
    for(const originalFeature of assetFeatures){const current=await read(admin,'capability/assets/'+originalFeature.id);await adminCommand('/assets/'+originalFeature.id+'/versions',{data:{...current.current.data,availability_evidence:'TEST explicitly rebased to the new synthetic parent release.'},expected_version:current.current.version_id,idempotency_key:crypto.randomUUID()});}
    featureB=await adminCommand('/assets',{kind:'FEATURE',parent_id:moduleB.id,data:riskData(featureBName),idempotency_key:crypto.randomUUID()});
    featureC=await adminCommand('/assets',{kind:'FEATURE',parent_id:moduleC.id,data:riskData(featureCName),idempotency_key:crypto.randomUUID()});
-   const unchanged=await read(admin,'capability/features?limit=100');expect(unchanged.import).toEqual(originalImport.import);expect(unchanged.items.filter((item:{id:string})=>originalImport.items.some((original:{id:string})=>original.id===item.id))).toEqual(originalImport.items);
+   const unchanged=await read(admin,originalImportPath);expect(unchanged).toEqual(originalSnapshot);
   });
   let riskRun:typeof generated,riskReviewUrl='';
   await test.step('same-Run single alternative accepts a second module as an unverified draft',async()=>{
