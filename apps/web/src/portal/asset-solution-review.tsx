@@ -1,3 +1,4 @@
+import {usePortalWorkState} from './portal-work-state';
 import {PortalErrorMessage,PortalReasonCodes,portalReasonText} from './portal-feedback';
 import {useEffect,useRef,useState} from 'react';
 import {portalApi} from './admin-live';
@@ -38,6 +39,7 @@ export function AssetSolutionReview({cid,vid,onDirty,onNext,refresh}:{cid:string
  const run=runs.find(r=>r.id===runId),alternative=run?.data.alternatives.find(a=>a.id===alternativeId);
  const dirty=!!form&&(JSON.stringify(form)!==baseline||!!note.trim()||reviewed);
  useMvpDirty(onDirty,dirty);
+ usePortalWorkState({busy});
  const persist=(key:string,value:string)=>{const u=new URL(window.location.href);if(value)u.searchParams.set(key,value);else u.searchParams.delete(key);window.history.replaceState({},'',u);};
  const canLeave=()=>!dirty||window.confirm('저장하지 않은 추천안 검토 내용을 버리고 이동할까요?');
  async function perform(work:()=>Promise<void>){if(gate.current)return;gate.current=true;setBusy(true);setError('');setMessage('');try{await work();}catch(e){setError(e instanceof Error?e:'처리 결과를 확인하지 못했습니다. 저장 여부를 다시 조회하세요.');}finally{gate.current=false;setBusy(false);}}

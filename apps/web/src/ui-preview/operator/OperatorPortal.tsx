@@ -1,4 +1,6 @@
 "use client";
+import {PreviewExitProvider,usePreviewExit} from '../../portal/preview-exit';
+import {usePortalWorkState} from '../../portal/portal-work-state';
 import {OperatorBusinessScreen} from "../../portal/operator-business";
 import {BusinessMessages} from "../../portal/business-ui";
 import {BusinessContextBar,ContextReadout} from "../../portal/context";
@@ -13,6 +15,7 @@ import React, { useMemo, useState } from "react";
 import { AlertCircle, ArrowRight, BriefcaseBusiness, Building2, CalendarClock, Check, CheckCircle2, ChevronDown, ChevronRight, ClipboardCheck, ClipboardList, Download, FileCheck2, FileClock, FileSearch, FileText, FileWarning, FolderOpen, Layers3, LayoutDashboard, LockKeyhole, LogOut, Menu, MessageSquareText, Plus, RefreshCw, Search, Send, ShieldCheck, Sparkles, Workflow, X } from "lucide-react";
 import type {PortalProps} from "../../portal/types";
 import "./operator-portal.css";
+import "../../portal/portal-menu.css";
 
 type Page =
   | "dashboard" | "companies" | "workspace" | "facts" | "improvement"
@@ -97,7 +100,9 @@ function SectionTitle({ title, sub, action }: { title: string; sub?: string; act
   return <div className="op-section-head"><div><h2>{title}</h2>{sub && <p>{sub}</p>}</div>{action}</div>;
 }
 
-export default function OperatorPortal({session,onLogout,business,workflow,examples=[]}:PortalProps & {examples?:Company[]}) {
+type OperatorPortalProps=PortalProps & {examples?:Company[]};
+export default function OperatorPortal(props:OperatorPortalProps){return props.session?<OperatorPortalView {...props}/>:<PreviewExitProvider><OperatorPortalView {...props}/></PreviewExitProvider>;}
+function OperatorPortalView({session,onLogout,business,workflow,examples=[]}:OperatorPortalProps) {
   const authenticated=!!session;
   const [signedIn, setSignedIn] = useState(!!session);
   const [page, setPage] = useState<Page>("dashboard");
@@ -120,7 +125,10 @@ export default function OperatorPortal({session,onLogout,business,workflow,examp
   const [selectedGrant, setSelectedGrant] = useState<Record<string, string>>({ "COMP-002": "GR-003" });
   const [editedImprovement, setEditedImprovement] = useState<Record<string, string>>({});
   const [proposalEditor, setProposalEditor] = useState<Record<string, string>>({});
-  const [showLogout, setShowLogout] = useState(false);
+  const requestPreviewExit=usePreviewExit();
+  const [requestBaseline,setRequestBaseline]=useState('사업장·지원자격 확인에 필요한 추가자료를 제출해 주세요.');
+  const previewRecord=(key:string)=>{const [company,site,task]=key.split(':');const base=records.find(r=>r.id===company);return contextRecords[key]??(base?contextExample(base,Number(site),Number(task)):null);};
+  usePortalWorkState({dirty:!authenticated&&(newRequest!==requestBaseline||Object.entries(editedImprovement).some(([key,value])=>value!==(previewRecord(key)?.improvement.tobe??''))||Object.entries(proposalEditor).some(([key,value])=>value!==(previewRecord(key)?.proposal.body??'')))});
   const baseCompany = records.find((r) => r.id === selectedId) ?? records[0];
   const contextKey = `${baseCompany?.id ?? "empty"}:${siteIndex}:${taskIndex}`;
   const current = contextRecords[contextKey] ?? (baseCompany ? contextExample(baseCompany, siteIndex, taskIndex) : EMPTY_COMPANY);
@@ -145,11 +153,11 @@ export default function OperatorPortal({session,onLogout,business,workflow,examp
   }), [query, records, companyFilter]);
 
   const notify = (message: string) => setToast(message);
-  const navigate = (next: Page) => { setPage(next); setToast(""); setMobileNav(false); setShowLogout(false); };
-  const chooseCompany = (companyId: string, next: Page = "workspace") => { setSelectedId(companyId); setSiteIndex(0); setTaskIndex(0); setSelectedEvidence(null); setNewRequest(""); navigate(next); };
+  const navigate = (next: Page) => { setPage(next); setToast(""); setMobileNav(false); };
+  const chooseCompany = (companyId: string, next: Page = "workspace") => { setSelectedId(companyId); setSiteIndex(0); setTaskIndex(0); setSelectedEvidence(null); setNewRequest("");setRequestBaseline("");setRequestBaseline(""); navigate(next); };
   const updateCompany = (fn: (c: Company) => Company) => setContextRecords((prev) => ({ ...prev, [contextKey]: fn(current) }));
   const logAction = (type: string, text: string) => setAudit((prev) => [{ id: idGen("LOG"), companyId: contextKey, at: today(), type, text }, ...prev]);
-  const logOut = () => { if(authenticated){onLogout?.();return;} setSignedIn(false); setShowLogout(false); clearExamples(); };
+  const logOut = () => { if(authenticated){onLogout?.();return;} setEditedImprovement({});setProposalEditor({});setNewRequest(requestBaseline);setSignedIn(false); };
   const openRequest = () => { setRequestReturn(page); navigate("requests"); };
   const reviewFact = (id: string, status: FactStatus) => {
     updateCompany((c) => ({ ...c, facts: c.facts.map((f) => f.id === id ? { ...f, status, actor: "DATCO 운영자 · 화면 검토 예시" } : f) }));
@@ -175,6 +183,7 @@ export default function OperatorPortal({session,onLogout,business,workflow,examp
     if (!newRequest.trim()) { notify("요청할 자료나 확인사항을 입력해 주세요."); return; }
     setRequests((prev) => [{ id: idGen("REQ"), companyId: contextKey, text: newRequest.trim(), status: "작성", at: today() }, ...prev]);
     logAction("자료 보완", "기업 보완 요청 문안 작성 (외부 전송 없음)");
+    setRequestBaseline(newRequest);
     notify("자료보완 요청이 시연 화면의 요청함에 작성되었습니다. 수요기업에게 전송되지 않았습니다.");
   };
   const reviewMatch = () => {
@@ -239,15 +248,15 @@ export default function OperatorPortal({session,onLogout,business,workflow,examp
   if (!signedIn) return <div className="datco-operator op-login"><div className="op-login-brand"><div className="op-logo"><Layers3 size={25}/><strong>DATCO ONE</strong></div><div className="op-brand-message"><h1>기업의 문제부터<br/>실행 가능한 제안까지.</h1><p>운영자 업무 포털 · 개발 전용 화면 미리보기</p></div></div><div className="op-login-pane"><div className="op-login-card"><h2>운영자 UI 미리보기</h2><p>실제 로그인·인증 없이 화면만 시연합니다.</p><button className="op-btn op-btn-primary" onClick={() => setSignedIn(true)}>미리보기 진입 <ArrowRight size={16}/></button></div></div></div>;
 
   return (
-    <div data-testid={business?"operator-business-context":undefined} data-company-id={business?.state.value?.company.id??''} data-site-id={business?.state.value?.selection.site_id??''} data-improvement-id={business?.state.value?.selection.improvement_id??''} data-version-id={business?.state.value?.selection.improvement_version_id??''} className="datco-operator op-shell">
+    <div data-testid={business?"operator-business-context":undefined} data-company-id={business?.state.value?.company.id??''} data-site-id={business?.state.value?.selection.site_id??''} data-improvement-id={business?.state.value?.selection.improvement_id??''} data-version-id={business?.state.value?.selection.improvement_version_id??''} className="datco-operator op-shell portal-layout">
       {mobileNav && <div className="op-mobile-overlay" onClick={() => setMobileNav(false)} />}
       <aside className={`op-sidebar ${mobileNav ? "open" : ""}`}>
         <div className="op-side-logo"><div className="op-logo-mark"><Layers3 size={20}/></div><div><strong>DATCO <em>ONE</em></strong><span>운영자 업무 포털</span></div><button onClick={() => setMobileNav(false)} className="op-close-side" aria-label="메뉴 닫기"><X size={17}/></button></div>
         <nav aria-label="운영자 업무 메뉴" className="op-side-nav">{links.map((section) => <div key={section.section} className="op-menu-section"><div className="op-menu-head">{section.section}</div>{section.pages.map(({ id, name, Icon }) => <button key={id} type="button" className={`op-menu-item ${page === id ? "active" : ""}`} onClick={() => navigate(id)}><Icon size={17}/><span>{name}</span>{page === id && <span className="op-nav-dot"/>}</button>)}</div>)}</nav>
-        <div className="op-side-bottom"><div className="op-security"><ShieldCheck size={18}/><div><strong>검토 기반 운영</strong><span>권한·원본·버전 확인</span></div></div><div className="op-user"><div className="op-avatar">운</div><div><strong>{session?.name??"DATCO 운영자"}</strong><span>{session?.role??"업무 검토 계정"}</span></div><button type="button" aria-label="로그아웃" title="로그아웃" onClick={() => setShowLogout(true)}><LogOut size={17}/></button></div></div>
+        <div className="op-side-bottom"><div className="op-security"><ShieldCheck size={18}/><div><strong>검토 기반 운영</strong><span>권한·원본·버전 확인</span></div></div><div className="op-user"><div className="op-avatar">운</div><div><strong>{session?.name??"DATCO 운영자"}</strong><span>{session?.role??"업무 검토 계정"}</span></div></div></div>
       </aside>
       <div className="op-app-body">
-        <header className="op-topbar"><div className="op-top-left"><button className="op-menu-toggle" aria-label="메뉴 열기" onClick={() => setMobileNav(true)}><Menu size={20}/></button><span>운영자 포털</span><ChevronRight size={14}/><b>{links.flatMap((s) => s.pages).find((p) => p.id === page)?.name}</b></div><div className="op-top-right">{!authenticated&&<div className="op-company-context"><Building2 size={15}/><select aria-label="업무 대상 기업 변경" value={selectedId} onChange={(e) => chooseCompany(e.target.value, "workspace")}>{records.map((c) => <option value={c.id} key={c.id}>{c.name}</option>)}</select><ChevronDown size={14}/></div>}<span className="op-top-sep"/><button aria-label="로그아웃" className="op-top-logout" onClick={() => setShowLogout(true)}><LogOut size={16}/><span>로그아웃</span></button></div></header>
+        <header className="op-topbar"><div className="op-top-left"><button className="op-menu-toggle" aria-label="메뉴 열기" onClick={() => setMobileNav(true)}><Menu size={20}/></button><span>운영자 포털</span><ChevronRight size={14}/><b>{links.flatMap((s) => s.pages).find((p) => p.id === page)?.name}</b></div><div className="op-top-right">{!authenticated&&<div className="op-company-context"><Building2 size={15}/><select aria-label="업무 대상 기업 변경" value={selectedId} onChange={(e) => chooseCompany(e.target.value, "workspace")}>{records.map((c) => <option value={c.id} key={c.id}>{c.name}</option>)}</select><ChevronDown size={14}/></div>}<span className="op-top-sep"/><button aria-label={authenticated?"로그아웃":"미리보기 종료"} className="op-top-logout" onClick={() => requestPreviewExit(logOut)}><LogOut size={16}/><span>{authenticated?'로그아웃':'미리보기 종료'}</span></button></div></header>
         <main className="op-main">{!authenticated&&<div className="op-preview-controls" role="region" aria-label="미리보기 제어"><strong>{records.length ? "예시 화면 보기 · 가상 데이터" : "빈 데이터 · 실제 DB 미연결"}</strong><button className="op-btn op-btn-outline" onClick={() => loadExamples(1)}>예시 화면 보기 · 기업 1개</button><button className="op-btn op-btn-outline" onClick={() => loadExamples(3)}>예시 화면 보기 · 여러 기업</button><button className="op-btn op-btn-outline" onClick={clearExamples}>예시 종료</button></div>}
           <div className="op-content">
             {business&&!workflow&&<BusinessContextBar business={business}/>}
@@ -341,7 +350,7 @@ export default function OperatorPortal({session,onLogout,business,workflow,examp
         </main>
       </div>
       {selectedEvidence && <div className="op-modal-mask" role="presentation" onClick={() => setSelectedEvidence(null)}><div className="op-modal" role="dialog" aria-modal="true" aria-label="증빙자료 확인" onClick={(e) => e.stopPropagation()}><div className="op-modal-top"><div><span>DOCUMENT EVIDENCE</span><h3>제출자료 근거 확인</h3></div><button aria-label="닫기" onClick={() => setSelectedEvidence(null)}><X size={20}/></button></div><div className="op-modal-content"><Meta label="파일명" value={selectedEvidence.name}/><Meta label="원본 위치" value={selectedEvidence.source}/><Meta label="문서 버전" value={`v${selectedEvidence.version}`}/><Meta label="업로드 일자" value={selectedEvidence.submittedAt}/><div className="op-evidence-quote"><span>문서 내용 발췌 (시연 Fixture)</span><p>{selectedEvidence.excerpt}</p></div><Explain>원본 파일 자체가 아니라 Fixture에 저장된 발췌문입니다. 실제 File Store·Private File API 미연동입니다.</Explain></div><div className="op-actions-row op-right"><button className="op-btn op-btn-primary" onClick={() => setSelectedEvidence(null)}>확인</button></div></div></div>}
-      {showLogout && <div className="op-modal-mask" role="presentation" onClick={() => setShowLogout(false)}><div className="op-confirm" role="dialog" aria-modal="true" aria-label="로그아웃 확인" onClick={(e) => e.stopPropagation()}><div className="op-confirm-icon"><LogOut size={23}/></div><h3>로그아웃하시겠습니까?</h3><p>{authenticated?"현재 서버 세션을 종료하고 로그인 화면으로 이동합니다.":"화면 체험 세션을 종료하고 로그인 화면으로 이동합니다. 입력한 시연 데이터는 같은 페이지 실행 중 메모리에만 보존됩니다."}</p><div className="op-actions-row op-right"><button className="op-btn op-btn-outline" onClick={() => setShowLogout(false)}>취소</button><button className="op-btn op-btn-primary" onClick={logOut}>로그아웃</button></div></div></div>}
+
     </div>
   );
 }

@@ -1,4 +1,6 @@
 'use client';
+import {usePreviewDiscard} from '../../portal/preview-exit';
+import {usePortalWorkState} from '../../portal/portal-work-state';
 import {PortalMenu} from '../../portal/portal-menu';
 import type {AdminCatalogRead} from "../../portal/admin";
 import type {PortalIdentity} from "../../portal/types";
@@ -73,6 +75,8 @@ export default function AdminControlCenter({session,catalogRead,onLogout,renderD
  const [mobile,setMobile]=useState(false);
  const [search,setSearch]=useState('');
  const [assignReason,setAssignReason]=useState('');
+ usePortalWorkState({dirty:!session&&!!assignReason});
+ usePreviewDiscard(()=>{if(!session)setAssignReason('');});
  const filter:Filter=useMemo(()=>({period,...(operatorFilter?{operatorId:operatorFilter}:{}),...(stageFilter?{stage:stageFilter}:{})}),[period,operatorFilter,stageFilter]);
  const snap=useMemo(()=>disconnectedSnapshot(filter),[filter]);
  const refresh=()=>{setOperatorFilter('');setStageFilter('');setSearch('')};

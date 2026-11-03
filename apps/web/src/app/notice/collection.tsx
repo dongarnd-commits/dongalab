@@ -1,5 +1,6 @@
 
 "use client";
+import {usePortalWorkState} from '../../portal/portal-work-state';
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { components } from "@/generated/api";
 import { Badge, Technical, dateLabel, errorLabel, modeLabel, record, stateLabel, text } from "./presentation";
@@ -20,6 +21,7 @@ export default function Collection({ onSelectNotice, demoContext }: { onSelectNo
   const [titles, setTitles] = useState<Record<string, string>>({});
   const [pending, setPending] = useState("");
   const [error, setError] = useState("");
+  usePortalWorkState({busy:!!pending});
   const generation = useRef(0);
   const reload = useCallback(async () => {
     const current = ++generation.current;

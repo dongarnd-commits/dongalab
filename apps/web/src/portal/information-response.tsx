@@ -1,3 +1,4 @@
+import {usePortalWorkState} from './portal-work-state';
 import {useRef,useState,useEffect} from 'react';
 import {CompanyError,uploadAccept} from '../company/client';
 import {FileSelection} from './file-selection';
@@ -18,6 +19,7 @@ export function InformationResponse({item,w,operator,load,command,onReviewed,exp
  const unchanged=!!latest&&answer.expected===item.response_ordinal&&latest.ordinal===item.response_ordinal&&answer.message===latest.message&&!answer.files.length&&sameIds(answer.fileIds,latest.file_ids);
  const changed=()=>window.dispatchEvent(new CustomEvent('datco-information-requests-changed',{detail:{company:w.cid}}));
  async function observe(){const rows=await load();const row=rows.find(r=>r.id===item.id);if(!row||row.company_id!==w.cid||row.improvement_version_id!==item.improvement_version_id)throw Error('요청 대상이 변경되었습니다.');return row;}
+ usePortalWorkState({dirty:operator?item.state==='REVIEW_REQUIRED'&&!!answer.message.trim():editable&&!unchanged&&(!!answer.message.trim()||answer.files.length>0||answer.fileIds.length>0),uncertain},w.session.id+':'+w.cid+':response:'+item.id);
  function work(fn:()=>Promise<void>,message=''){if(lock.current||w.busy)return;lock.current=true;void w.run(fn,message).finally(()=>{lock.current=false;});}
  async function check(){
   const row=await observe();if(!alive.current)return;

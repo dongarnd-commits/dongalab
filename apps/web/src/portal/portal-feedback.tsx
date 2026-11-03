@@ -1,5 +1,18 @@
 /** Business-facing messages; server reason codes remain available on demand. */
 const reasons:Record<string,string>={
+ STALE_WORKBOOK_PREVIEW:'기술자산이나 비교 기준이 변경됐습니다. 같은 Excel 파일을 다시 비교하고 등록 범위를 확인하세요.',
+ WORKBOOK_REVIEW_REQUIRED:'선택한 예외 항목의 기존 기능 연결 또는 별도 신규 등록을 확인하세요.',
+ WORKBOOK_NO_SUPPORTED_ROWS:'지원하는 표 항목을 읽지 못했습니다. 첫 행 헤더와 필수 셀, 수식·병합 지원 범위를 확인하세요.',
+ WORKBOOK_TARGET_NOT_FOUND:'연결할 기존 기능 ID를 찾지 못했습니다. 현재 기술자산 목록의 원천 ID를 확인하세요.',
+ WORKBOOK_DUPLICATE_TARGET:'여러 선택 행이 같은 기능을 변경하려 합니다. 확정할 행 하나를 선택하세요.',
+ INVALID_WORKBOOK_SELECTION:'등록 선택이 올바르지 않습니다. 비교 결과를 다시 확인하세요.',
+ WORKBOOK_FILENAME_INVALID:'경로가 없는 XLSX 파일 이름으로 다시 선택하세요.',
+ WORKBOOK_ROW_LIMIT:'한 번에 비교할 수 있는 표 범위를 초과했습니다. 5,000행 이하로 나누어 등록하세요.',
+ WORKBOOK_FORMAT_INVALID:'Excel 파일 구조를 읽지 못했습니다. 지원하는 XLSX 파일과 표인지 확인하세요.',
+ WORKBOOK_SHEET_NAME_INVALID:'이름이 비었거나 중복된 시트가 있습니다. Excel에서 시트 이름을 구분해 다시 저장해 주세요.',
+ WORKBOOK_DUPLICATE_HEADER:'같은 필드 헤더가 반복됩니다. 첫 행에 필드별 헤더 하나만 두세요.',
+ WORKBOOK_BATCH_ALREADY_APPLIED:'이미 반영한 등록 범위입니다. 같은 파일을 다시 비교해 현재 상태를 확인하세요.',
+
  AVAILABILITY_EVIDENCE_REQUIRED:'제공 확인을 완료하려면 실제 확인 근거가 필요합니다.',
  RELATION_EVIDENCE_REQUIRED:'연계를 확인했다면 확인 근거를 남겨 주세요.',
  ASSET_ALREADY_MANAGED:'이미 관리 등록된 기능입니다. 상세에서 새 버전을 작성하세요.',
@@ -34,11 +47,20 @@ const reasons:Record<string,string>={
 };
 export const portalReasonText=(code:string,fallback='요청을 처리하지 못했습니다. 저장 여부를 다시 확인하고 오류 정보를 담당자에게 알려 주세요.')=>reasons[code]??fallback;
 export class PortalRequestError extends Error{
- constructor(readonly code:string){super(portalReasonText(code));this.name='PortalRequestError';}
+ constructor(readonly code:string,readonly status?:number){super(portalReasonText(code));this.name='PortalRequestError';}
 }
 export function PortalErrorMessage({error}:{error:string|Error}){
  return <div role="alert"><p>{error instanceof Error?error.message:error}</p>{error instanceof PortalRequestError&&<details><summary>담당자 확인용 오류 정보</summary><code>{error.code}</code></details>}</div>;
 }
 export function PortalReasonCodes({codes}:{codes:string[]}){
  return <details><summary>변경·차단 사유의 상세 기록</summary><ul>{codes.map((code,index)=><li key={index}><code>{code}</code></li>)}</ul></details>;
+}
+
+export function portalResolutionText(code:string){
+ if(code==='MATCH_NOT_PROPOSABLE')return '매칭·자격 검토에서 각 항목의 근거와 의견을 저장하고 제안 가능 판단을 확인하세요.';
+ if(code==='ANALYSIS_REVIEW_REQUIRED'||code==='LEGACY_ANALYSIS_REQUIRES_REANALYSIS')return '개선요구 검토에서 정확한 제출본의 분석·활용 검토 기록을 확인하세요.';
+ if(code==='STALE_INPUT_VERSION'||code==='COMPANY_INPUT_CHANGED'||code==='TARGET_VERSION_MISMATCH')return '대상·업무 다시 조회에서 정확한 입력을 확인하고, 현재 Version으로 전환하려면 명시 선택하세요.';
+ if(code.startsWith('ASSET_')||code.startsWith('UNVERIFIED_ASSET_'))return '서비스 조합 검토에서 제공·선행·연계 근거를 확인하세요. 전역 기술자산의 제공검증은 관리자에게 요청하세요.';
+ if(code==='MISSING_REQUIRED_INFORMATION')return '개선요구 공식 검토·확정과 매칭·자격 검토의 남은 확인사항·근거를 보완하세요. 기업 답변이 필요하면 보완자료 요청을 작성하세요.';
+ return '상세 차단 기록의 대상을 확인하고 해당 원문·검토 화면에서 근거를 다시 확인하세요. 미확인 조건을 충족으로 바꾸지 마세요.';
 }

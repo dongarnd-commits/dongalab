@@ -1,3 +1,4 @@
+import {usePortalWorkState} from './portal-work-state';
 import {FileSelection} from './file-selection';
 import {useEffect,useState} from 'react';
 import {BusinessEditor} from './company-editor';
@@ -19,6 +20,7 @@ export function CompanyFinance({w}:{w:CompanyWorkflow}){
  const section=(kind:Kind)=>kind==='finance'?'financials':'history';
  const initialRows=draft.initialRows??rowsFingerprint(draft.kind?w.detail!.inputs.find(version=>version.ordinal===draft.expected)?.data[section(draft.kind)]??[]:[]);
  const dirty=!!draft.kind&&(draft.files.length>0||draft.form&&(rowsFingerprint(p[section(draft.kind)])!==initialRows||(draft.reviewIndices?.length??0)>0));
+ usePortalWorkState({dirty},w.session.id+':'+w.cid+':finance-v14');
  useEffect(()=>{if(!dirty)return;const warn=(event:BeforeUnloadEvent)=>{event.preventDefault();event.returnValue='';};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[dirty]);
  function close(){if(dirty&&!window.confirm('저장하지 않은 '+(draft.kind==='finance'?'재무정보':'수행이력')+' 작성을 버리고 닫을까요?'))return;setDraft({...draft,kind:null,files:[],form:false,reviewIndices:[]});setError('');setInfo('');}
 

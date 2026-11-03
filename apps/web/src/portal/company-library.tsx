@@ -1,3 +1,4 @@
+import {usePortalWorkState} from './portal-work-state';
 import {useEffect,useState} from 'react';
 import {FileSelection} from './file-selection';
 import {companyRequest,uploadAccept,maxUpload} from '../company/client';
@@ -30,6 +31,7 @@ async function replaceFile(w:CompanyWorkflow,file:CompanyData['files'][number],s
 }
 export function CompanyLibrary({w}:{w:CompanyWorkflow}){
  const [draft,setDraft]=useBusinessDraft<Record<string,File>>(w,'library-replacements',()=>({}));
+ usePortalWorkState({dirty:Object.keys(draft).length>0},w.session.id+':'+w.cid+':library-replacements');
  const [selectionError,setSelectionError]=useState<Record<string,string>>({});
  const context=w.session.id+':'+w.cid;
  const [responseLinks,setResponseLinks]=useState<{context:string;items:InformationItem[]|null;error:boolean}>(()=>({context,items:null,error:false}));

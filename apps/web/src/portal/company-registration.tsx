@@ -1,3 +1,4 @@
+import {usePortalWorkState} from './portal-work-state';
 import {FileSelection} from './file-selection';
 import {useState,useRef,useEffect} from 'react';
 import type {CompanyWorkflow} from './workflow';
@@ -20,6 +21,7 @@ export function InitialRegistration({w,goto}:{w:CompanyWorkflow;goto:(s:string)=
  const request=useRef<AbortController|null>(null),continuing=useRef(false);useEffect(()=>()=>request.current?.abort(),[]);
  const [draft,setState]=useState<Draft>(()=>w.drafts.get('initial-registration') as Draft??blank()),[busy,setBusy]=useState(false);
  const update=(patch:Partial<Draft>)=>{const next={...(w.drafts.get('initial-registration') as Draft??draft),...patch};w.drafts.set('initial-registration',next);setState(next);return next;};
+ usePortalWorkState({dirty:draft.created?draft.documents.some(d=>!d.fileId)||!!draft.address&&!draft.siteId:draft.documents.length>0||JSON.stringify(draft.profile)!==JSON.stringify(emptyProfile)||!!draft.address||!!draft.businessType||!!draft.businessItems,busy:busy||draft.saving},w.session.id+':initial-registration');
  const setProfile=(patch:Partial<Profile>)=>update({profile:{...draft.profile,...patch}});
  function add(files:File[]){if(files.length+draft.documents.length>2||files.some(f=>!f.size||f.size>20*1024*1024||!f.name.toLowerCase().endsWith('.pdf'))){update({error:'PDF를 최대 2개, 파일당 20MB 이하로 선택해 주세요.'});return;}update({documents:[...draft.documents,...files.map(file=>({file,candidates:[],locations:[],error:''}))],error:''});}
  async function analyze(){

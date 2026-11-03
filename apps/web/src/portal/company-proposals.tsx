@@ -1,3 +1,4 @@
+import {usePortalWorkState} from './portal-work-state';
 import {useEffect,useRef,useState} from 'react';
 import type {CompanyWorkflow} from './workflow';
 import {storeAttachment} from './company-attachments';
@@ -45,6 +46,7 @@ export function CompanyProposals({w}:{w:CompanyWorkflow}){
 }
 function ProposalContents({active,w,reload}:{active:Proposal;w:CompanyWorkflow;reload:()=>Promise<void>}){
  const [draft,setDraft]=useBusinessDraft(w,'proposal-authorization:'+active.version_id,()=>({name:'',title:'',time:'',method:'ORAL',context:'',file:null as File|null,reason:'',confirmed:false}));
+ usePortalWorkState({dirty:active.approval.state==='OPEN'&&(!!draft.name||!!draft.title||!!draft.time||!!draft.context||!!draft.file||!!draft.reason||draft.confirmed)},w.session.id+':'+w.cid+':proposal-authorization:'+active.version_id);
  const record=active.approval.state==='OPEN'&&active.approval.mode==='COMPANY_RECORDED_AUTHORIZATION'&&w.session.role==='COMPANY_EDITOR';
  return <BusinessCard title={active.title+' · 전달본 '+active.ordinal}><div className="space-y-6"><p>이 전달본의 본문 {active.sections.length}개 항목</p>{active.sections.map((section,index)=><section key={index}><h3 className="font-bold">{section.heading}</h3><p className="whitespace-pre-wrap">{section.body}</p></section>)}</div>
  {active.approval.closure_reason==='SUPERSEDED'&&<p className="my-4">이전 전달본입니다. 현재 검토할 제안서는 목록에서 최신 전달본을 확인해 주세요.</p>}

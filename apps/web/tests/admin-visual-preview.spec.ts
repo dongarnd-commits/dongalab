@@ -66,3 +66,10 @@ test('control tower chart skeletons navigation filters assignment and measuremen
  await page.screenshot({path:info.outputPath('AI-unmeasured.png'),fullPage:true});
  await page.getByRole('button',{name:'관리 홈',exact:true}).focus();await page.keyboard.press('Enter');await expect(page.locator('.da-page-heading h1')).toHaveText('통합 운영 관제');
 });
+
+
+test('preview administrator uses common draft exit while reflected memo is clean',async({page})=>{
+ const calls:string[]=[];page.on('request',r=>{if(new URL(r.url()).pathname.startsWith('/api/'))calls.push(r.url());});await enter(page);await menu(page,9);const field=page.getByLabel('검토 메모',{exact:true}),exit=page.getByRole('button',{name:'미리보기 종료',exact:true}),dialog=page.getByRole('dialog',{name:'반영하지 않은 미리보기 변경사항이 있습니다',exact:true});await field.fill('TEST unsaved memo');await exit.click();await expect(dialog.getByRole('button',{name:'계속 작성',exact:true})).toBeFocused();await dialog.getByRole('button',{name:'계속 작성',exact:true}).click();await expect(field).toHaveValue('TEST unsaved memo');await field.fill('');await exit.click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('button',{name:'미리보기 시작',exact:true})).toBeVisible();
+ await enter(page);await menu(page,9);await field.fill('TEST reflected memo');await page.getByRole('button',{name:'메모 저장 (화면)',exact:true}).click();await exit.click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('button',{name:'미리보기 시작',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'미리보기 시작',exact:true}).click();await expect(field).toHaveValue('TEST reflected memo');await field.fill('TEST discard memo');await exit.click();await dialog.getByRole('button',{name:'변경을 버리고 미리보기 종료',exact:true}).click();await expect(page.getByRole('button',{name:'미리보기 시작',exact:true})).toBeVisible();await page.getByRole('button',{name:'미리보기 시작',exact:true}).click();await expect(field).toHaveValue('TEST reflected memo');await expect(field).not.toHaveValue('TEST discard memo');expect(calls).toEqual([]);expect(await page.context().cookies()).toEqual([]);
+});

@@ -40,7 +40,7 @@ for(const role of ['editor','operator','admin'] as const)test('Slice0a real logi
  await expect(nav).toBeVisible();await page.screenshot({path:test.info().outputPath('authenticated-'+role+'.png'),fullPage:true});
  expect(writes).toEqual([]);
  await page.getByRole('button',{name:'로그아웃',exact:true}).first().click();
- if(role==='operator')await page.getByRole('dialog',{name:'로그아웃 확인'}).getByRole('button',{name:'로그아웃',exact:true}).click();
+ await expect(page.getByRole('dialog',{name:'저장하지 않은 변경사항이 있습니다',exact:true})).toHaveCount(0);
  await expect(page).toHaveURL(/\/login$/);expect((await page.request.get('/api/notice/session')).status()).toBe(401);
  expect((await page.request.get(paths[role],{maxRedirects:0})).status()).toBe(303);
  await page.goBack();await expect(page).not.toHaveURL(new RegExp(paths[role]));await expect(page.getByText(context().accounts[role],{exact:true})).toHaveCount(0);

@@ -282,8 +282,8 @@ test('three real portals keep desktop width, mobile keyboard menus and one logou
    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
    await expect(page.getByRole('button',{name:'로그아웃',exact:true})).toHaveCount(1);
    await page.getByRole('button',{name:'로그아웃',exact:true}).click();
-   const confirmation=page.getByRole('dialog',{name:'로그아웃 확인',exact:true});
-   if(await confirmation.isVisible())await confirmation.getByRole('button',{name:'로그아웃',exact:true}).click();
+   const confirmation=page.getByRole('dialog',{name:'저장하지 않은 변경사항이 있습니다',exact:true});
+   if(await confirmation.isVisible())await confirmation.getByRole('button',{name:'변경을 버리고 로그아웃',exact:true}).click();
    await expect(page).toHaveURL(/\/login$/);
    expect((await page.request.get('/api/notice/session')).status()).toBe(401);
   }finally{await context.close();}
