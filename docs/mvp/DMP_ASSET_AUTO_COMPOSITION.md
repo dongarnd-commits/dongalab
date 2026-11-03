@@ -245,7 +245,7 @@ ESLint9.39.5는 [공식 지원 정책](https://eslint.org/version-support/)상 2
 
 | 항목 | 구분·현재 확인 범위 | 한 번에 결정할 제안값·최소 후속 조치 |
 | --- | --- | --- |
-| 적용 버전·시점 | **사용자 결정 필요 / 기술 조치 필요**. 이번 수정은 새 브랜치/PR20의 미배포 결과다. 기존18445는725987f 유지. 기존725는 workbook JSON reader와 opt-in owner 계약이 없어 새 전환 도구가 거부한다 | 최종 PR Commit과 적용 창을 결정하되 호환 이전 실행물·현재 START/owner 계약의 별도 검토 가능한 정합화가 먼저다. 문서2개·원본 manifest/실행물·DB/files/계정/TLS를 보존한다. 준비 완료 전 현재 환경은 중지하지 않는다 |
+| 적용 버전·시점 | **사용자 결정 필요**. 제품은 PR20 `04dfea4ee9d2521ba632c430c2218463df5df63c`로 고정, 기존18445는725 유지. 별도 owner adapter·불변04 Web 실행물과 검증된 이전9b 호환 복귀 경로를 준비했다. 적용 승인은 여전히 PENDING이며 아래 집중시험 근거와 중단조건을 함께 본다 | 입력·업로드·작업을 멈출 전환 창과 담당자를 한 번 결정한다. 정확 owner/plan digest·제품04·복귀9b8d0e0·승인 action/유효기간을 결합한 별도 적용 결정 후 기술 담당자가 실행한다. 문서2개·원본 manifest/HEAD·DB/files/계정/TLS는 유지한다. 실제자료 승인은 이 결정과 별개다 |
 | 평가 자료·입력 | **사용자 결정 필요**, 실제자료 미사용은 **확인 완료** | 사용자가 고른 최소 자료와 문제·목표1건. 필요한 개인식별·계좌·서명 외 민감항목을 가린 평가용 사본을 사용자가 제품에 직접 입력한다. Codex 대화·도구 출력·Git·CI Fixture에는 전달하지 않는다 |
 | 재무자료 | **사용자 결정 필요**.2개 연도를 필수로 하는 평가 정책은 없음 | 평가에 필요한 연도만 선택한다. 불필요한 연도/전체 자료의 재입력을 요구하지 않는다 |
 | 실제 검수자·접근범위 | **사용자 결정 필요 / 기술 조치 필요**. 기존 TEST 역할은 시험용이며 개인 계정으로 자동 전환하지 않음 | 회사 담당자·DATCO 운영자·필요 승인자·자산 관리자 실명/역할과 회사 Scope를 지정한다. 승인 후 개인별 고유 자격 발급/만료·회수 방법을 정한다. 새 Role·관리자의 기업 승인 권한 확대는 이번 범위에 없음 |
@@ -405,7 +405,7 @@ Windows I/O 보완 후 동일 비민감 소스의 full manifest snapshot→새 e
 
 Windows 파일 I/O 관련 순수 회귀는103 PASS/0 SKIP이며 실제260자 초과 경로·artifact root·sidecar·복사·기록 identity·기존 junction/link 차단과 fixed build 옵션/실패 시 next-env 원복을 포함한다. 초기 timeout, build 변이 차단, 긴 경로 복사 실패를 없었던 일로 만들지 않고 앞선 보호 로그와 새 회차를 구분했다. 추가 private checker의 소스/합성 guard 검토는 실제 실행 PASS와 별도다.
 
-**실제18445 적용은 미실행이며 현재 수단으로 바로 실행할 수 없다.** 도구는 보호 포트18445/8443/8444를 거부하고 기존725에는 opt-in owner 계약과 새 workbook JSON reader가 없다. 현재725를 새 자료의 무조건적인 fallback으로 사용하지 않는다. 실제 적용 전 단일 결정표의 정확 Commit/시각과 함께, 호환 이전 실행물·원래 data-owner/START 계약을 보존 문서2개·manifest 변경 없이 정합화할 별도 검토 가능한 절차를 확정해야 한다. 이 조건이 없으면 적용을 보류한다. 일반 START·manifest·HEAD·상태 파일을 고치거나 문서를 지워 가드를 우회하지 않는다. 새 source에서 저장한 자료를 옛 DB로 되감는 복귀는 허용하지 않는다.
+**PR20 완료 당시(아래 후속 인계 준비 전) 실제18445 적용은 미실행이며 당시 수단으로 바로 실행할 수 없었다.** 도구는 보호 포트18445/8443/8444를 거부하고 기존725에는 opt-in owner 계약과 새 workbook JSON reader가 없다. 현재725를 새 자료의 무조건적인 fallback으로 사용하지 않는다. 실제 적용 전 단일 결정표의 정확 Commit/시각과 함께, 호환 이전 실행물·원래 data-owner/START 계약을 보존 문서2개·manifest 변경 없이 정합화할 별도 검토 가능한 절차를 확정해야 한다. 이 조건이 없으면 적용을 보류한다. 일반 START·manifest·HEAD·상태 파일을 고치거나 문서를 지워 가드를 우회하지 않는다. 새 source에서 저장한 자료를 옛 DB로 되감는 복귀는 허용하지 않는다.
 
 실제 기존 검수환경은 최종 격리 점검에서 익명 login200(31ms), 공개 nonce9ca49b473812/HEAD725987f4a375d4f77028e35361e4fcdb05aac4ee, 알려진5프로세스의 기존 cwd, 보존 문서2개 SHA 일치를 확인했다. 원래 dirty 상태도 유지했다. 기존 DB 내용·기업자료·계정/세션을 열거나 자동 로그인/주입하지 않았으므로 이 점검을 현재 실기업 자료의 전수 보존 검증이라고 부르지 않는다. Docker/WSL 재시작·기존8443/8444·백업·보안/권한 설정 변경은 하지 않았다. 보호 근거는 quality-20261103/isolation.json이다.
 
@@ -420,11 +420,11 @@ Windows 파일 I/O 관련 순수 회귀는103 PASS/0 SKIP이며 실제260자 초
 b47725a의 test-only 준비를 적용한 뒤 같은 관련 경로를 순차 실행해 Fresh 전체3 PASS/1.9분(ci/1회 신규 독립 시험의 reacceptance-quality-full-final.log), 자동 DMP 전체1 PASS/2.7분(ci/fe3211409ddc, asset-solutions-quality-full-final.log)을 확인했다. 전자는 등록/OCR·재무·요구/답변·단독/복합·공고/매칭·16절 DOCX/PDF·기업 수정 요청, 후자는0발행 Catalog·관리자 제공 확인·자동 추천/구성·실제 전달과 이후 선택변경 연계 Guard를 포함한다. 테스트 상태/timeout·파일/Version 기대를 완화하지 않았다. 두 임시 DB는 소유 label/CPU1·512MB 디스크 볼륨으로 분리했으며 자기 컨테이너만 종료·정리하고 시험 볼륨은 보존했다. 검증 중 기존18445의 익명200 응답도 계속 확인했다. 시험이 만든 이 Worktree의 next-env 타입 경로만 Git 원본으로 복원했으며 기존 인수 source/build/deps는 변경하지 않았다.
 
 최신 합성 사용성 관찰은 별도 실제 사람 평가와 구분한다. 선택한 기능2개/해결범위8행에서 기능 설명을 읽기 위한 펼침·닫힘0회, 기본 양성업무 용어0·혼합 완료옵션0, 재무 저장범위 안내 있음·취소 control1개, 변경 사유는 업무 문구를 먼저 표시하고 raw code는 상세에 보존했다. 선택구성 재조회 후 저장까지의 시험 스크립트는8행의 역할·설명·제외/미해결·추가확인·상태와 공통4항목, 총44종 control을 명시 수정/선택했다. 관찰된 DOM input50/change44/click2는 Playwright 이벤트이며 사람의 입력 횟수나 최소 조작 수가 아니다. 공통 검토 의견은1회지만 행별 범위/예외·제공근거 판단은 남는다. 기능 요약 표시·근거 펼침 감소와 실제 운영자의 수정·판단 시간 감소를 동일시하지 않는다. screenshot3포털·선택기능 요약과 synthetic-usability-observation.json을 같은 보호 산출물에서 확인했다. 실제 최소 수정량·시간/입력량 감소·추천 적합성은 사용자가 승인한 A 평가에서 측정할 항목이며 이번 합성 결과로 통과시키지 않는다.
-### 2026-11-03 고정 제품04의 최소 legacy 인계 준비 — 구현 전 계약
+### 2026-11-03 초기 legacy 인계 검토 계약 — 최종 복귀 실행물은 아래9b로 대체
 
 제품 검수 기준은 PR20/04dfea4ee9d2521ba632c430c2218463df5df63c로 고정한다. 기능/UI/룰/추천/OCR/Parser·물리 Schema·의존성은 변경하지 않고 미지원5건을 유지한다. 별도 fix/acceptance-handover-20261103 Worktree에서 기존 v3 산출물/hash/호환 검사를 재사용하는 제한된 legacy owner adapter만 준비한다. 주 에이전트가 도구·집중시험·기존2보고서의 유일한 수정 담당이다. 보조2개는 읽기 전용으로725 데이터 reader와 START/소유권 경합을 각각 조사했고 파일/공통 타입/Migration/의존성 병렬 쓰기·권한 확대·설치는 하지 않는다.
 
-725의 새 workbook_provenance 거절은 strict Metadata의 자료형 문제다. START 문제는 별도로, 데이터 owner root와 실행 source가 결합되고 외부 lease를 모르는 guard0이며 dirty 검사가 supervisor 정리 구문 밖에 있어 STARTING이 남을 수 있다. 한 필드만 backport해도 latest-import 목록·원본 경로·룰Version 차이는 남으므로 이를 완전 호환 복귀라고 하지 않는다. 복귀 실행물은 제품04의 불변 recovery artifact/실행 slot으로 고정한다. 이는 새 자료를 읽는04 재실행 복구이며725 기능/화면으로의 코드 downgrade가 아니다.725 원본 START를 새 자료 이후 fallback으로 사용하지 않는다.
+725의 새 workbook_provenance 거절은 strict Metadata의 자료형 문제다. START 문제는 별도로, 데이터 owner root와 실행 source가 결합되고 외부 lease를 모르는 guard0이며 dirty 검사가 supervisor 정리 구문 밖에 있어 STARTING이 남을 수 있다. 한 필드만 backport해도 latest-import 목록·원본 경로·룰Version 차이는 남으므로 이를 완전 호환 복귀라고 하지 않는다. 초기안은 제품04 재기동을 recovery slot으로 두었으나, 이전 버전 복귀와 구분하기 위해 최종안에서는 기존 검증된9b 실행물로 대체했다. 아래 최종 결과와 단일 결정표를 따른다. 이는 새 자료를 읽는04 재실행 복구이며725 기능/화면으로의 코드 downgrade가 아니다.725 원본 START를 새 자료 이후 fallback으로 사용하지 않는다.
 
 입력 계약: clean 제품04 source/lock/Schema/hash와 독립 불변 artifact, 정확한 legacy root/nonce/725HEAD·원래 manifest hash·보존문서2개 hash·공개 TLS CA/서버 인증서·Caddy template/hash·DBcontainerID/label/mount volume/loopback ports·files/cookie namespace·알려진 process/listener 소유권, plan digest에 결합한 별도 명시 적용 승인이다. 현재는 원본 비밀번호/키/계정 파일 값·기업 원문을 조회하지 않고 비민감 technical projection/hash와 공개 응답만 조사한다. 현재 task를 실제 적용 승인으로 만들거나 실제 승인 receipt를 생성하지 않는다.
 
@@ -433,3 +433,56 @@ b47725a의 test-only 준비를 적용한 뒤 같은 관련 경로를 순차 실�
 정상 old START 경합은 별도 lease 파일만으로 막지 못한다. Windows의 일시적인 파일 공유 fence를 지원되는 기존 entrypoint와 STOPPED state에 적용·검증해 내용/ACL을 바꾸지 않고 동시 legacy START를 거부한다. fence 획득 불가·불명 PID/타 listener·진행 중 작업·기록/자료형/산출물 불일치·만료/없는 승인에서는 중지/기동0으로 거부한다. controller 중단/재부팅 뒤 lease는 명시 reconciliation 전 재시작하지 않는다. 임시 fence를 영구 old START 계약 변경으로 주장하지 않는다. 자동 재부팅 서비스/계정관리/자동삭제 체계는 개발하지 않는다.
 
 비민감 시험은 이미 보존된2002 환경의 자료만 명시 복제하고 원본9ca DB/파일을 복제·열람하지 않는다. 복제 nonce/DBrole/ports만 분리하며 신규 기업 원문·추천 정답·공고·검수자료를 추가하지 않는다. 초기 복제와 전환 중 DB restore를 구분하고 전환/복귀는 항상 같은 현재 DB를 사용한다. 실제18445/8443/8444에는 fence·stop·start·쓰기·배포를 수행하지 않는다. 이미 성공한 제품 전체 시험/CI는 재사용하고 새 owner adapter·fence·승인·호환 복구·자료보존 영향만 집중 검증한다.
+### 2026-11-03 제품04 고정 후 인계·호환 복귀 준비 결과
+
+제품 검수 기준과 PR20 HEAD는 `04dfea4ee9d2521ba632c430c2218463df5df63c` 그대로다. 제품 기능/UI/룰/추천/OCR/Parser·Schema·lock에는 변경이 없다. 합성 품질5건·미지원 범위·외부AI/공고/제안 Guard를 그대로 유지한다. 이번 수정은 별도 `fix/acceptance-handover-20261103` 브랜치의 Windows owner adapter·집중시험과 기존 두 문서 동기화다. PR20이나 기존 PR17/18/19·main을 병합·종료하거나 검수환경에 배포하지 않았다. 보조2명은 읽기 전용 계약·안전 검토만 수행했고 주 에이전트가 모든 파일 수정·시험·통합을 맡았다.
+
+#### 두 문제의 구분
+
+| 구분 | 원인·확인 범위 | 처리·제한 |
+| --- | --- | --- |
+| 725 workbook 읽기 | 725의 strict `Metadata`는 새 정상 저장 JSON의 `workbook_provenance`를 거부한다. 실제9ca의 읽기 전용 count에서는 해당 필드가 있는 import0건이며 실제 원문/metadata 내용은 읽지 않았다. 보존된 비민감2002 자료 복제본에서는 기존725의 실제 HTTP500을 재현했다 | 제품04 reader로 현재650·지정 원본649·workbook1과 원본 다운로드를 확인한다. 물리 Schema/Alembic은 동일하다. 단일 필드 backport만으로725의 최신 import 목록 의미·workbook 원본 경로·룰Version 차이까지 해소됐다고 주장하지 않는다 |
+| START/data-owner | 725는 실행 source=data owner를 전제하는 guard0이고 외부 lease를 모른다. dirty 검사가 supervisor 정리 구문 밖이어서 STARTING 잔류도 가능하다. v3는 guard1 enrollment를 요구하고18445를 명시적으로 보호한다 | 기존 v3 `PROTECTED`와 enrollment 조건을 유지한다. 정확9ca/기존 root/18445/725 소유권과 별도 승인에만 한정한 외부 adapter를 사용한다. 원본 manifest/HEAD/state를 새 버전으로 위장하지 않는다. 실제 기존 START를 실행하거나 문서2개를 clean/reset하지 않았다 |
+
+#### 정확한 실행물과 적용 경계
+
+- 제품 source: `dongalab-quality-20261103`, clean HEAD04. 불변 Web artifact manifest SHA256은 `1567ef9885660e77b7d967ac42f9e17e614d2d438b2ade7bb3786d42a371b74e`, fresh dist는 `.next/datco-e2e-df5fcdcbb0d0`이다. source/Schema/lock·설치된 Python/Node 의존성 tree·interpreter hash를 재검사하고 매번 별도 실행 복사본을 만든다.
+- 고정 launcher: `dongalab-handover-launcher-20261103-owner`, control Commit `e98ca192fa16e553b6a1ba9c57157fb82815f183`. API·Worker·Web·Gateway를 같은 owner의 DB/files/TLS/cookie로 결합하며 실행 state/events/worker-ready/파생 gateway/실행 복사본만 외부 보호 경로에 둔다. 실제9ca용 plan은 그 경로의 `storage/private/runtime/handover-20261103/owner-9ca49b473812/plan.json`이며 digest는 `25349069cc052869cf11b78974ac62e044c74e4cc4138a16d29aaa910d78d897`다.
+- TARGET은 제품04, RECOVERY는 **기존 검증된 이전 버전 `9b8d0e0f9eb79aaaa2b973f7e3455df78b8a046e`**다. 이전 artifact SHA256은 `46a879b490e463eb282b2160e4e48d9d6cdf9f8be9eb2a6be4dfe114f748eb38`다. 기존2002 release/artifact·의존성을 재해시하고 새 owner plan에 다시 결합했으며2002의 owner 계약/DB/계정은 재사용하지 않았다.04→04 재기동 시험과 이전 버전 복귀를 구분한다.725 코드 복귀와 과거 DB 되감기는 제외한다. 두 버전의 Backend bytes·lock·Schema와 workbook reader 계약은 같아야 하며 다른 head 조합은 거부한다.
+- 실제 owner에 생성한 것은 외부 계획·불변 artifact 사본·`PENDING_USER_DECISION` 양식뿐이다. 실제 승인 receipt·활성 lease는 생성하지 않았고 실제 activate/stop/start/resume·fence·로그인·자료 입력·Migration·seed·삭제는 수행하지 않았다.
+
+승인된 전환은 (1) 정확 승인/소스/실행물/DBURL·역할·loopback 대상/owner/PID 생성시각·cwd·listener/자료 경로/문서·계정·TLS 해시/미종료 작업0을 정지 전에 재확인하고, (2) legacy entrypoint에 임시 읽기 fence를 잡은 뒤 기존 supervisor의 정상 `stop.request`로만 정지하며, (3) 자연스럽게 기록된 기존 STOPPED state를 읽기 공유 fence로 보호하고 외부 lease를 만든 뒤04를 기동한다. DB container/volume은 계속 같은 것을 사용한다. 기존 state는725의 과거 종료 기록으로 남고 현재 실행04는 외부 state와 API·Worker·공개 헤더·Web artifact로 식별한다. 일반 v3 보호 포트를 삭제하거나 기존 환경이 guard1인 척하지 않는다.
+
+새 정상 STOP은 **새 실행 프로세스만** 종료하고 DB/volume/files/accounts/TLS/이력을 남긴다. 기존 원본 RUNBOOK·CREDENTIALS는 주소·시험계정 안내/과거 lifecycle 근거로 보존하며, 인계 후 기존 START/STOP/CLEANUP을 섞어 사용하지 않는다. 새 경로의 recover/stop은 같은 plan에 결합한 별도 승인 action과 소유 custodian을 확인한다. 원자료·비밀번호·키·DBURL은 plan/stdout/Git에 남기지 않는다. 실행 bootstrap만 승인 뒤 기존 DB 접속 설정을 내부 소비하고, child stdout/stderr는 버리며 lifecycle 오류는 고정 코드/클래스만 보존한다.
+
+#### 집중 검증과 보존 근거
+
+집중 단위시험은 Windows에서 **114 PASS/0 SKIP**다(신규47·기존 release67). projection의 비밀값 미보관·중복/잘못된 JSON·승인/시간/nonce/제품 binding·승인 전 무변경·잘못된 DBURL의 정지 전 차단·파일 fence·생성 전 자식 등록·Job 종료·강제 custodian 종료·미확인 cleanup의 재개 거부를 포함한다. Windows 전용 OS 시험은 다른 OS에서는 적용 불가로 명시하며 이 Windows 실행의 실패를 SKIP으로 바꾸지 않았다. 최종114건에는 이전 버전 binding·동일04 재기동을 이전 버전 복귀로 오인하지 않는 검사·각 source의 정확 HEAD 검사, PID 재사용 구분과 포트를 열지 않은 Python 손자 프로세스의 추적·종료도 포함한다. 최종 이전9b 복귀 7경로의 결과는 아래와 같다.
+
+전체 제품 CI는 고정04의 기존 성공 근거를 재사용했고 GitHub에서 동일 HEAD·열린 Draft/미병합과4개 workflow 성공을 다시 확인했다. [DATCO CI](https://github.com/dongarnd-commits/dongalab/actions/runs/41590876064)의 Backend456/PG326/Frontend 타입·lint·unit9·build, Public87→Fresh3→DMP1 및 Preview6/13/23은 앞선 최종 결과를 유지한다. 이번 전환 도구 변경 때문에 전체 제품 시험/전체PG/전체Playwright를 다시 실행하지 않았다. 새 준비 브랜치의 전체CI 성공을 주장하지 않는다.
+
+시험은 원래2002 비민감 자료의 정지된 volume을 읽기 전용으로 복제한 독립 nonce만 사용했다. 신규 회사·자료·공고·추천 정답은 주입하지 않았다. 정상 fixture 생성 중 의존성 사본 경로 제한·누락된 시작 설정, 최초 adapter 시험 중 TARGET binding·Windows venv launcher 자식 계층 오류가 드러났고 실패 로그와 원래 회차를 보존했다. 수정된 회차는 새 독립 복제본과 고정 launcher에서 수행한다. 시험용 DB 이름/접속 Role만 새 nonce로 격리했으며 실제9ca나 원본2002의 DB/계정/볼륨/파일은 변경하지 않았다.
+
+#### 실제 전환의 중단 조건과 남는 제한
+
+승인 없음/만료·digest/HEAD/실행물/의존성/Schema·owner/volume/경로/문서/계정/TLS 불일치, 알 수 없는 PID/listener, 진행 중 입력·업로드·작업 또는 queued/processing/attempts, 정지·자식/자손 정리·포트 해제 미확인은 **적용 중지**다. 시작 실패 뒤에는 자식/Job ActiveProcesses0·포트 해제를 확인한 경우에만 같은 현재 DB 위의 이전9b RECOVERY를 시작한다. 과거 DB 복원·오류 숨김·state 조작으로 통과시키지 않는다.
+
+임시 fence는 실행 중의 정상 legacy START 충돌만 막으며 재부팅 후 영구 OS 차단을 제공하지 않는다. custodian 강제 종료/재부팅 또는 FAILED cleanupFalse·증거 누락 상태의 일반 resume은 **차단**한다. 이때 기술 담당자의 별도 정합 확인 전에는 old START·DB복원·임의 상태 변경으로 재개하지 않는다. 이번 범위에서는 상주 서비스·영구 ACL·자동 crash/reboot 복구 체계를 만들지 않았다. 이는 정확한 남은 운영 제한이며 일반 정상 stop/resume·시작 실패 후 호환 복귀와 구분한다.
+
+주소 `https://127.0.0.1:18445/login`·인증서·시험계정·Role/CompanyScope·DB/volume/files/이력·원래 문서2개 보존은 계획과 복제 시험에서 확인한 범위로 보고한다. 실제 업무 row/파일 원문·계정 비밀번호·인증서 개인키는 조사하지 않았으므로 실제 자료 전수 무결성이나 실제 개인 로그인 완료를 주장하지 않는다. 실제 원래 문서2개 SHA는 각각 `cf50dae8b641bda48b6601c7736826d31f4891c0fd67b2b616e7c125c0177988`, `48d3386ef1300449f1b95791586d24a7405fd9e0d84044f55d3e571f87ed5036`다.
+
+사람이 결정할 것은 기존 단일 결정표의 **적용 창·실자료 범위·개별 접근자/회사Scope·보호 상태 확인·보존/백업/정리 책임**이다. 저장 암호화/BitLocker·Docker VHDX 접근·전체 외부 전송 차단 미확인, 자동 만료/완전 정리 부재는 해결됐다고 바꾸지 않는다. 실자료 사용 승인 후 사용자가 직접 입력하는 A(추출/정정/분석/DMP추천/구성 검토)부터 평가한다. 공식 공고·자격이 없는 B(매칭/정식 DOCX·PDF/전달)는 기존 Guard로 계속 보류한다. 실기업 평가·최종 인수는 아직 하지 않았다.
+
+이전9b와04의 Web 차이는 원천 분류 상세 GET 경로, 카탈로그 응답과 현재 필터의 결합, 분석 검토/보완요청 이동의 미저장 동기화 및 운영자 Preview의4파일이다. 이를 이번 작업에서 수정하지 않았다. 이전 버전은 데이터 호환 복구용이며 제품04의 UI와 같다고 주장하지 않는다. 복귀 중에는 신규 입력·실기업 평가를 보류하고 정상 STOP→승인된 resume으로04를 재적용한다.04 복귀 후에도 코드·입력·DMP Version과 평가 회차를 명시한다. 기존649/정상 workbook 자료·계정·Scope·이력을 과거 DB로 되돌리지 않는다.
+
+#### 최종 집중시험 확정·보호 상태
+
+최종 비민감 복제 `ac0084c00da0`의 **7경로 PASS**:725→04 정상 인계,04→이전9b 복귀, API/Worker/Web 각각의 시작 실패→9b 복구,9b에서04 재적용, custodian 강제 종료→UNCLEAN 일반 재개 차단이다. 원래2002 자료만 복제했고 신규 회사·문서·공고·추천 정답을 추가하지 않았다. 현재650·지정 원래649·workbook1의 전체 페이지, provenance와 XLSX 원본 SHA/다운로드200, 회사2·사업장2·파일2, 기존 네 역할의 동일 세션/권한과 회사 Scope를 확인했다. 같은 현재 DB의 업무 row/count/hash·감사 이력·파일 bytes·원본 manifest/accounts/CA/Caddyfile·보존 문서2개·Schema를 각 경로 전후 비교해 유지했다. 세션 저장소는 정상 로그인 기록이며 기존 네 cookie를 이어 썼다. 이전9b의2002 owner를9ca owner인 척 사용하지 않았다.
+
+전환·복귀 실행 경로의 고정 Commit은 `1dc4b5c8881ede84e046f34165002c519047a3dc`였다. 마지막 읽기 전용 조사에서 실제9ca의 Worker base Python1·Windows console host4가 기존6개 소유권 목록에 빠졌음을 확인해 최종 `e98ca192fa16e553b6a1ba9c57157fb82815f183`에서 정지 전 소유권 검사만 강화했다. 최종 계획은11개 전체를 결합하며, 새 자손·허용되지 않은 실행물·PID 재사용·실행물 hash 변경을 정지 전에 거부한다. 이 변경 영향은 신규2개 단위시험(모형/실제 비리스너 손자)·실제9ca11개 읽기 전용 binding·종료 후 자체 app/관찰 명령0 확인으로 검증했다. 제품 bootstrap/전환·복귀 경로 자체는 동일하고 전체 제품 시험/PG/Playwright를 다시 반복하지 않았다.
+
+초기 시험 실패는 유지했다. 첫 adapter 회차의 슬롯/Windows launcher 계약 오류,04 재기동 회차의 통합 준비 대기170초 초과, 후속 재로그인4건 때문에 감사 전체 동일 비교가 실패한 기록은 각각 보존했다. 기존 감사12건 hash와 후속 LOGIN만 정확8건 추가된 사실도 별도 확인했다. 최종 이전9b 회차는 새 독립 평가이며 같은 네 세션으로7경로를 통과했다. 준비/의존성 전체 hash 확인을 포함한 후속 시험 대기는240초로 구분했으며 API70초·Worker30초·Gateway20초 준비 Guard나 데이터/권한 기대는 변경하지 않았다. 초기170초 기준 충족이나 실제18445 복구 SLA를 주장하지 않는다.
+
+보호 근거는 새 개발 Worktree의 `storage/private/runtime/handover-20261103/previous-compatible-handover-summary.json`(최종7경로), `full-owner-graph-proof.json`(실제11개·변경0), `final-compatible-resource-state.json` 및 앞선 실패 JSON/로그다. 코드·고정 환경·DMP/입력 버전과 각 실패/후속 회차를 구분했고 보호 로그·실행물·원본649·실자료는 Git/CI에 넣지 않았다. 최종 자체 app/observer 명령은0이며 세 복제 DB는 정상 중지하고 volume/files/계정/이력을 보존했다. 강제중단 시험의 외부 lease는 과거 RUNNING 기록을 고쳐 속이지 않고 UNCLEAN으로 판정해 재개 차단을 확인했다.
+
+실제9ca에는 최종 `plan.json`·두 artifact·PENDING 양식만 외부 보호 경로에 준비했다. 실제 승인 receipt/활성 lease·stop.request는 생성하지 않았고18445/8443/8444·원래 DB/volume/files/계정/비밀번호·백업·문서2개는 변경하지 않았다. 실제 접속은 여전히725의 익명 login200이며 실제자료/키/비밀번호 원문이나 실제 개인 로그인을 조사하지 않았다. 사람은 기존 단일 결정표에서 적용 창과 실제자료·개별 접근·보존/보호/백업·정리 조건만 결정한다. 기술 준비, 실제 적용, A 실기업 평가, B 공식 제안과 최종 인수는 모두 별개다.
