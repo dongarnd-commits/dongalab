@@ -325,3 +325,44 @@ ESLint9.39.5는 [공식 지원 정책](https://eslint.org/version-support/)상 2
 최종 후속 소스에서 lint·TypeScript·production build도 PASS였다. 실행하지 못했던 별도 전체 경로는 순차 실행하여 reacceptance-full-ui3 PASS/1.8분(ci/c75aa6691255), dmp-auto-solution-full-ui1 PASS/2.7분을 확인했다. 재무 여러 PDF·16절 DOCX/PDF·기업 수정 요청·세 포털 좁은 화면/키보드·파일 선택 취소/거부가 포함된다. 사업장 요약과 전달본 문구를 현재 화면에 맞춘 선택자만 정렬했으며 실제 사이트1건·승인/파일/Version/의사결정 상태 기대는 보존했다. 최종 관련19개 근거는 ci/6a9786e3c639다. 새로운 전체 인수환경 생성·사용자 계정 변경·실제 기업자료 사용·18445 적용은 하지 않았다.
 
 0829121의 원격 전체 UI는75 PASS/1 FAIL(7.8분), 다른6개 Job은 SUCCESS였다. 남은 실패는 mvp-portals의 회사 수정요청 성공 검사에서 서버 처리 상태와 제안서 재조회 상태가 동시에 보일 때 광역 role=status가2개가 된 선택자 문제였다. 제품 코드를 바꾸지 않고 정확한 성공 메시지를 필터링하여 해당 실제 문서 전달/기업 수정요청1건을 재실행해1 PASS(26.5초) 확인했다. 실제 REVISION_REQUEST·파일2개·정확한 Version 기대는 그대로다. ci-082-failed.log(SHA256 20d7a2af671a8a9d6a8606e3ba19937d3826e47b8cc63d8024e3a57722f1e077)와 mvp-status-final.log를 보존한다. 최신 전체 합격 여부는 이 시험 보완 커밋의 PR19 Checks/본문으로 확정하며 이전6개 성공을 재사용해 최신7개 성공이라고 하지 않는다.
+
+### PR19 이후 후속 범위와 공통 영향 — 구현 전
+
+출발 PR19의 정확 HEAD는0b6f56a88131a10fdc9c4cb16ed7658250275b03이며 원격과 일치한다. 별도 dongalab-quality-20261103 / fix/portal-analysis-quality-20261103에서만 진행한다. 완료 기준은 GAP_MATRIX의 Q01~Q06으로 고정했다. 기존 A–G 결과·문서2개·PR17/18/19/main·18445/8443/8444와 기존 데이터/실행물을 보존한다. 실제자료 평가·배포 완료를 목표에 섞지 않는다.
+
+구현 전 공통 영향은 다음과 같이 제한한다. 세 포털 공통 UI/로그아웃은 기존 인증/세션 API와 Role/Scope를 유지한 클라이언트의 실제 미저장/처리 중 상태·확인 경로를 우선 재사용한다. 진행 결과 불명/로그아웃 실패를 숨기지 않는다. 추천/OCR/Parser는 기존 Source/Evidence/Review/Manifest·규칙 버전 경계를 유지하며 사람 확인/제공·필수 연계/제안 Guard를 바꾸지 않는다. Excel 갱신은 기존 import·원천 Revision·관리 자산/Version을 먼저 대조하고, 새 저장/API/Schema가 필요한 경우 정확한 변경·범위를 이 문서에 추가한 뒤 구현한다. 승인되지 않은 관계/제공 정책은 만들지 않는다.
+
+전환 수단은 실행 코드 식별과 데이터 소유를 분리하는 최소 lifecycle 증분만 허용한다. 새 합성 환경에서 검증하며 현재 인수환경의 START·manifest를 수정해 버전을 맞추거나 중지하지 않는다. 새 코드의 정상 저장자료를 옛 DB로 되감지 않는 복귀와 DB 호환성 검증을 완료조건으로 둔다. 구체 구조/API 영향은 기존 도구 조사 후 확정한다.
+
+### Q04·Q06 상세 계약 — 구현 전 영향 기록
+
+Q04는 관리자 전용 `POST /capability/asset-imports/preview`(XLSX binary·X-Upload-Name·20MB), `POST …/apply`(파일/Parser/Catalog/Preview digest·선택 행·명시 연결 또는 NEW·Idempotency), `GET …/{sha}/original`을 추가한다. safe OOXML과 제한된 표 헤더, 명시된 세로 병합 분류만 지원한다. 기존 PrivateFiles·업로드 Audit·원천 imports/features/revisions/members를 재사용하며 물리 Schema와 관리 부모·제공 VERIFIED·업무 권한은 변경하지 않는다. Metadata의 optional workbook_provenance와 생성 API 타입만 확장한다. 내용 동일 시 Import/Revision/Catalog는 변경하지 않고 새 업로드 위치는 Audit로 보존한다. 파일 SHA와 부분 선택 적용 batch digest는 구분한다. 누락 행 자동 삭제·중단은 하지 않는다. 원래 649 JSON의 엄격 검증과 해시는 유지한다.
+
+Q06은 기존 START/manifest를 고쳐 통과시키지 않고 별도 선택형 release 도구를 추가한다. 원래 data-owner manifest는 변경하지 않고 실행 Worktree/Commit/빌드 해시를 별도 immutable release 기록으로 고정한다. 동일 Git 저장소, clean source, 소유 label·loopback, DB migration/schema와 의존성 잠금의 호환성을 시작 전에 확인한다. API·Worker·Web은 새 실행 root, DB·파일·TLS·세션 namespace·계정은 동일 data-owner를 사용한다. 실패 시 같은 DB/파일 위에서 이전 실행물을 재시작하며 DB를 과거 백업으로 되돌리지 않는다. 준비/build 검사는 서비스 중지 전에 수행한다. 기존 비선택 환경의 START는 그대로이며 release 선택 환경만 별도 도구로 안내한다. 18445·8443·8444와 기존 환경은 이 작업에서 등록·중지·적용하지 않는다. 실제 적용 전 보존 문서와 데이터 소유권·전환 승인을 별도로 확인한다.
+Q04 증분 등록의 목록 영향: 기본 `/capability/features`는 모든 원천 root의 최신 Revision을 보여주는 현재 목록으로 명확히 한다. `import_id` 명시 조회는 과거 등록 batch의 고정 member Snapshot을 그대로 유지한다. 최근 등록 batch metadata와 전체 현재 목록 건수를 구분한다. 기존 원천의 member를 새 Excel batch에 억지로 추가하지 않으므로 원문에 없는 파일 위치·제공 근거를 새 출처로 만들지 않는다. 물리 DB/역할/과거 Snapshot 변경은 없다.
+
+Q05 독립 holdout 최초 회차(24건)는 원본 PR19 9통과/15불일치, 1차 보완 12통과/12불일치로 원결과를 보존했다. 이 수치를 실기업 정확도로 해석하지 않는다. 업무 적용조건이 없어서 질문하지 않는 NOT_APPLICABLE을 FOUND로 기대한 3사례(4개 진단 assertion), TXT의 줄별 Location을 단일 Location으로 기대한 1건은 평가 계약 오류로 따로 분류한다. 넓은 자유문장 숫자/기간 문법 5건은 지원되지 않아 실패로 남긴다. 같은 문장의 긍정 요구에 다른 업무의 제외를 전파하는 결함과 후반의 명시 미정 예산 반복질문은 새 회차로 수정한다. 1차 입력·정답·제품별 결과는 덮어쓰지 않으며 이후 회차는 미사용 독립평가가 아니라 이미 노출된 회귀자료다.
+
+Q02 실제 브라우저 추가 재현: 원천 SYSTEM/MODULE의 source-system:<24hex>/source-module:<24hex> 식별자를 기존 Web proxy가 colon 때문에400으로 차단했다. 기존 Backend 읽기 계약을 맞추기 위해 GET /capability/assets/{id}의 정확한 두 원천 ID 형식만 예외 허용하고 경로 구성요소를 encode한다. POST·다른 경로·임의 colon·권한/Scope 계약은 유지한다. 목록 조건 변경 중 과거 결과를 현재 결과처럼 클릭하지 않도록 현재 조회 조건의 응답만 목록으로 표시한다. 새 inventory 기본 범위의 관리기능 rawroot1 증가와 과거 import Snapshot 불변을 각각 시험한다.
+
+Q06 JSON 자료 호환성 추가 재현: f49dbd8 및 기존 725 계열의 엄격한 Metadata DTO에는 workbook_provenance가 없으므로 새 Excel 등록 후 과거 코드의 목록 응답이 실패할 수 있다. 물리 Schema·lock 동일만으로 복귀 호환이라고 판단하지 않는다. 실제 환경/DB를 읽지 않고 과거 Git 코드와 합성 Metadata로 extra_forbidden을 재현했다. 도구는 source별 합성 Metadata roundtrip reader·해당 writer format을 기록하고 양방향 호환이 확인되지 않으면 중지 전 전환을 거부한다. 리허설은 새 호환 baseline Commit에서 생성하며 실제 기존725 코드로 무조건 복귀 가능하다고 주장하지 않는다. 실제18445 적용은 호환되는 이전 실행물 확보와 기존 START/owner 계약 정합화까지 확인한 뒤 별도 결정해야 한다. 운영 DB Migration·자료 변경·기존 manifest 수정은 하지 않는다.
+
+### 후속 집중 검증 기록 — 실자료·실환경 적용과 분리
+
+Q01/Q02/Q03은 정확한 과거 제출 Version·당시 사업장·메뉴 목적·상태/차단 해결 위치, 보완요청 선택에서 작성폼 연결, 실제 dirty/busy/uncertain에 따른 공통 종료를 보완했다. 저장된 분석 검토가 이미 재조회됐는데 이전 dirty 상태가 작성폼 이동을 막던 race도 재현·수정했다. 원천 상세의 proxy400과 화면 밖 결과를 별도로 재현했고 즉시 보이는 결과·처리/오류·원천/관리 이력 구분·종류별 소속 안내·짧은 행 요약으로 수정했다. 기본 행에서 줄인 설명과 식별자는 상세에 보존한다. Preview는 인증 API/쿠키 없이 같은 dirty 종료 확인을 공유하며, 반영본 유지·미반영 폐기는 별도로 검증한다.
+
+Q04는 20MB 이하 XLSX, 최대5000행·20000셀·확장64MB·ZIP2000항목 제한을 사용한다. 첫 행의 system/시스템, feature_group/기능그룹/모듈, name/기능명/기능, description/기능설명/설명과 optional feature_id/원천기능ID를 지원한다. 분류 두 열의 명시 세로 병합만 상속한다. 중복/빈 시트명·중복 헤더는 거부하고, 수식·도형·이미지·묵시적 빈칸 상속·그 밖의 계층은 성공으로 집계하지 않는다. 명확한 신규·변경은 묶음 검토, 예외는 업무명 선택으로 연결하며 다른 ID는 상세에서 입력한다. 원본·셀 위치와 선택한 정확 Revision을 Audit에 보존한다. NOOP는 import/revision/catalog digest를 바꾸지 않는다. 신규 관리 FEATURE가 rawroot1개를 만드는 기존 경로 때문에 CURRENT_CATALOG는1건 늘 수 있지만 원본 import_id 전체 Snapshot과 기존 Revision은 완전히 일치함을 검사한다.
+
+검증 구분:
+
+- Backend 전체 unit 406 PASS(당시 소스). 후속 workbook pure6, 평가도구/분석39, release/기존도구80 PASS는 겹치는 사례가 있어 합산하지 않는다. 최종 전체는 최신 PR CI로 확정한다.
+- 로컬 PostgreSQL 전체 첫 실행은284 PASS/4 FAIL/28 ERROR/기존 실제공고 opt-in1 SKIP. 512MB tmpfs 시험컨테이너 OOM2건을 Docker 이벤트로 확인했다. 1GB 재실행은309 PASS/3 FAIL/4 ERROR/동일1 SKIP였고 PostgreSQL signal9·OOMKilled=true를 보존했다. 성공으로 처리하지 않았다. 메모리 DB자료를 새 소유 디스크 볼륨으로 분리하고512MB/CPU1 한도로 실패7건+최종 workbook2건을 재실행해9 PASS(50.32초)를 확인했다. 같은 사례의 재실행을 더해 단일 전체 합격으로 보고하지 않는다. 기존 DB/볼륨은 변경하지 않았으며 새 시험 디스크 볼륨도 삭제하지 않았다.
+- 원래649개 승인 JSON은 SHA256 28b1967ed77360d0fcc6d5525f6d7395fd899865b2e01e358402edc347d1d368 그대로2개 원천 전체 투영·탐색/제외·답변/0건·Worker 조합 생성·저장/재조회 시험을 통과했다. 기능 설명이나 제공 근거를 바꾸지 않았다. 합성2행 Excel/전체UI와 구분하며 실제 Excel 원본의 경로·해시나 실기업 추천 정답을 검증했다고 하지 않는다. 실제 제공/릴리스/연계 증거가 없는 항목은 NEEDS_CONFIRMATION으로 남긴다.
+- API 타입 일치, ESLint, TypeScript, 검토 unit9, production build PASS. 이후 UI 수정은 타입검사와 실제 Chromium으로 확인했으며 최종 빌드는 최종 source/CI에서 다시 식별한다.
+- 집중 Chromium 초기6 PASS/6 FAIL: 원천proxy400 제품결함, 저장 후 이동 dirty race 제품결함, CURRENT_CATALOG 계약과 다른 옛 immutable 기대1건, 실제 보호 history가 없는 뒤로가기 시험준비3건으로 구분했다. 불변성/세션 차단 기대는 강화했고 timeout/기대값 완화나 SKIP으로 숨기지 않았다. 수정 후 동일12건12 PASS(1.1분): 실제 Web/API/Worker/PG, source SYSTEM/MODULE/FEATURE GET200, 관리 자산 이력, 명시 원본 Snapshot 전부 불변, 반영 응답 유실/중복0, 과거 제출 Version·당시 사업장·6메뉴/F5, 요청 작성, clean3역할·실제dirty·처리중·불명·실패·revoked cookie·다중탭·뒤로가기/F5/직접URL 차단을 포함한다. 지연/503 위치 시험만 명시적 UI 응답 제어이고 정상 저장 성공은 실제 Backend다.
+
+Q05 품질 결과는 고정 개발29사례에서 원래17/29→1차29/29(내용27·정상거절2), 최초 미사용 합성 holdout24에서는9/24→12/24였다. 원래 결과·gold는 그대로 보존했다. 정정 회차는 H07/H08/H09의 적용조건 없는 진단 강제3사례(4 assertion), H24의 TXT 줄별 Location1사례를 평가 계약 오류로 명시하고 같은 입력을 유지했다. 이 이미 노출된24사례의 같은 정정 기준에서는 원본13/24→1차16/24→최종19/24, 최종 내용16/21·정상거절3·미지원 자유문장 숫자/기간5실패(10 assertion)다. +4의 gold 정정과 +3의 실제 후속 코드 개선을 섞지 않는다. 처리 예외0, 불리한 사례 삭제0. 버전은 improvement-rules-v6 / asset-solutions-v4 / published-solutions-v4다. 최초 source는0b6f56a,1차는fa5af07,후속품질은55ca6f5에 보존했다. 고정 합성 JSON은 .gitattributes -text로 원래 바이트 SHA를 Git에서도 확인했다. 이는 유한한 합성 회귀이며 OCR/실기업 정확도·운영자 수정 시간·입력량 감소를 측정한 결과가 아니다.
+
+재사용한 경로는 사업자등록 전용 PDF/OCR·재무 NTS section/code/label/단위/기간·일반 첨부 parser, 원문/Evidence/Review/Manifest·회사 ACK·운영자 CONFIRM·제공/필수연계·정식제안/전달 Guard다. 새 OCR/외부AI나 관계 면제 정책을 만들지 않았다. FACT evidence는 원문 value quote를 유지하고 불변 Fact의 period/unit/currency만 추가한다. 추천은 원문 역할과 명시 제외를 유지하며, 실제 등록 기능 인용으로 업무/해결범위·제외/미확인을 설명한다. 자동 초안 이후 사람은 실제 적합 범위/예외·제공/릴리스·필요 연계·최종 문안을 판단해야 한다. 화면/규칙이 미리 채운 항목 수를 실제 수작업 감소로 주장하지 않는다.
+
+Q06 실행 검증은 다음 고정소스의 신생 비민감 owner에서만 수행한다. reader/writer v2계약이 없는 기존725/18445,8443,8444는 도구에서 거부한다. 실제 기존 인수환경은 익명 login200·기존HEAD725·원래문서2개 해시/프로세스 경로만 확인하며 로그인·업무자료 조회·변경은 하지 않았다. 기존 START/manifest/보존 문서를 삭제하거나 고쳐 가드를 우회하지 않았다. 독립 실전환·새저장·복귀·실패복귀의 완료 여부/정확 소스·중단 관측은 이어지는 검증 기록과 최신 PR 본문으로 확정한다.
