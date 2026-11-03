@@ -28,6 +28,7 @@ from acceptance_handover_fence import FileFence,process_identity,listener_owners
 ROOT=Path(__file__).resolve().parents[3]
 TOOL=Path(__file__).resolve()
 PRODUCT='04dfea4ee9d2521ba632c430c2218463df5df63c'
+RECOVERY='9b8d0e0f9eb79aaaa2b973f7e3455df78b8a046e'
 LEGACY='725987f4a375d4f77028e35361e4fcdb05aac4ee'
 ACTUAL_NONCE='9ca49b473812'
 ACTUAL_ROOT=ROOT.parent/'dongalab-dmp-assets'
@@ -192,7 +193,7 @@ def validate_approval(plan,approval,action,now=None):
     require(approval.get('decision')=='APPROVED','HANDOVER_SEPARATE_APPLY_DECISION_REQUIRED')
     require(approval.get('plan_sha256')==plan['id'] and approval.get('nonce')==plan['owner']['manifest']['nonce']
         and approval.get('origin')==plan['owner']['manifest']['origin'] and approval.get('product_head')==PRODUCT
-        and approval.get('recovery_head')==PRODUCT,'HANDOVER_APPROVAL_BINDING_MISMATCH')
+        and approval.get('recovery_head')==RECOVERY,'HANDOVER_APPROVAL_BINDING_MISMATCH')
     require(action in approval.get('actions',[]) and bool(approval.get('decided_by')) and bool(approval.get('decision_reference')),'HANDOVER_APPROVAL_SCOPE_MISSING')
     try:
         start=datetime.fromisoformat(approval['not_before']);end=datetime.fromisoformat(approval['expires']);current=now or datetime.now(timezone.utc)
@@ -204,12 +205,12 @@ def validate_approval(plan,approval,action,now=None):
 def load_plan(path):
     plan=read_json(path);body={k:v for k,v in plan.items() if k!='id'}
     require(plan.get('format')==FORMAT and plan.get('id')==release.digest(body),'HANDOVER_PLAN_TAMPERED')
-    require(plan['product']['head']==PRODUCT and plan['recovery']['head']==PRODUCT,'HANDOVER_FIXED_PRODUCT_REQUIRED')
+    require(plan['product']['head']==PRODUCT and plan['recovery']['head']==RECOVERY,'HANDOVER_FIXED_PRODUCT_REQUIRED')
     return plan
 
 
 def validate_product(record,out):
-    require(record['head']==PRODUCT,'HANDOVER_FIXED_PRODUCT_REQUIRED')
+    require(record['head'] in (PRODUCT,RECOVERY),'HANDOVER_FIXED_PRODUCT_REQUIRED')
     source=release.clean_source(record['source_root'],PRODUCT)
     require(release.source_contract(source)==record['source_contract'],'HANDOVER_PRODUCT_CONTRACT_CHANGED')
     require(record['source_contract']['workbook_data']['reader_preserves_workbook_provenance'] is True,'HANDOVER_INCOMPATIBLE_RECOVERY_READER')
@@ -221,28 +222,39 @@ def validate_product(record,out):
     return source
 
 
-def make_plan(owner_root,nonce,kind,product_file,out):
+def compatible_pair(product,recovery):
+    require(product['head']==PRODUCT and recovery['head']==RECOVERY,'HANDOVER_EXACT_TARGET_AND_PREVIOUS_REQUIRED')
+    for key in ('locks','schema_code'):
+        require(product['source_contract'][key]==recovery['source_contract'][key],'HANDOVER_PREVIOUS_CONTRACT_INCOMPATIBLE')
+    require(all(r['source_contract']['workbook_data']['reader_preserves_workbook_provenance'] is True for r in (product,recovery)),'HANDOVER_PREVIOUS_DATA_READER_INCOMPATIBLE')
+    require(not release.git(Path(product['source_root']),'diff',RECOVERY,PRODUCT,'--','apps/api/app'),'HANDOVER_PREVIOUS_BACKEND_BYTES_DIFFER')
+
+def make_plan(owner_root,nonce,kind,product_file,out,previous_file=None):
     require(release.no_links(out).is_relative_to(ROOT/'storage/private/runtime'),'HANDOVER_EXTERNAL_PRIVATE_PLAN_PATH_REQUIRED')
-    owner=capture_owner(owner_root,nonce,kind);record=read_json(product_file)
-    # A new owner binding is created; an old 2002 release record is never reused.
-    require(record['head']==PRODUCT and record.get('portable') is True,'HANDOVER_PORTABLE_PRODUCT_ARTIFACT_REQUIRED')
-    validate_product(record,Path(record['artifact_store']))
-    artifact=release.validate_web_artifact(Path(record['artifact_store']),record)
-    destination=out/record['web_artifact']['relative_root']
-    if not destination.exists():release.copy_entries(artifact,destination,record['web_artifact']['files'])
-    release.immutable(destination.parent/'artifact.json',record['web_artifact'])
-    product={**record,'id':'r'+release.digest(dict(slot='TARGET',head=PRODUCT,artifact=record['build_hash']))[:24], 'slot':'TARGET'}
-    recovery={**record,'id':'r'+release.digest(dict(slot='RECOVERY',head=PRODUCT,artifact=record['build_hash']))[:24], 'slot':'RECOVERY'}
-    for value in (product,recovery):value.pop('artifact_store',None);validate_product(value,out)
-    body=dict(format=FORMAT,owner=owner,product=product,recovery=recovery,control_root=str(ROOT),control_head=release.git(ROOT,'rev-parse','HEAD'),
+    require(previous_file is not None,'HANDOVER_VERIFIED_PREVIOUS_ARTIFACT_REQUIRED')
+    owner=capture_owner(owner_root,nonce,kind)
+    records=[read_json(product_file),read_json(previous_file)];compatible_pair(*records)
+    bound=[]
+    for slot,record in zip(('TARGET','RECOVERY'),records):
+        require(record.get('portable') is True,'HANDOVER_PORTABLE_PRODUCT_ARTIFACT_REQUIRED')
+        validate_product(record,Path(record['artifact_store']))
+        artifact=release.validate_web_artifact(Path(record['artifact_store']),record)
+        destination=out/record['web_artifact']['relative_root']
+        if not destination.exists():release.copy_entries(artifact,destination,record['web_artifact']['files'])
+        release.immutable(destination.parent/'artifact.json',record['web_artifact'])
+        value={**record,'id':'r'+release.digest(dict(slot=slot,head=record['head'],artifact=record['build_hash']))[:24],'slot':slot}
+        value.pop('artifact_store',None);validate_product(value,out);bound.append(value)
+    body=dict(format=FORMAT,owner=owner,product=bound[0],recovery=bound[1],control_root=str(ROOT),control_head=release.git(ROOT,'rev-parse','HEAD'),
         code_hashes={name:release.file_hash(TOOL.parent/name) for name in CONTROL_FILES},
         legacy_semantics='guard0; original state is historical; external custodian is the sole normal owner',
-        recovery_semantics='Product04 recovery; never a725 code downgrade',real_data_approved=False)
+        recovery_semantics='Verified previous9b using the same current DB/files; never a725 downgrade or database restore',real_data_approved=False)
     plan=dict(body,id=release.digest(body));release.immutable(out/'plan.json',plan)
-    template=dict(decision='PENDING_USER_DECISION',plan_sha256=plan['id'],nonce=nonce,origin=owner['manifest']['origin'],product_head=PRODUCT,recovery_head=PRODUCT,
+    template=dict(decision='PENDING_USER_DECISION',plan_sha256=plan['id'],nonce=nonce,origin=owner['manifest']['origin'],product_head=PRODUCT,recovery_head=RECOVERY,
         actions=['activate','resume','recover','stop'],not_before=None,expires=None,decided_by=None,decision_reference=None,real_data_approved=False)
     release.immutable(out/'approval-template.json',template)
     return plan
+
+
 CONTROL_FILES=('acceptance_handover.py','acceptance_handover_fence.py','acceptance_handover_projection.py','acceptance_handover_job.py')
 
 def validate_control(plan):
@@ -251,6 +263,7 @@ def validate_control(plan):
     require(not release.git(ROOT,'status','--porcelain'),'HANDOVER_LAUNCHER_MUST_BE_CLEAN')
     require(set(plan['code_hashes'])==set(CONTROL_FILES),'HANDOVER_CONTROL_CONTRACT_MISSING')
     require(all(release.file_hash(TOOL.parent/n)==plan['code_hashes'][n] for n in CONTROL_FILES),'HANDOVER_LAUNCHER_BYTES_CHANGED')
+    compatible_pair(plan['product'],plan['recovery'])
     for rec in (plan['product'],plan['recovery']):validate_product(rec,Path(plan['_out']))
 
 def static_owner(plan,entry_fence=None):
@@ -364,7 +377,7 @@ def start_slot(plan,slot,m,fault=None):
         python=rec['interpreters']['python_launcher']
         spawn('api',[python,'-B',TOOL,'api-child','--plan',out/'plan.json'],source/'apps/api')
         identity=uat.wait_url('http://127.0.0.1:'+str(m['api_port'])+'/__test/identity',job.children,deadline=70)
-        expected=(m['db'],m['role'],m['nonce'],PRODUCT,str(Path(plan['owner']['data_root'])/'files'))
+        expected=(m['db'],m['role'],m['nonce'],rec['head'],str(Path(plan['owner']['data_root'])/'files'))
         require((identity['database'],identity['db_user'],identity['nonce'],identity['head'],str(Path(identity['files']).resolve()))==expected,'HANDOVER_API_IDENTITY_MISMATCH')
         spawn('worker',[python,'-B',TOOL,'worker-child','--plan',out/'plan.json'],source/'apps/api')
         until=time.monotonic()+30
@@ -375,14 +388,14 @@ def start_slot(plan,slot,m,fault=None):
         spawn('web',[rec['interpreters']['node'],source/'apps/web/node_modules/next/dist/bin/next','start','--hostname','127.0.0.1','--port',str(m['web_port'])],execution['web_root'])
         uat.wait_url('http://127.0.0.1:'+str(m['web_port'])+'/login',job.children,deadline=70)
         gateway=out/('gateway-'+rec['id']+'.Caddyfile')
-        text=generated_gateway(Path(plan['owner']['root']),m,PRODUCT)
+        text=generated_gateway(Path(plan['owner']['root']),m,rec['head'])
         if gateway.exists():require(gateway.read_text(encoding='utf-8')==text,'HANDOVER_DERIVED_GATEWAY_CHANGED')
         else:gateway.write_text(text,encoding='utf-8')
         spawn('gateway',[m['caddy'],'run','--config',gateway,'--adapter','caddyfile'],source)
         until=time.monotonic()+20
         while True:
             require(all(p.poll() is None for p in job.children),'HANDOVER_CHILD_EXITED')
-            try:public_identity(plan,PRODUCT);break
+            try:public_identity(plan,rec['head']);break
             except (OSError,RuntimeError):
                 require(time.monotonic()<until,'HANDOVER_GATEWAY_START_UNCONFIRMED');time.sleep(.2)
         return job,execution
@@ -393,7 +406,7 @@ def start_slot(plan,slot,m,fault=None):
         raise RuntimeError('HANDOVER_SLOT_START_FAILED_CLEANED') from None
 
 def current_lease(out,plan,phase,slot,**extra):
-    value=dict(plan=plan['id'],phase=phase,slot=slot,product_head=PRODUCT,custodian=process_identity(os.getpid()),**extra)
+    value=dict(plan=plan['id'],phase=phase,slot=slot,product_head=PRODUCT,head=plan['product' if slot=='TARGET' else 'recovery']['head'],custodian=process_identity(os.getpid()),**extra)
     save(out/'state.json',value);return value
 
 def require_clean_resume(lease):
@@ -418,7 +431,7 @@ def run_owner(plan_path,approval_path,mode='activate',fault=None):
         require(not any(release.alive(v['pid']) for v in lease.get('children',[])),'HANDOVER_PRIOR_CHILD_CLEANUP_UNCONFIRMED')
         require(read_json(data/'state.json').get('phase')=='STOPPED' and release.file_hash(data/'state.json')==lease['stopped_state_sha256'],'HANDOVER_HISTORICAL_STATE_CHANGED_NO_REWRITE')
         ports_free(m)
-    job=None;slot='TARGET' if mode=='activate' else 'RECOVERY';stopped_hash=None;children=[];finished=False
+    job=None;slot='TARGET';stopped_hash=None;children=[];finished=False
     with release.action_lock(out),ExitStack() as stack:
         entry=stack.enter_context(FileFence(root/'apps/api/tests/manual_acceptance.py',exclusive=True))
         static_owner(plan,entry)
@@ -483,13 +496,13 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('action',choices=['prepare','activate','resume','recover','stop','status','api-child','worker-child'])
     parser.add_argument('--plan',type=Path);parser.add_argument('--approval',type=Path)
     parser.add_argument('--owner-root',type=Path);parser.add_argument('--nonce');parser.add_argument('--kind',choices=['EXISTING_OWNER','SYNTHETIC_CLONE'])
-    parser.add_argument('--product',type=Path);parser.add_argument('--out',type=Path);parser.add_argument('--fixture-fault',choices=['api','worker','web'])
+    parser.add_argument('--previous-product',type=Path);parser.add_argument('--product',type=Path);parser.add_argument('--out',type=Path);parser.add_argument('--fixture-fault',choices=['api','worker','web'])
     a=parser.parse_args()
     try:
         if a.action=='prepare':
-            require(all((a.owner_root,a.nonce,a.kind,a.product,a.out)),'HANDOVER_PREPARE_ARGUMENTS_REQUIRED')
-            private_directory(a.out);p=make_plan(a.owner_root,a.nonce,a.kind,a.product,a.out)
-            print(json.dumps(dict(result='PREPARED_NOT_APPLIED',plan_sha256=p['id'],product_head=PRODUCT,recovery_head=PRODUCT)))
+            require(all((a.owner_root,a.nonce,a.kind,a.product,a.out,a.previous_product)),'HANDOVER_PREPARE_ARGUMENTS_REQUIRED')
+            private_directory(a.out);p=make_plan(a.owner_root,a.nonce,a.kind,a.product,a.out,a.previous_product)
+            print(json.dumps(dict(result='PREPARED_NOT_APPLIED',plan_sha256=p['id'],product_head=PRODUCT,recovery_head=RECOVERY)))
         elif a.action in ('api-child','worker-child'):child_main(a.plan,'api' if a.action=='api-child' else 'worker')
         elif a.action in ('activate','resume'):run_owner(a.plan,a.approval,a.action,a.fixture_fault)
         elif a.action in ('recover','stop'):request_action(a.plan,a.approval,a.action)

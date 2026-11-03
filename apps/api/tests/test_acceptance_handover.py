@@ -75,7 +75,7 @@ def test_identity_is_read_only_and_has_no_command_or_environment():
 
 def approval_pair():
     now=datetime.now(timezone.utc);m=manifest();plan={'id':'a'*64,'owner':{'manifest':m}}
-    approval=dict(decision='APPROVED',plan_sha256=plan['id'],nonce=m['nonce'],origin=m['origin'],product_head=handover.PRODUCT,recovery_head=handover.PRODUCT,actions=['activate','recover','stop'],not_before=(now-timedelta(minutes=1)).isoformat(),expires=(now+timedelta(minutes=10)).isoformat(),decided_by='SYNTHETIC_TEST_ONLY',decision_reference='fixture test decision',real_data_approved=False)
+    approval=dict(decision='APPROVED',plan_sha256=plan['id'],nonce=m['nonce'],origin=m['origin'],product_head=handover.PRODUCT,recovery_head=handover.RECOVERY,actions=['activate','recover','stop'],not_before=(now-timedelta(minutes=1)).isoformat(),expires=(now+timedelta(minutes=10)).isoformat(),decided_by='SYNTHETIC_TEST_ONLY',decision_reference='fixture test decision',real_data_approved=False)
     return plan,approval,now
 
 
@@ -199,3 +199,8 @@ def test_failed_tcp_database_probe_blocks_before_owner_mutation(tmp_path,monkeyp
     def forbidden(*_,**__):pytest.fail('No stop/write/event on failed TCP authentication')
     for name in ('stop_legacy','save','event'):monkeypatch.setattr(handover,name,forbidden)
     with pytest.raises(RuntimeError,match='DATABASE_IDENTITY'):handover.run_owner(tmp_path/'plan.json',tmp_path/'approval.json')
+
+
+def test_same_target_is_not_claimed_as_previous_version():
+    with pytest.raises(RuntimeError,match='EXACT_TARGET_AND_PREVIOUS'):
+        handover.compatible_pair({'head':handover.PRODUCT},{'head':handover.PRODUCT})
