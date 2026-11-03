@@ -324,6 +324,7 @@ def test_linear_hash_rejects_nested_links_even_before_excluding_cache(tmp_path,r
     try:
         with pytest.raises(RuntimeError,match='LINKED_PATH_REJECTED'):release.tree_hash(tmp_path)
         with pytest.raises(RuntimeError,match='LINKED_PATH_REJECTED'):canonical_old_tree_hash(tmp_path)
+        with pytest.raises(RuntimeError,match='LINKED_PATH_REJECTED'):release.no_links(release.fs_path(link))
     finally:
         if os.name=='nt':os.rmdir(link)
         else:link.unlink()
@@ -488,3 +489,73 @@ def test_same_head_running_build_must_match_the_selected_exact_release_before_st
     with pytest.raises(RuntimeError,match='RUNNING_IDENTITY_MISMATCH'):
         release.switch(tmp_path,m,tmp_path,new['id'],m['nonce'])
     assert 'stopped' not in seen
+
+
+def test_actual_long_path_copy_manifest_and_runtime_identity_keep_normal_paths(tmp_path):
+    import os,shutil
+    from hashlib import sha256
+    sandbox=tmp_path/'owned-long-path-case';sandbox.mkdir()
+    source=sandbox/'source'
+    try:
+        web=synthetic_web(source)
+        relative=WEB_DIST+'/server/app/'+('/'.join('level-'+str(i)+'-'+'x'*42 for i in range(5)))+'/__PAGE__.segment.rsc'
+        deep=web/relative
+        assert len(str(deep))>260
+        release.fs_path(deep.parent).mkdir(parents=True)
+        payload=b'SYNTHETIC_LONG_PATH_MANIFEST_ONLY'
+        release.fs_path(deep).write_bytes(payload)
+        entry=next(item for item in release.all_files(web) if item['path']==relative)
+        assert entry==dict(path=relative,size=len(payload),sha256=sha256(payload).hexdigest())
+        assert release.all_files(release.fs_path(web))==release.all_files(web)
+        # The artifact/metadata root itself is also longer than MAX_PATH.
+        out=sandbox/('owner-'+'a'*64)/('data-'+'b'*64)/('retained-'+'c'*64)
+        assert len(str(out))>260
+        r=artifact_record(source,out)
+        artifact=release.validate_web_artifact(out,r)
+        assert release.file_hash(artifact/relative)==sha256(payload).hexdigest()
+        execution=release.execution_web(out,r)
+        runtime=Path(execution['web_root'])
+        assert release.all_files(runtime)==r['web_artifact']['files']
+        assert release.normal_path(release.fs_path(runtime))==runtime
+        assert not str(runtime).startswith(chr(92)*2+'?'+chr(92))
+        assert all(not item['path'].startswith(chr(92)*2+'?'+chr(92)) for item in r['web_artifact']['files'])
+        saved=json.loads(release.fs_path(runtime.parent/'execution.json').read_text(encoding='utf-8'))
+        assert saved==execution and Path(saved['source_root'])==source
+        if os.name=='nt':assert str(release.fs_path(runtime)).startswith(chr(92)*2+'?'+chr(92))
+        else:assert release.fs_path(runtime)==runtime
+    finally:
+        # Remove only this test's exact owned temporary tree, using one OS
+        # namespace end to end. No workspace/runtime/source data is targeted.
+        resolved=release.no_links(sandbox)
+        assert resolved.parent==tmp_path.resolve() and resolved.name=='owned-long-path-case'
+        shutil.rmtree(release.fs_path(resolved))
+
+
+def test_windows_namespace_conversion_preserves_unc_and_local_logical_identity(tmp_path):
+    import os
+    local=tmp_path/'synthetic-file'
+    assert release.normal_path(release.fs_path(local))==local.absolute()
+    if os.name=='nt':
+        unc=Path(chr(92)*2+'synthetic-server'+chr(92)+'synthetic-share'+chr(92)+'nested')
+        physical=release.fs_path(unc)
+        assert str(physical).startswith(chr(92)*2+'?'+chr(92)+'UNC'+chr(92))
+        assert release.normal_path(physical)==unc
+    else:assert release.fs_path(local)==local.absolute()
+
+
+def test_owned_build_uses_fixed_memory_cap_and_restores_tracked_next_env_on_failure(tmp_path,monkeypatch):
+    import subprocess
+    source=tmp_path/'source';web=source/'apps/web';web.mkdir(parents=True)
+    tracked=web/'next-env.d.ts';original=b'SYNTHETIC_EXACT_ORIGINAL\r\n';tracked.write_bytes(original)
+    out=tmp_path/'owned-output';out.mkdir()
+    monkeypatch.setattr(release,'git',lambda *a:'a'*40)
+    monkeypatch.setattr(release,'release_environment',lambda *a:{'NODE_OPTIONS':'--inspect=SYNTHETIC_UNTRUSTED_FLAG','SAFE_MARKER':'retained'})
+    observed=[]
+    def failed_build(command,**kwargs):
+        observed.append(kwargs['env'].copy())
+        tracked.write_bytes(b'SYNTHETIC_BUILD_SIDE_EFFECT')
+        raise subprocess.CalledProcessError(1,command)
+    monkeypatch.setattr(release.subprocess,'run',failed_build)
+    with pytest.raises(subprocess.CalledProcessError):release.build(source,sample(tmp_path),out,WEB_DIST)
+    assert observed==[{'NODE_OPTIONS':'--max-old-space-size=2048','SAFE_MARKER':'retained'}]
+    assert tracked.read_bytes()==original

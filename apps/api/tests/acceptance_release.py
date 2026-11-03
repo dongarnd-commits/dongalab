@@ -38,25 +38,47 @@ def digest(value):
     return sha256(json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=False).encode()).hexdigest()
 
 
+def normal_path(path):
+    """Logical paths remain ordinary absolute paths in records and identities."""
+    text=os.fspath(path)
+    if os.name=='nt':
+        prefix=chr(92)*2+'?'+chr(92)
+        unc=prefix+'UNC'+chr(92)
+        if text.upper().startswith(unc.upper()):text=chr(92)*2+text[len(unc):]
+        elif text.startswith(prefix):text=text[len(prefix):]
+    return Path(text)
+
+
+def fs_path(path):
+    """Windows extended namespace is used ONLY at filesystem I/O boundaries."""
+    path=normal_path(path).absolute()
+    if os.name!='nt':return path
+    text=os.path.normpath(str(path))
+    prefix=chr(92)*2+'?'+chr(92)
+    if text.startswith(chr(92)*2):return Path(prefix+'UNC'+chr(92)+text[2:])
+    return Path(prefix+text)
+
+
 def file_hash(path):
-    return sha256(Path(path).read_bytes()).hexdigest()
+    return sha256(fs_path(path).read_bytes()).hexdigest()
 
 
 def no_links(path):
-    path=Path(path).absolute()
+    path=normal_path(path).absolute()
     for item in [path,*path.parents]:
-        if item.exists() or item.is_symlink():
-            stat=item.lstat()
-            if item.is_symlink() or getattr(stat,'st_file_attributes',0)&0x400:
-                fail('RELEASE_LINKED_PATH_REJECTED')
-    return path.resolve()
+        try:details=fs_path(item).lstat()
+        except FileNotFoundError:continue
+        if statmod.S_ISLNK(details.st_mode) or getattr(details,'st_file_attributes',0)&0x400:
+            fail('RELEASE_LINKED_PATH_REJECTED')
+    return normal_path(fs_path(path).resolve())
 
 
 def tree_hash(directory):
     directory=no_links(directory)
-    if not directory.is_dir():fail('RELEASE_ARTIFACT_MISSING')
+    io_root=fs_path(directory)
+    if not io_root.is_dir():fail('RELEASE_ARTIFACT_MISSING')
     entries=[]
-    for base,dirs,files in os.walk(directory,followlinks=False):
+    for base,dirs,files in os.walk(io_root,followlinks=False):
         for name in [*dirs,*files]:
             # Root ancestors are checked once above. Each walked entry needs
             # only its own lstat, avoiding repeated ancestor resolution per file.
@@ -67,7 +89,7 @@ def tree_hash(directory):
         for name in sorted(files):
             path=Path(base)/name
             if name in ('trace','.DS_Store') or name.endswith(('.pyc','.log')):continue
-            entries.append((path.relative_to(directory).as_posix(),file_hash(path)))
+            entries.append((path.relative_to(io_root).as_posix(),file_hash(path)))
     if not entries:fail('RELEASE_ARTIFACT_EMPTY')
     return digest(entries)
 
@@ -244,15 +266,15 @@ def owner_identity(owner,m,out):
 
 def immutable(path,value):
     no_links(path.parent)
-    path.parent.mkdir(parents=True,exist_ok=True)
+    fs_path(path.parent).mkdir(parents=True,exist_ok=True)
     no_links(path)
-    with path.open('x',encoding='utf-8') as output:json.dump(value,output,ensure_ascii=False,sort_keys=True,indent=2)
+    with fs_path(path).open('x',encoding='utf-8') as output:json.dump(value,output,ensure_ascii=False,sort_keys=True,indent=2)
 
 
 def load_record(out,identifier,anchor_only=False):
     if not re.fullmatch('r[a-f0-9]{24}',identifier):fail('RELEASE_ID_INVALID')
     path=no_links(out/'releases'/(identifier+'.json'))
-    record=json.loads(path.read_text(encoding='utf-8'))
+    record=json.loads(fs_path(path).read_text(encoding='utf-8'))
     data_descriptor(record,anchor_only=anchor_only)
     body={k:v for k,v in record.items() if k!='id'}
     if record.get('id')!=identifier or identifier!='r'+digest(body)[:24]:fail('RELEASE_RECORD_TAMPERED')
@@ -263,9 +285,10 @@ def load_record(out,identifier,anchor_only=False):
 def all_files(root):
     """Full immutable artifact manifest, including every route-cache byte."""
     root=no_links(root)
-    if not root.is_dir():fail('RELEASE_WEB_ARTIFACT_MISSING')
+    io_root=fs_path(root)
+    if not io_root.is_dir():fail('RELEASE_WEB_ARTIFACT_MISSING')
     entries=[]
-    for base,dirs,files in os.walk(root,followlinks=False):
+    for base,dirs,files in os.walk(io_root,followlinks=False):
         for name in [*dirs,*files]:
             item=(Path(base)/name).lstat()
             if statmod.S_ISLNK(item.st_mode) or getattr(item,'st_file_attributes',0)&0x400:
@@ -275,23 +298,23 @@ def all_files(root):
         dirs[:]=sorted(dirs)
         for name in sorted(files):
             path=Path(base)/name
-            entries.append(dict(path=path.relative_to(root).as_posix(),size=path.stat().st_size,sha256=file_hash(path)))
+            entries.append(dict(path=path.relative_to(io_root).as_posix(),size=path.stat().st_size,sha256=file_hash(path)))
     return sorted(entries,key=lambda value:value['path'])
 
 
 def copy_entries(source,destination,entries):
     source=no_links(source);destination=no_links(destination)
-    destination.mkdir(parents=True,exist_ok=False)
+    fs_path(destination).mkdir(parents=True,exist_ok=False)
     for entry in entries:
         relative=Path(entry['path'])
         if relative.is_absolute() or relative.drive or relative.root or '..' in relative.parts:fail('RELEASE_ARTIFACT_MANIFEST_PATH_INVALID')
         origin=source/relative;target=destination/relative
-        item=origin.lstat()
+        item=fs_path(origin).lstat()
         if statmod.S_ISLNK(item.st_mode) or getattr(item,'st_file_attributes',0)&0x400:
             fail('RELEASE_LINKED_PATH_REJECTED')
-        target.parent.mkdir(parents=True,exist_ok=True)
-        with origin.open('rb') as incoming,target.open('xb') as outgoing:shutil.copyfileobj(incoming,outgoing)
-        if target.stat().st_size!=entry['size'] or file_hash(target)!=entry['sha256']:
+        fs_path(target.parent).mkdir(parents=True,exist_ok=True)
+        with fs_path(origin).open('rb') as incoming,fs_path(target).open('xb') as outgoing:shutil.copyfileobj(incoming,outgoing)
+        if fs_path(target).stat().st_size!=entry['size'] or file_hash(target)!=entry['sha256']:
             fail('RELEASE_WEB_COPY_CHANGED')
     if all_files(destination)!=entries:fail('RELEASE_WEB_COPY_MANIFEST_MISMATCH')
 
@@ -299,15 +322,15 @@ def copy_entries(source,destination,entries):
 def snapshot_web(source,out,dist):
     web=no_links(Path(source)/'apps/web')
     build=no_links(web/dist)
-    if not (build/'BUILD_ID').is_file():fail('RELEASE_BUILD_INCOMPLETE')
+    if not fs_path(build/'BUILD_ID').is_file():fail('RELEASE_BUILD_INCOMPLETE')
     entries=[]
     for name in ('package.json','next.config.mjs'):
         path=no_links(web/name)
-        if not path.is_file():fail('RELEASE_WEB_RUNTIME_CONFIG_MISSING')
-        entries.append(dict(path=name,size=path.stat().st_size,sha256=file_hash(path)))
+        if not fs_path(path).is_file():fail('RELEASE_WEB_RUNTIME_CONFIG_MISSING')
+        entries.append(dict(path=name,size=fs_path(path).stat().st_size,sha256=file_hash(path)))
     for relative in (dist,'public'):
         folder=web/relative
-        if not folder.exists():
+        if not fs_path(folder).exists():
             if relative=='public':continue
             fail('RELEASE_BUILD_INCOMPLETE')
         for entry in all_files(folder):entries.append(dict(entry,path=relative+'/'+entry['path']))
@@ -316,15 +339,15 @@ def snapshot_web(source,out,dist):
     identity=digest(entries);artifact_id='a'+identity[:24]
     relative_root='release-artifacts/'+artifact_id+'/web'
     root=no_links(out/relative_root)
-    if root.exists():
+    if fs_path(root).exists():
         if all_files(root)!=entries:fail('RELEASE_IMMUTABLE_ARTIFACT_CHANGED')
     else:copy_entries(web,root,entries)
     artifact=dict(format='datco-web-artifact-v1',artifact_id=artifact_id,
         relative_root=relative_root,manifest_sha256=identity,files=entries,
-        build_id=(build/'BUILD_ID').read_text(encoding='utf-8').strip(),fresh_build=True)
+        build_id=fs_path(build/'BUILD_ID').read_text(encoding='utf-8').strip(),fresh_build=True)
     metadata=no_links(root.parent/'artifact.json')
-    if metadata.exists():
-        if json.loads(metadata.read_text(encoding='utf-8'))!=artifact:fail('RELEASE_ARTIFACT_RECORD_CHANGED')
+    if fs_path(metadata).exists():
+        if json.loads(fs_path(metadata).read_text(encoding='utf-8'))!=artifact:fail('RELEASE_ARTIFACT_RECORD_CHANGED')
     else:immutable(metadata,artifact)
     return artifact
 
@@ -342,9 +365,9 @@ def validate_web_artifact(out,record):
     if (actual!=artifact.get('files') or digest(actual)!=artifact.get('manifest_sha256')
             or record.get('build_hash')!=artifact.get('manifest_sha256')):
         fail('RELEASE_IMMUTABLE_ARTIFACT_CHANGED')
-    sidecar=json.loads(no_links(root.parent/'artifact.json').read_text(encoding='utf-8'))
+    sidecar=json.loads(fs_path(no_links(root.parent/'artifact.json')).read_text(encoding='utf-8'))
     if sidecar!=artifact:fail('RELEASE_ARTIFACT_RECORD_CHANGED')
-    if (root/record['dist_dir']/'BUILD_ID').read_text(encoding='utf-8').strip()!=artifact['build_id']:
+    if fs_path(root/record['dist_dir']/'BUILD_ID').read_text(encoding='utf-8').strip()!=artifact['build_id']:
         fail('RELEASE_ARTIFACT_BUILD_ID_CHANGED')
     return root
 
@@ -400,16 +423,19 @@ def release_environment(m,out,source,record):
 
 def build(source,m,out,dist):
     config=source/'apps/web'/dist.replace('datco-e2e-','datco-config-')/'tsconfig.json'
-    config.parent.mkdir(parents=True,exist_ok=True)
+    fs_path(config.parent).mkdir(parents=True,exist_ok=True)
     web=source/'apps/web'
-    config.write_text(json.dumps(dict(extends='../../tsconfig.json',compilerOptions=dict(paths={'@/*':[str(web/'src/*')]}),include=[str(web/'next-env.d.ts'),str(web/'src/**/*.ts'),str(web/'src/**/*.tsx'),str(web/'tests/**/*.ts'),str(web/dist/'types/**/*.ts')],exclude=[str(web/'node_modules')])),encoding='utf-8')
+    fs_path(config).write_text(json.dumps(dict(extends='../../tsconfig.json',compilerOptions=dict(paths={'@/*':[str(web/'src/*')]}),include=[str(web/'next-env.d.ts'),str(web/'src/**/*.ts'),str(web/'src/**/*.tsx'),str(web/'tests/**/*.ts'),str(web/dist/'types/**/*.ts')],exclude=[str(web/'node_modules')])),encoding='utf-8')
     env=release_environment(m,out,source,dict(head=git(source,'rev-parse','HEAD'),dist_dir=dist))
-    original=(web/'next-env.d.ts').read_bytes()
+    # Only this owned build gets a fixed cap after sanitization; arbitrary
+    # inherited Node flags stay discarded. Runtime environments are unchanged.
+    env['NODE_OPTIONS']='--max-old-space-size=2048'
+    original=fs_path(web/'next-env.d.ts').read_bytes()
     command=['cmd.exe','/c','npm.cmd','run','build'] if os.name=='nt' else ['npm','run','build']
     try:
         with (out/'release-build.log').open('a',encoding='utf-8') as log:
             subprocess.run(command,cwd=web,env=env,stdout=log,stderr=subprocess.STDOUT,creationflags=uat.HIDDEN,check=True)
-    finally:(web/'next-env.d.ts').write_bytes(original)
+    finally:fs_path(web/'next-env.d.ts').write_bytes(original)
 
 
 def prepare(owner,m,out,source,head,dist=None,do_build=False):
@@ -424,16 +450,16 @@ def prepare(owner,m,out,source,head,dist=None,do_build=False):
     expected=json.loads(subprocess.check_output([str(python_at(source)),'-B','-c',"import json;from alembic.config import Config;from alembic.script import ScriptDirectory;print(json.dumps(sorted(ScriptDirectory.from_config(Config('alembic.ini')).get_heads())))"],cwd=source/'apps/api',env=env,text=True,encoding='utf-8'))
     if expected!=database['alembic']:fail('RELEASE_MIGRATION_REQUIRED_NOT_ALLOWED')
     if do_build:
-        if (source/'apps/web'/dist).exists():fail('RELEASE_IMMUTABLE_BUILD_ALREADY_EXISTS')
+        if fs_path(source/'apps/web'/dist).exists():fail('RELEASE_IMMUTABLE_BUILD_ALREADY_EXISTS')
         build(source,m,out,dist)
-    if not (source/'apps/web'/dist/'BUILD_ID').is_file():fail('RELEASE_BUILD_INCOMPLETE')
+    if not fs_path(source/'apps/web'/dist/'BUILD_ID').is_file():fail('RELEASE_BUILD_INCOMPLETE')
     clean_source(source,head)
     artifact=snapshot_web(source,out,dist)
     body=dict(schema=RECORD_SCHEMA,source_root=str(source),head=head,dist_dir=dist,
         source_contract=contract,build_hash=artifact['manifest_sha256'],web_artifact=artifact,database=database,
         owner=owner_identity(owner,m,out),launcher=str(TOOL),launcher_hash=file_hash(TOOL))
     record=dict(body,id='r'+digest(body)[:24]);path=out/'releases'/(record['id']+'.json')
-    if path.exists():
+    if fs_path(path).exists():
         if load_record(out,record['id'])!=record:fail('RELEASE_RECORD_CONFLICT')
     else:immutable(path,record)
     return record
