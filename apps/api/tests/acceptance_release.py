@@ -23,6 +23,8 @@ import manual_acceptance as uat
 ROOT = Path(__file__).resolve().parents[3]
 TOOL = Path(__file__).resolve()
 PROTECTED = {8443, 8444, 18445, 49355, 49356}
+RECORD_SCHEMA = 'datco-uat-release-v2'
+DATA_FORMAT = 'dmp-workbook-metadata-v1'
 
 
 def fail(code):
@@ -98,6 +100,61 @@ def owner_guard_version(source):
     return declarations[0] if len(declarations)==1 and declarations[0]==1 else 0
 
 
+
+def workbook_data_contract(source):
+    """Probe a source's pure JSON reader with synthetic data; no DB or files data.
+
+    A field accepted but discarded is not backward-compatible reading. A tracked
+    writer is conservatively considered capable of persisting this JSON format.
+    """
+    sample=dict(schema_version='workbook-v1',artifact_kind='SYNTHETIC_RELEASE_PROBE',
+        source_workbook='SYNTHETIC.xlsx',source_sheet='SYNTHETIC',source_display_date='',
+        feature_count=1,system_count=1,group_count=1,uniqueness_rule='feature_id',
+        system_counts={'SYNTHETIC':1},workbook_provenance={
+            'file_sha256':'a'*64,'parser_version':'synthetic-probe-v1',
+            'rows':[{'row_key':'0:2','cells':{'name':{'cell':'C2'}}}]})
+    code="""import json,sys
+sys.path.insert(0,sys.argv[1])
+from app.infrastructure.dmp_inventory import Metadata
+sample=json.loads(sys.argv[2])
+try:
+    parsed=Metadata.model_validate(sample)
+    preserved=parsed.model_dump().get('workbook_provenance')==sample['workbook_provenance']
+except Exception:
+    preserved=False
+print(json.dumps({'reader':preserved}))
+"""
+    env={key:value for key,value in os.environ.items()
+         if not key.startswith(('DATCO_','OPENAI_','ANTHROPIC_','GEMINI_','GOOGLE_API_',
+            'BIZINFO_','GROK_','XAI_','AZURE_OPENAI_'))
+         and key not in ('DATABASE_URL','PYTHONPATH','HTTP_PROXY','HTTPS_PROXY','ALL_PROXY',
+            'http_proxy','https_proxy','all_proxy')}
+    env['PYTHONIOENCODING']='utf-8'
+    result=subprocess.run([str(python_at(source)),'-I','-B','-c',code,
+        str(Path(source)/'apps/api'),json.dumps(sample)],cwd=Path(source)/'apps/api',
+        env=env,capture_output=True,text=True,encoding='utf-8',creationflags=uat.HIDDEN)
+    if result.returncode:fail('RELEASE_DATA_CONTRACT_PROBE_FAILED')
+    try:reader=json.loads(result.stdout)['reader']
+    except (ValueError,KeyError,TypeError):fail('RELEASE_DATA_CONTRACT_PROBE_FAILED')
+    if type(reader) is not bool:fail('RELEASE_DATA_CONTRACT_PROBE_FAILED')
+    writer_path='apps/api/app/capability/workbook_import.py'
+    writer=bool(git(source,'ls-files','--',writer_path))
+    return dict(format=DATA_FORMAT,probe_version=1,
+        reader_preserves_workbook_provenance=reader,
+        writer_may_emit_workbook_provenance=writer)
+
+
+def data_descriptor(record):
+    if record.get('schema')!=RECORD_SCHEMA:fail('RELEASE_RECORD_SCHEMA_UNSUPPORTED')
+    descriptor=record.get('source_contract',{}).get('workbook_data')
+    if (not isinstance(descriptor,dict) or descriptor.get('format')!=DATA_FORMAT
+            or descriptor.get('probe_version')!=1
+            or type(descriptor.get('reader_preserves_workbook_provenance')) is not bool
+            or type(descriptor.get('writer_may_emit_workbook_provenance')) is not bool):
+        fail('RELEASE_BACKWARD_DATA_CONTRACT_INCOMPATIBLE')
+    return descriptor
+
+
 def source_contract(source):
     source=Path(source)
     python=python_at(source)
@@ -110,7 +167,8 @@ def source_contract(source):
     contract={p.relative_to(source).as_posix():file_hash(p) for p in [*schemas,*migrations]}
     if not schemas or not migrations:fail('RELEASE_SCHEMA_CONTRACT_MISSING')
     site=source/('apps/api/.venv/Lib/site-packages' if os.name=='nt' else 'apps/api/.venv/lib')
-    return dict(locks=locked,schema_code=digest(contract),release_owner_guard=owner_guard_version(source),python=str(python),
+    return dict(locks=locked,schema_code=digest(contract),release_owner_guard=owner_guard_version(source),
+                workbook_data=workbook_data_contract(source),python=str(python),
                 python_config=file_hash(source/'apps/api/.venv/pyvenv.cfg'),
                 python_deps=tree_hash(site),node_deps=tree_hash(modules))
 
@@ -187,12 +245,14 @@ def load_record(out,identifier):
     if not re.fullmatch('r[a-f0-9]{24}',identifier):fail('RELEASE_ID_INVALID')
     path=no_links(out/'releases'/(identifier+'.json'))
     record=json.loads(path.read_text(encoding='utf-8'))
+    data_descriptor(record)
     body={k:v for k,v in record.items() if k!='id'}
     if record.get('id')!=identifier or identifier!='r'+digest(body)[:24]:fail('RELEASE_RECORD_TAMPERED')
     return record
 
 
 def validate_record(owner,m,out,record,check_db=True):
+    data_descriptor(record)
     if record['owner']!=owner_identity(owner,m,out):fail('RELEASE_OWNER_CHANGED')
     source=clean_source(record['source_root'],record['head'])
     if uat.repository_common_dir(source)!=uat.repository_common_dir(owner):fail('RELEASE_REPOSITORY_MISMATCH')
@@ -205,6 +265,10 @@ def validate_record(owner,m,out,record,check_db=True):
 
 
 def compatible(previous,target):
+    old_data,new_data=data_descriptor(previous),data_descriptor(target)
+    if ((old_data['writer_may_emit_workbook_provenance'] or new_data['writer_may_emit_workbook_provenance'])
+            and not (old_data['reader_preserves_workbook_provenance'] and new_data['reader_preserves_workbook_provenance'])):
+        fail('RELEASE_BACKWARD_DATA_CONTRACT_INCOMPATIBLE')
     if previous['owner']!=target['owner']:fail('RELEASE_DATA_OWNER_MISMATCH')
     for key in ('locks','schema_code'):
         if previous['source_contract'][key]!=target['source_contract'][key]:fail('RELEASE_CONTRACT_INCOMPATIBLE')
@@ -253,7 +317,7 @@ def prepare(owner,m,out,source,head,dist=None,do_build=False):
         build(source,m,out,dist)
     if not (source/'apps/web'/dist/'BUILD_ID').is_file():fail('RELEASE_BUILD_INCOMPLETE')
     clean_source(source,head)
-    body=dict(schema='datco-uat-release-v1',source_root=str(source),head=head,dist_dir=dist,
+    body=dict(schema=RECORD_SCHEMA,source_root=str(source),head=head,dist_dir=dist,
         source_contract=contract,build_hash=tree_hash(source/'apps/web'/dist),database=database,
         owner=owner_identity(owner,m,out),launcher=str(TOOL),launcher_hash=file_hash(TOOL))
     record=dict(body,id='r'+digest(body)[:24]);path=out/'releases'/(record['id']+'.json')
@@ -362,7 +426,7 @@ def switch(owner,m,out,identifier,confirmation):
         if registered['owner']!=owner_identity(owner,m,out):fail('RELEASE_OWNER_CHANGED')
         selected=selection(out);previous=load_record(out,selected['current']);target=load_record(out,identifier)
         # All potentially expensive checks/builds happen before the stop request.
-        validate_record(owner,m,out,previous);validate_record(owner,m,out,target);compatible(previous,target)
+        compatible(previous,target);validate_record(owner,m,out,previous);validate_record(owner,m,out,target)
         before=state(out)
         if before.get('nonce')!=m['nonce']:fail('RELEASE_STATE_NONCE_MISMATCH')
         if before['phase']=='RUNNING' and before.get('head')!=previous['head']:fail('RELEASE_RUNNING_IDENTITY_MISMATCH')
