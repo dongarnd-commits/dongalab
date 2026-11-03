@@ -411,7 +411,7 @@ Windows 파일 I/O 관련 순수 회귀는103 PASS/0 SKIP이며 실제260자 초
 
 #### 후속 Git·전체 회귀와 남은 상태
 
-구분 가능한 구현 근거는 분석/원문 계보fa5af07·55ca6f5, Excel24e6975, 포털01acb2a·3c02b84, Preview6454ca3, 전환f49dbd8·9b8d0e0·a4ada3c·daa4af7·997d5a0, 회귀 준비d27aa88이다. 변경 영역은 `apps/api/app/capability/{workbook_import,asset_imports,api,asset_solutions}.py`와 기존 분석/Worker 경로, Web portal/common session·UI·proxy 및 생성 API 타입, `apps/api/tests/acceptance_release.py`와 대응 시험·고정 합성 품질 자료다. Source/Evidence/Version/Review·기업 ACK·운영자 CONFIRM·제공/필수 연계·정식 제안/전달 Guard, Role/Company Scope·물리 Schema는 유지했다. 외부AI/새 OCR·연계 면제·공고 없는 제안 정책은 추가하지 않았다.
+구분 가능한 구현 근거는 분석/원문 계보fa5af07·55ca6f5, Excel24e6975, 포털01acb2a·3c02b84, Preview6454ca3, 전환f49dbd8·9b8d0e0·a4ada3c·daa4af7·997d5a0, 회귀 준비d27aa88이다. 변경 영역은 `apps/api/app/capability/{workbook_import,input,application,asset_solutions}.py`·`apps/api/app/api/{capability,asset_imports,asset_solutions}.py`와 기존 분석/Worker 경로, Web portal/common session·UI·proxy 및 생성 API 타입, `apps/api/tests/acceptance_release.py`와 대응 시험·고정 합성 품질 자료다. Source/Evidence/Version/Review·기업 ACK·운영자 CONFIRM·제공/필수 연계·정식 제안/전달 Guard, Role/Company Scope·물리 Schema는 유지했다. 외부AI/새 OCR·연계 면제·공고 없는 제안 정책은 추가하지 않았다.
 
 이번 최종 기록 이후 Commit은 문서만 추가하고 실행 제품·lock·Schema·전환 도구가 정식 source917과 동일함을 검사한다. 별도 Feature Branch `fix/portal-analysis-quality-20261103`의 [Draft PR20](https://github.com/dongarnd-commits/dongalab/pull/20)은 PR19/0b6f56a88131a10fdc9c4cb16ed7658250275b03을 base로 하며 PR17→18→19의 포함 관계를 유지한다. 기존 PR17/18/19는 open Draft/미병합, main10d3d8b0f0142b0d6cbb992acb07bb34ed40c049를 유지한 원격 메타데이터도 확인했다. 보호 로그·원본649·실자료·계정·실행 비밀은 Git/CI에 넣지 않는다. 정확 최종 HEAD와 최신 전체7개 Job의 완료 결과는 같은 PR 본문/Checks에 기록한다. 예전 성공이나 로컬 부분 실행을 최신 전체 성공으로 대신하지 않는다.
 
