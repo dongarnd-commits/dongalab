@@ -10,7 +10,7 @@ DOMAINS=(
  ('ACCOUNTING','회계',r'회계|전표|결산|세무|매입|매출|정산'),
  ('COLLABORATION','협업·사무',r'협업|결재|메신저|그룹웨어|문서공유|일반\s*사무'),
 )
-NEGATIVE=r'제외|불필요|필요(?:가|는)?\s*없|도입하지\s*않|검토하지\s*않|대상(?:이)?\s*아(?:니|님)'
+NEGATIVE=r'제외|불필요|필요(?:가|는)?\s*없|원하지\s*않|(?:도입|검토|추천)하지\s*않|대상(?:이)?\s*아(?:니|님)'
 
 def active_match(text,pattern):
     for match in re.finditer(pattern,text):
@@ -33,8 +33,8 @@ ANSWERS={
  'R03':r'(?:개선\s*목표|목표|희망\s*결과|개선\s*후)\s*(?:은|는|:|：)\s*\S+|(?:줄이|단축|향상|낮추|높이).{0,16}(?:싶|희망|목표|원합)',
  'R04':r'(?:적용\s*범위|대상\s*범위|대상|범위)\s*(?:은|는|:|：)\s*\S+|(?:공장|부서|물류센터|사업장).{0,20}(?:에만|만\s*대상)',
  'R05':r'(?:현재|기존|현행)\s*(?:설비|시스템|ERP|MES)\s*(?:은|는|:|：)\s*\S+|(?:현재|기존).{0,12}(?:엑셀|스프레드시트|수기|SAP|ERP|MES)(?:로|를|을|\s)|기존\s*(?:시스템|설비)\s*(?:없음|미사용)|연계\s*대상\s*(?:은|는|:|：)\s*\S+',
- 'R06':r'(?:예산|사업비|견적)\s*(?:은|는|:|：)?\s*(?:[0-9][0-9,.]*\s*(?:원|만원|억원|KRW|USD)|없음|미정|모름|추후\s*확인)',
- 'R07':r'(?:일정|착수|완료|납기|기한|도입시기)\s*(?:은|는|:|：)?\s*(?:20\d{2}[^\n]{0,30}|\d+\s*(?:개월|주|월)|미정|모름|추후\s*확인)',
+ 'R06':r'(?:예산|사업비|견적)\s*(?:은|는|:|：)?\s*(?:[0-9][0-9,.]*\s*(?:원|천원|만원|백만원|억원|KRW|USD)|없음|미정|미확정|미결정|모름|추후\s*확인)',
+ 'R07':r'(?:일정|착수|완료|납기|기한|도입\s*(?:시기|시점))\s*(?:은|는|:|：)?\s*(?:20\d{2}[^\n]{0,30}|\d+\s*(?:개월|주|월)|미정|미확정|미결정|모름|추후\s*확인)',
 }
 
 def answer_span(rule,spans,present):
@@ -61,26 +61,26 @@ def answer_span(rule,spans,present):
             current_tool = rule=='R05' and source.get('field') in ('as_is','problem') and active_match(line,r'(?:엑셀|Excel|수기|스프레드시트|ERP|MES).{0,12}(?:관리|기록|사용)')
             if explicit_scope or current_tool:
                 return source,'FOUND'
-            subject={'R06':r'예산|사업비|견적','R07':r'일정|착수|기한|납기'}.get(rule)
+            subject={'R06':r'예산|사업비|견적','R07':r'일정|착수|기한|납기|도입\s*(?:시기|시점)'}.get(rule)
             if subject and re.search(r'(?:'+subject+r').{0,35}(?:추후|별도|근거\s*확인\s*후).{0,12}(?:산정|확인|검토)',line):
                 return source,'DECLARED_UNKNOWN'
             found=re.search(present,line) or re.search(ANSWERS.get(rule,r'(?!)'),line)
             if found:
                 value=line[found.start():found.end()+12]
-                return source,'DECLARED_UNKNOWN' if re.search(r'미정|모름|추가\s*확인',value) else 'FOUND'
+                return source,'DECLARED_UNKNOWN' if re.search(r'미정|미확정|미결정|모름|추(?:가|후)\s*확인',value) else 'FOUND'
     return None,None
 
 UNITS={'초':('TIME',Decimal(1)),'분':('TIME',Decimal(60)),'시간':('TIME',Decimal(3600)),
-       '원':('KRW',Decimal(1)),'만원':('KRW',Decimal(10000)),'억원':('KRW',Decimal(100000000)),
+       '원':('KRW',Decimal(1)),'천원':('KRW',Decimal(1000)),'백만원':('KRW',Decimal(1000000)),'만원':('KRW',Decimal(10000)),'억원':('KRW',Decimal(100000000)),
        '%':('PERCENT',Decimal(1)),'건':('COUNT',Decimal(1)),'명':('PERSON',Decimal(1))}
 
 def scalar_observations(spans):
     groups={}
     for source in spans:
         for line in source['quote'].splitlines():
-            match=re.fullmatch(r'\s*(불량률|처리시간|소요시간|재고오차|사업비|예산)\s*\(([^)]{1,100})\)\s*[:：]\s*([0-9]+(?:\.[0-9]+)?)\s*(억원|만원|시간|초|분|원|%|건|명)\s*',line)
-            if not match or not re.search(r'20\d{2}|최근\s*\d+|분기|월|기간',match[2]):continue
+            match=re.fullmatch(r'\s*(불량률|처리시간|소요시간|재고오차|사업비|예산)\s*\(([^)]{1,100})\)\s*[:：]\s*((?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:\.[0-9]+)?)\s*(억원|백만원|만원|천원|시간|초|분|원|%|건|명)\s*',line)
+            if not match or not re.search(r'20\d{2}|최근\s*\d+\s*(?:일|주|개월|월|년)|[1-4]\s*분기|[1-9]\d?\s*월',match[2]):continue
             dimension,factor=UNITS[match[4]]
             key=(match[1],re.sub(r'\s+','',match[2]),dimension)
-            groups.setdefault(key,{}).setdefault(Decimal(match[3])*factor,source)
+            groups.setdefault(key,{}).setdefault(Decimal(match[3].replace(',',''))*factor,source)
     return groups

@@ -43,6 +43,19 @@ def extract(name,raw):
             return replace(p,limitations=p.limitations+(str(e),))
     return p
 
+
+def fact_span(version, fact, link):
+    """Keep the exact reviewed value quote separate from its immutable meaning.
+
+    Period/unit/currency belong to the Fact root, not to invented source prose.
+    No normalization, fact confirmation or input selection happens here.
+    """
+    return dict(kind='FACT', version_id=version['id'], review_id=link['review_id'],
+                evidence_id=link['evidence_id'], quote=version['value'],
+                field='fact:' + fact['field'], period=fact['period'],
+                unit=fact['unit'], currency=fact['currency'])
+
+
 def process_improvement_one(factory=None,files=None,extractor=extract,before_publish=None):
     factory=factory or get_session_factory();files=files or LocalPrivateFiles(ROOT/'storage/private/notice')
     with factory.begin() as session:claimed=claim(session,kind=KIND)
@@ -114,7 +127,7 @@ def process_improvement_one(factory=None,files=None,extractor=extract,before_pub
         if site['data'].get('process','').strip():spans.append(dict(kind='SITE',version_id=site['id'],field='process',quote=site['data']['process']))
         for fact in m['data']['facts']:
             fv=a.get(C.fact_versions,fact['id']);f=a.get(C.facts,fv['fact_id'])
-            spans.append(dict(kind='FACT',version_id=fv['id'],review_id=fact['review_id'],evidence_id=fact['evidence_id'],quote=fv['value'],field='fact:'+f['field']))
+            spans.append(fact_span(fv,f,fact))
         for source in a.rows(S.inputs,manifest_id=m['id']):
             if source['evidence_id']:
                 e=a.get(C.evidence,source['evidence_id'])

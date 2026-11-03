@@ -1,0 +1,203 @@
+{
+  "schema": "analysis-quality-supplemental-replay-v1",
+  "source_head": "0b6f56a88131a10fdc9c4cb16ed7658250275b03",
+  "method": "Exact original git source replayed in memory for approved supplemental regressions, without DB/files/network or business actions. Does not alter the frozen 29-case development corpus.",
+  "source_sha256": {
+    "apps/api/app/capability/recommendations.py": "6907ef8d151db8fc9d17984d012ad3371af3bfa5decb4e3a7e606e9363dd3080",
+    "apps/api/app/company/improvement_worker.py": "5246a38396132c96297567eaf7ec01486e80cb305f1786e1670ae4a4d5558aba"
+  },
+  "cases": [
+    {
+      "id": "reviewed-role",
+      "input": {
+        "context": {
+          "company_id": "SYNTHETIC_COMPANY",
+          "improvement_version_id": "SUBMIT_V1",
+          "original_text": "근태 기록이 분리됨",
+          "structured": {
+            "as_is": "근태 기록이 분리됨"
+          }
+        },
+        "reviewed": [
+          {
+            "category": "STRUCTURE",
+            "candidate_id": "C",
+            "subject": "constraints",
+            "content": "급여계산 제외",
+            "evidence": [
+              {
+                "kind": "RESPONSE",
+                "quote": "급여계산 제외"
+              }
+            ]
+          },
+          {
+            "category": "STRUCTURE",
+            "candidate_id": "G",
+            "subject": "goal",
+            "content": "근태 기록 조회",
+            "evidence": [
+              {
+                "kind": "RESPONSE",
+                "quote": "근태 기록 조회"
+              }
+            ]
+          },
+          {
+            "category": "STRUCTURE",
+            "candidate_id": "CAUSE",
+            "subject": "원인 후보",
+            "content": "입력 누락 가능성",
+            "evidence": [
+              {
+                "kind": "RESPONSE",
+                "quote": "입력 누락 가능성"
+              }
+            ]
+          }
+        ]
+      },
+      "before": [
+        {
+          "id": "improvement:as_is",
+          "kind": "CURRENT_STATE",
+          "text": "근태 기록이 분리됨",
+          "evidence": [
+            {
+              "kind": "IMPROVEMENT_VERSION",
+              "version_id": "SUBMIT_V1",
+              "field": "as_is",
+              "quote": "근태 기록이 분리됨"
+            }
+          ],
+          "uncertainty": "확인된 개선요구 원문입니다. 서비스 해결범위 확정은 별도입니다."
+        },
+        {
+          "id": "analysis:C",
+          "kind": "REQUIRED_FUNCTION",
+          "text": "급여계산 제외",
+          "evidence": [
+            {
+              "kind": "RESPONSE",
+              "quote": "급여계산 제외"
+            }
+          ],
+          "uncertainty": "USE_FOR_REQUEST 검토 후보입니다. Confirmed Fact나 공식 요구 확정이 아닙니다."
+        },
+        {
+          "id": "analysis:G",
+          "kind": "REQUIRED_FUNCTION",
+          "text": "근태 기록 조회",
+          "evidence": [
+            {
+              "kind": "RESPONSE",
+              "quote": "근태 기록 조회"
+            }
+          ],
+          "uncertainty": "USE_FOR_REQUEST 검토 후보입니다. Confirmed Fact나 공식 요구 확정이 아닙니다."
+        },
+        {
+          "id": "analysis:CAUSE",
+          "kind": "REQUIRED_FUNCTION",
+          "text": "입력 누락 가능성",
+          "evidence": [
+            {
+              "kind": "RESPONSE",
+              "quote": "입력 누락 가능성"
+            }
+          ],
+          "uncertainty": "USE_FOR_REQUEST 검토 후보입니다. Confirmed Fact나 공식 요구 확정이 아닙니다."
+        }
+      ],
+      "after": [
+        {
+          "id": "improvement:as_is",
+          "kind": "CURRENT_STATE",
+          "text": "근태 기록이 분리됨",
+          "evidence": [
+            {
+              "kind": "IMPROVEMENT_VERSION",
+              "version_id": "SUBMIT_V1",
+              "field": "as_is",
+              "quote": "근태 기록이 분리됨"
+            }
+          ],
+          "uncertainty": "확인된 개선요구 원문입니다. 서비스 해결범위 확정은 별도입니다."
+        },
+        {
+          "id": "analysis:C",
+          "kind": "CONSTRAINT",
+          "text": "급여계산 제외",
+          "evidence": [
+            {
+              "kind": "RESPONSE",
+              "quote": "급여계산 제외"
+            }
+          ],
+          "uncertainty": "USE_FOR_REQUEST 검토 후보입니다. Confirmed Fact나 공식 요구 확정이 아닙니다."
+        },
+        {
+          "id": "analysis:G",
+          "kind": "GOAL",
+          "text": "근태 기록 조회",
+          "evidence": [
+            {
+              "kind": "RESPONSE",
+              "quote": "근태 기록 조회"
+            }
+          ],
+          "uncertainty": "USE_FOR_REQUEST 검토 후보입니다. Confirmed Fact나 공식 요구 확정이 아닙니다."
+        }
+      ],
+      "gold": {
+        "analysis:C": "CONSTRAINT",
+        "analysis:G": "GOAL",
+        "analysis:CAUSE": "OMITTED_CAUSE_NOT_FUNCTION"
+      }
+    },
+    {
+      "id": "fact-context",
+      "input": {
+        "fv": {
+          "id": "FACT_V2",
+          "value": "1,200"
+        },
+        "f": {
+          "field": "revenue",
+          "period": "2027",
+          "unit": "천원",
+          "currency": "KRW"
+        },
+        "fact": {
+          "review_id": "FACT_REVIEW_V2",
+          "evidence_id": "ORIGINAL_PROOF"
+        }
+      },
+      "before": {
+        "kind": "FACT",
+        "version_id": "FACT_V2",
+        "review_id": "FACT_REVIEW_V2",
+        "evidence_id": "ORIGINAL_PROOF",
+        "quote": "1,200",
+        "field": "fact:revenue"
+      },
+      "after": {
+        "kind": "FACT",
+        "version_id": "FACT_V2",
+        "review_id": "FACT_REVIEW_V2",
+        "evidence_id": "ORIGINAL_PROOF",
+        "quote": "1,200",
+        "field": "fact:revenue",
+        "period": "2027",
+        "unit": "천원",
+        "currency": "KRW"
+      },
+      "gold": {
+        "quote": "1,200",
+        "period": "2027",
+        "unit": "천원",
+        "currency": "KRW"
+      }
+    }
+  ]
+}

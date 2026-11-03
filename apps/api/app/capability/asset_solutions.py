@@ -13,7 +13,7 @@ from app.capability.search import compact, query_terms, GENERAL, PARTICLES
 from app.company.improvement_structure import normalized
 from app.notice.domain import Denied
 
-VERSION = "asset-solutions-v2"
+VERSION = "asset-solutions-v3"
 MAX_MODULE_FEATURES = 8
 MAX_COMPOSITE_MODULES = 6
 MAX_ALTERNATIVES = 8
@@ -250,18 +250,43 @@ def _group_order(item):
             _feature_order(candidates[0]), key)
 
 
+def _coverage_units(candidates):
+    # Count concrete source-backed task concepts, never spelling variants or
+    # repeated lexical hits. Inbound and outbound remain distinct operations.
+    aliases = {"근태": "근태", "출퇴근": "근태", "급여": "급여", "임금": "급여",
+               "생산실적": "작업실적", "작업실적": "작업실적",
+               "mes": "생산", "qms": "품질", "hr": "인사", "scms": "공급망",
+               "전자결재": "결재", "기안": "결재", "분개": "전표"}
+    units = set()
+    for candidate in candidates:
+        for demand, terms in candidate["demand_terms"].items():
+            for term in terms:
+                words = R.business_words(term)
+                # Conventional task compounds must retain their precise role.
+                if "실적" in term and words & {"생산", "작업실적"}:
+                    words = (words - {"생산"}) | {"작업실적"}
+                if "입출고" in words:
+                    words = (words - {"입출고"}) | {"입고", "출고"}
+                units.update((demand, aliases.get(word, word)) for word in words)
+                if not words:
+                    units.add((demand, compact(term)))
+    return units
+
+
 def _greedy(groups):
-    chosen, covered = [], set()
+    chosen, covered, covered_demands = [], set(), set()
     remaining = sorted(groups.items(), key=_group_order)
     while remaining and len(chosen) < MAX_COMPOSITE_MODULES:
         ranked = sorted(remaining, key=lambda item: (
-            -len(_tokens(item[1]) - covered), _group_order(item)))
+            -len({d for c in item[1] for d in c["demand_ids"]} - covered_demands),
+            -len(_coverage_units(item[1]) - covered), _group_order(item)))
         key, candidates = ranked[0]
-        new = _tokens(candidates) - covered
+        new = _coverage_units(candidates) - covered
         if chosen and not new:
             break
         chosen.append((key, candidates))
         covered.update(new)
+        covered_demands.update(d for c in candidates for d in c["demand_ids"])
         remaining = [item for item in remaining if item[0] != key]
     return chosen
 
@@ -347,7 +372,6 @@ def _alternative(context, demands, chosen, excluded_clauses, catalog_features, n
         if demand["kind"] == "CONSTRAINT":
             continue
         matched = [c for c in candidates if demand["id"] in c["demand_ids"]]
-        names = _unique(c["name"] for c in matched)
         if matched:
             missing = _unique([_REVIEW, *[value for c in matched for value in _limits(c, nodes)]])
             if R.PARTIAL_SCOPE.search(R.positive_text(demand["text"])):
@@ -356,8 +380,12 @@ def _alternative(context, demands, chosen, excluded_clauses, catalog_features, n
                 evidence_refs=deepcopy(demand["evidence"]), status="PARTIAL",
                 capability_version_id=None,
                 feature_revision_ids=[c["revision_id"] for c in matched],
-                role=_label("검토할 원천 기능 역할: " + " · ".join(names), 2000),
-                addressed_scope=_label("원문 표현과 연결된 기능 후보: " + " · ".join(names), 5000),
+                role=_label("요구 원문: " + demand["text"] + " / 적용 검토 모듈: "
+                    + " · ".join(_unique(c["module_name"] for c in matched)), 2000),
+                addressed_scope=_label("등록된 제공범위 원문: " + " / ".join(_unique(
+                    e["quote"] for c in matched for e in c["evidence"]
+                    if any(term in c["demand_terms"].get(demand["id"], [])
+                           for term in e["matched_terms"]))), 5000),
                 unaddressed_scope="요구 전체의 해결·실제 적용성·효과는 아직 검증하지 않았습니다.",
                 missing_information=missing))
         else:
@@ -408,7 +436,7 @@ def generate(context, catalog, reviewed=(), basis=None, limits=()):
     and persists this projection. No unreviewed result is a confirmed service.
     """
     demands = _demands(context, reviewed)
-    excluded, excluded_clauses = R.exclusions(context)
+    excluded, excluded_clauses = R.exclusions(context, reviewed)
     active = [d for d in demands if d["kind"] != "CONSTRAINT"]
     nodes = {node["id"]: node for kind in ("systems", "modules") for node in catalog.get(kind, [])}
     features, candidates = {}, []
@@ -453,10 +481,10 @@ def generate(context, catalog, reviewed=(), basis=None, limits=()):
         value = _alternative(context, demands, chosen, excluded_clauses, features, nodes)
         alternatives.setdefault(value["id"], value)
     ordered = sorted(alternatives.values(), key=lambda a: (
-        -len({(row["demand_id"], term) for row in a["coverage"]
-              for c in candidates if c["revision_id"] in row["feature_revision_ids"]
-              for term in c["demand_terms"].get(row["demand_id"], [])}),
-        len(a["feature_selections"]), a["name"], a["id"]))[:MAX_ALTERNATIVES]
+        -len({row["demand_id"] for row in a["coverage"] if row["feature_revision_ids"]}),
+        -len(_coverage_units([c for c in candidates
+             if c["revision_id"] in {f["feature_revision_id"] for f in a["feature_selections"]}])),
+        len(a["modules"]), len(a["feature_selections"]), a["name"], a["id"]))[:MAX_ALTERNATIVES]
     covered = {d for candidate in candidates for d in candidate["demand_ids"]}
     limitations = _unique([*limits,
         "등록된 기능 표현을 이용한 제한된 규칙 검색·조합 초안이며 범용 AI 의미분석이 아닙니다.",

@@ -3,7 +3,7 @@ import re
 from app.company.improvement_language import active_match,answer_span,classify_domains,scalar_observations
 from app.company.improvement_structure import extract as extract_structure, function_derivation
 
-VERSION = 'improvement-rules-v4'
+VERSION = 'improvement-rules-v5'
 REASONS = {
  'R02':'개선 전후 효과를 비교하려면 측정 지표·기준기간·현재값·단위를 확인해야 합니다.',
  'R03':'기업이 기대하는 개선 결과를 구체화하기 위한 확인입니다.',
@@ -19,7 +19,7 @@ RULES = (
  ('R04','적용 범위',r'공정|업무|라인|사업장|부서|(?:창고|입출고|재고).{0,25}(?:관리|통합|구축)',r'적용\s*범위\s*[:：]|대상\s*범위\s*[:：]','이번 개선 대상과 포함·제외 범위를 확인해 주세요.'),
  ('R05','설비·시스템',r'설비|시스템|연계|구축',r'기존\s*(설비|시스템)\s*[:：]|연계\s*대상\s*[:：]','기존 설비·시스템 구성과 연계 대상·제약을 확인해 주세요.'),
  ('R06','사업비',r'예산|투자|견적|사업비',r'(예산|사업비|견적)\s*[:：]\s*\S+','검토할 예산의 산정 범위·통화·포함 비용을 확인해 주세요.'),
- ('R07','일정',r'착수|완료일|납기|일정|기한',r'(착수|완료일|일정|기한)\s*[:：]\s*\S+','희망 일정의 기준일과 선행조건을 확인해 주세요.'),
+ ('R07','일정',r'착수|완료일|납기|일정|기한|도입\s*(?:시기|시점)',r'(착수|완료일|일정|기한)\s*[:：]\s*\S+','희망 일정의 기준일과 선행조건을 확인해 주세요.'),
 )
 
 def analyze(data, spans, *, incomplete=False, coverage=()):

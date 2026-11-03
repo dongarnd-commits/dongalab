@@ -4,7 +4,7 @@ from copy import deepcopy
 from app.capability.search import search_reasons, query_terms
 from app.notice.domain import Denied
 
-VERSION = 'published-solutions-v2'
+VERSION = 'published-solutions-v3'
 VOCABULARY = (
     ('재고', '입고', '출고', '입출고', '수불', '물류', '창고'),
     ('생산', '공정', '작업실적', '제조', 'mes'),
@@ -69,9 +69,12 @@ def groups_for(value):
     return {index for index, group in enumerate(VOCABULARY) if any(word_in(value, word) for word in group)}
 
 
-def exclusions(context):
+def exclusions(context, reviewed=()):
     texts = [context.get('original_text', '')]
     texts.extend(value for value in context.get('structured', {}).values() if isinstance(value, str))
+    from app.company.improvement_structure import ALIASES
+    texts.extend(item['content'] for item in reviewed if item.get('category') == 'STRUCTURE'
+                 and ALIASES.get(item.get('subject'), item.get('subject')) == 'constraints')
     negative = list(dict.fromkeys(clause.strip() for text in texts for clause in clauses(text)
                                   if EXCLUDED.search(clause)))
     words = set()
@@ -102,20 +105,26 @@ def source_demands(context, reviewed=()):
             evidence=[dict(kind='IMPROVEMENT_VERSION', version_id=context['improvement_version_id'],
                            field=field, quote=text)],
             uncertainty='확인된 개선요구 원문입니다. 서비스 해결범위 확정은 별도입니다.'))
-        seen.add(text.strip())
+        seen.add((kind, text.strip()))
     if not result and context.get('original_text', '').strip():
         result.append(dict(id='improvement:original_text', kind='PROBLEM', text=context['original_text'],
             evidence=[dict(kind='IMPROVEMENT_VERSION', version_id=context['improvement_version_id'],
                            field='original_text', quote=context['original_text'])],
             uncertainty='확인된 원문이며 원인·최종 요구사항의 별도 확정이 아닙니다.'))
-        seen.add(context['original_text'].strip())
+        seen.add(('PROBLEM', context['original_text'].strip()))
+    from app.company.improvement_structure import ALIASES
     for item in reviewed:
-        if item['category'] != 'STRUCTURE' or item['content'].strip() in seen:
+        subject = item.get('subject', 'required_functions')  # legacy projections omitted the role
+        kind = dict(FIELDS).get(ALIASES.get(subject, subject))
+        identity = (kind, item['content'].strip())
+        # A reviewed constraint or cause is still its original role; review use
+        # does not turn it into a requested function or a service promise.
+        if item['category'] != 'STRUCTURE' or kind is None or identity in seen:
             continue
-        result.append(dict(id='analysis:' + item['candidate_id'], kind='REQUIRED_FUNCTION',
+        result.append(dict(id='analysis:' + item['candidate_id'], kind=kind,
             text=item['content'], evidence=deepcopy(item['evidence']),
             uncertainty='USE_FOR_REQUEST 검토 후보입니다. Confirmed Fact나 공식 요구 확정이 아닙니다.'))
-        seen.add(item['content'].strip())
+        seen.add(identity)
     return result
 
 
@@ -197,7 +206,7 @@ def validate_basis(service, actor, context, basis):
 def retrieve(context, catalog, feature_reader, reviewed=()):
     demands = source_demands(context, reviewed)
     result, covered = [], set()
-    excluded, excluded_clauses = exclusions(context)
+    excluded, excluded_clauses = exclusions(context, reviewed)
     for item in catalog:
         if not item.get('version_id'):
             continue
