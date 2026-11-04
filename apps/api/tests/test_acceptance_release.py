@@ -613,3 +613,12 @@ def test_portal_contract_rejects_cross_version_and_cross_role(tmp_path):
     a,b=[web/x for x in release.PORTAL_FILES[::2]][:2]
     a.write_bytes(b.read_bytes())
     with pytest.raises(RuntimeError,match='RELEASE_PORTAL_ROLE_OR_BYTES_MISMATCH'):release.validate_portals(web,c,r['head'],c['build_id'])
+
+
+def test_stale_role_bundles_are_never_attested_as_a_new_build(tmp_path,monkeypatch):
+    source=tmp_path/'source';web=source/'apps/web';web.mkdir(parents=True)
+    (web/'next-env.d.ts').write_text('SYNTHETIC',encoding='utf-8')
+    stale=web/'.role-portals/company/portal.js';stale.parent.mkdir(parents=True);stale.write_text('ANOTHER_COMMIT',encoding='utf-8')
+    monkeypatch.setattr(release.subprocess,'run',lambda *a,**k:pytest.fail('stale bundle reached npm build'))
+    with pytest.raises(RuntimeError,match='RELEASE_FRESH_PORTAL_OUTPUT_REQUIRED'):release.build(source,sample(tmp_path),tmp_path/'out',WEB_DIST)
+    assert stale.read_text(encoding='utf-8')=='ANOTHER_COMMIT'

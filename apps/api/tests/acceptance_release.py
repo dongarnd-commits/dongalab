@@ -476,6 +476,9 @@ def build(source,m,out,dist):
     config=source/'apps/web'/dist.replace('datco-e2e-','datco-config-')/'tsconfig.json'
     fs_path(config.parent).mkdir(parents=True,exist_ok=True)
     web=source/'apps/web'
+    # Immutable release builds use a fresh checkout/output generation. Never
+    # attest stale bundles left by another commit or a skipped npm prebuild.
+    if fs_path(no_links(web/'.role-portals')).exists():fail('RELEASE_FRESH_PORTAL_OUTPUT_REQUIRED')
     fs_path(config).write_text(json.dumps(dict(extends='../../tsconfig.json',compilerOptions=dict(paths={'@/*':[str(web/'src/*')]}),include=[str(web/'next-env.d.ts'),str(web/'src/**/*.ts'),str(web/'src/**/*.tsx'),str(web/'tests/**/*.ts'),str(web/dist/'types/**/*.ts')],exclude=[str(web/'node_modules')])),encoding='utf-8')
     env=release_environment(m,out,source,dict(head=git(source,'rev-parse','HEAD'),dist_dir=dist))
     # Only this owned build gets a fixed cap after sanitization; arbitrary
