@@ -119,3 +119,53 @@ def test_business_gold_question_sets_and_source_grounding(domain,current,questio
         validate(candidate,sources)
         assert candidate['data']['rule_id'] in {'R01','R02','R03','R04','R05','R06','R07','R08'}
         assert candidate['data']['claim_kind']!='CONFIRMED_FACT'
+
+
+@pytest.mark.parametrize("answer", [
+    "예산은 미정이며 일정도 미정입니다.",
+    "예산도 아직 미정이고 일정은 미확정입니다.",
+    "예산과 일정은 미정입니다.",
+])
+def test_budget_and_schedule_declared_unknown_are_answers_with_common_particles(answer):
+    sources=[span("시스템 구축 예산 및 희망 일정 검토"),dict(span(answer),field="constraints")]
+    out,diagnostics=analyze({},sources)
+    for rule in ("R06","R07"):
+        assert next(d["outcome"] for d in diagnostics if d["rule"]==rule)=="DECLARED_UNKNOWN"
+        assert not any(c["data"]["rule_id"]==rule for c in out)
+    assert not any(c["data"]["claim_kind"]=="CONFIRMED_FACT" for c in out)
+
+
+def test_unknown_schedule_does_not_reclassify_an_explicit_budget_amount_as_unknown():
+    sources=[span("예산과 일정 검토"),dict(span("예산은 3000만원이며 일정은 아직 미정입니다."),field="constraints")]
+    out,diagnostics=analyze({},sources)
+    assert next(d["outcome"] for d in diagnostics if d["rule"]=="R06")=="FOUND"
+    assert next(d["outcome"] for d in diagnostics if d["rule"]=="R07")=="DECLARED_UNKNOWN"
+
+
+def test_current_accounting_program_answer_is_not_repeated():
+    sources=[span("업무 시스템 개선"),dict(span("기존 회계 프로그램은 유지합니다."),field="constraints")]
+    out,diagnostics=analyze({},sources)
+    assert next(d["outcome"] for d in diagnostics if d["rule"]=="R05")=="FOUND"
+    assert not any(c["category"]=="MISSING_INFORMATION" and c["data"]["rule_id"]=="R05" for c in out)
+
+
+def test_known_current_program_and_explicit_unresolved_linkage_remain_distinct():
+    known=dict(span("기존 회계 프로그램은 유지합니다."),field="constraints")
+    unresolved=dict(span("실제 시스템 연계 방식은 추가 확인이 필요합니다."),field="constraints")
+    sources=[span("업무 시스템 개선"),known,unresolved]
+    out,diagnostics=analyze({},sources)
+    linkage=next(c for c in out if c["category"]=="MISSING_INFORMATION" and c["data"]["rule_id"]=="R05")
+    assert linkage["data"]["assessment"]=="DECLARED_UNKNOWN"
+    assert linkage["data"]["evidence"]==[unresolved]
+    assert linkage["data"]["claim_kind"]=="DIRECT_SOURCE"
+    assert "연계 대상·방식·제약만" in linkage["data"]["question"]
+    assert next(d["outcome"] for d in diagnostics if d["rule"]=="R05")=="DECLARED_UNKNOWN"
+    assert any(c["data"]["subject"]=="constraints" and c["content"]==known["quote"] for c in out)
+    validate(linkage,sources)
+
+
+def test_excluded_equipment_linkage_is_not_reopened_as_unknown_requirement():
+    sources=[dict(span("신규 센서 및 생산설비 연계는 제외합니다."),field="constraints")]
+    out,diagnostics=analyze({},sources)
+    assert next(d["outcome"] for d in diagnostics if d["rule"]=="R05")=="NOT_APPLICABLE"
+    assert not any(c["category"]=="MISSING_INFORMATION" and c["data"]["rule_id"]=="R05" for c in out)
