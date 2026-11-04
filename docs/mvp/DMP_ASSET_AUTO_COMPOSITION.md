@@ -527,3 +527,31 @@ RT-01·RT-02의 정확한 연결 시험 근거는 확인되지 않아 별도 업
 ### 2026-11-04 포털 산출물 최소 보완 계약 — 검증 진행
 
 사용자는 포털 런타임6개 누락의 최소 수정·격리검증·현재04에서의 새 전환계획 준비만 승인했다. 실제18445 정지/재기동/재전환/복귀·실기업자료 사용은 승인하지 않았다. 변경은 acceptance_release의 필수 파일/빌드 출처 계약, 기존 handover의 현재 e98 04 정상 인계 경로와 집중시험에 한정한다. 제품04·복귀9b의 업무 코드/HEAD·DB Schema·권한·기능·UI·Rule·OCR·Parser·추천은 변경하지 않는다. 새 계획의 PENDING 상태는 승인 전 아무 owner 요청도 만들지 않으며, 과거 계획/승인을 신규 실행물에 재사용하지 않는다. 현재04 정상 STOP에는 새 결정에 결합한 별도 이전-owner STOP receipt만 사용하고, 과거 STOPPED725 상태의 공유 읽기 fence를 연속 유지해 구 START 경합을 막는다. 현재 집중 단위131건 PASS이며 실제 분리 실행물/포털 및 인계 시험은 아직 미완료다.
+
+
+## PR #21 배포 준비 사전검사 중단 — 2026-11-04
+
+범위는 제품 `3057acc861eef27249bbc49c86f1888377e575c6`의 배포 제어 최소 보완·비파괴 사전검사다. 실제18445의 제품04/제어8c를 유지하며 기존 제어기 상수·전임자 검사·START·manifest·상태·보존 문서를 수정하지 않았다. 이 절은 별도 준비 브랜치의 기록이며 data-owner의 보호 문서 원본을 대체하지 않는다.
+
+기존8c의 `acceptance_handover.load_plan/validate_product`는04/9b 정확 쌍을 요구하고, `acceptance_rehandover.predecessor_state`는e98을 요구하므로 현재8c→PR21 인수는 기존 코드로 허용되지 않는다. 보호 포트 차단이나 고정 상수를 바꾸기 전에 같은 현재 DB로 복귀하는 자료·판정 계약을 먼저 확인했다.
+
+실제자료를 읽지 않는 기존 합성 복제28e77e0ab0c2(출처2002c1fabb87, actual_owner_read=false)를 재사용했다. 기존 DB/스키마/역할을 그대로 사용했으며 Migration·Seed·DB 초기화·복원은 없었다. PR21의 정상 CompanyApplication·Worker·Review·기업 ACK·운영자 CONFIRM으로 텍스트 근거의 v8 자료를 저장했다. 이후 정상 기업정보 Version 명령으로 현황을 수정하고 동일 DB를 PR21/04/9b의 정확한 소스·독립 Python으로 조회했다.
+
+| 검사 | PR21 3057 | 이전04 | 기존 복귀9b |
+| --- | --- | --- | --- |
+| 새 정상 저장자료의 엄격 DTO roundtrip | 일치 | 일치 | 일치 |
+| 조회 전후 동일 DB fingerprint | 동일 | 동일 | 동일 |
+| 기업정보 변경 후 분석 freshness | COMPANY_INPUT_CHANGED | COMPANY_INPUT_CHANGED·RULE_CHANGED | COMPANY_INPUT_CHANGED·RULE_CHANGED |
+| 같은 변경 후 Provider current_valid | false | true | true |
+
+물리 자료가 손상·삭제된 실패는 아니다. 이전 실행물의 CompanyProvider가 PR21의 statement_sources 기반 freshness 검사를 하지 않아, 새 제품이 무효화한 구조화 근거를 여전히 유효하다고 반환하는 실제 계약 차이다. 추천 생성/정식 전달 전체 Guard 우회가 재현됐다고 주장하지 않는다. 일부 소비 경로에는 별도 분석 freshness Guard도 있다. 다만 이 결과를 근거로04/9b가 PR21의 안전한 동일 DB 복귀 실행물이라고 보증할 수 없으므로 **배포 준비 BLOCKED**다. 사용자의 “기존 자료의 안전성이나 복귀 가능성이 입증되지 않으면 중단” 조건을 적용했다.
+
+별도 `acceptance_pr21_compat.py`는 실제 owner를 거부하는 합성 자료 생성·조회와 `PR21_RECOVERY_STALE_BASIS_ACCEPTED` 차단 판정만 제공한다. stop/start/replace/approval 기능은 없다. 기존 고정 도구를 수정하거나 안전하지 않은 새 인수 경로를 만들지 않았다. 독립 시험 `test_acceptance_pr21_compat.py`와 기존 handover/rehandover/release 보호 회귀는145 PASS다. 이 PASS는 차단 검사의 정상 동작이며 **전환 성공·복귀 성공·적용 준비 완료가 아니다**.
+
+최초 조회 시험은 기존 제품 GET의 SELECT FOR UPDATE와 DB READ ONLY 설정이 충돌하여 SQLSTATE25006으로 중단됐다. 제품은 바꾸지 않았다. 시험 계층만 row lock을 허용하고 모든 DML/DDL을 차단·미커밋 종료·전후 해시 비교하도록 정정했다. 첫 실패와 정정 후 결과는 별도 준비 경로 `storage/private/runtime/pr21-preflight/`에 보존하며 Git/CI에 포함하지 않는다.
+
+실제18445의 readonly 기준선은 제품04·제어8c·소유 프로세스11개, 기존 DB/볼륨, Schema gh02a0012026, 대기/처리 Job0을 확인했다. CA DER SHA256은 `22ae01958fcf5f8b4bb8043cd61f7844e91cb6a3ac086904752cc7a91dea7141`이고, 현재 공개 leaf는 `718eba611e1fdd72191b08c7e4904e2d71942a891f4a4db899c8182ea8985496`이다. 이전 계획의 leaf `0cf3c821d5c4de93434dc471aae841b2212d84db35f932b9ad53102c89119525`와 구분한다. CA·TLS 설정은 바꾸지 않았다.
+
+중단 때문에 PR21 새 불변 산출물 생성/6개 포털 파일 검사·새 인수 계획 digest·전환/시작실패 복구 실행은 진행하지 않았다. 예전 산출물·계획·승인으로 이 항목을 대신하지 않는다. 다음 단계는 새 텍스트 근거 계약에서 실패 폐쇄하는 호환 복귀 실행물의 범위를 명시적으로 결정하는 것이다. PR21 HEAD·제품 기능·Rule·DMP와 실제 환경을 그대로 유지한 상태에서 현재 허용된 제어 절차 보완만으로는 해결되지 않았다. 실제 적용은 호환성 및 격리 인수/실패 복구 검증과 새 정확 계획에 대한 별도 승인 전까지 금지한다.
+
+사후 readonly 비교에서 작업 전/후 전체 점검 필드가 일치했다. 실제18445의 소유 프로세스·자손/포트·state/manifest·컨트롤러 코드·DB Schema/계정/Scope·업무 테이블 fingerprint·첨부 파일 메타데이터·보존 문서2개·TLS CA/현재leaf 해시가 동일하며 /login200·제품04·미처리 작업0을 유지했다. 기존 회사/사업장/파일/개선요구 Version/검토/분석은 각1건, 회사 감사10건, 원천/Revision649건·Snapshot1건을 유지했다. 첨부 원문·비밀번호·개인키는 조회/출력하지 않았다. 이번에 정상 재개한 합성 DB28e77e0ab0c2는 다시 STOPPED로 두고 볼륨·새 합성 Version·최초 실패/최종 검증 근거를 보존했다. 8443/8444 구성·프로세스에는 조작을 하지 않았다.
