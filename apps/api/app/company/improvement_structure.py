@@ -154,6 +154,13 @@ def extract(data, spans):
             match = re.fullmatch(r"\s*(" + labels + r")\s*[:：]\s*(.{1,2000})\s*", line)
             if match:
                 subject = ALIASES.get(match[1], match[1])
+                # Typed fields already provide this role and literal source.
+                # The composed original_text mirrors them; parsing its label again
+                # must not add a second shortened claim from the same version.
+                if any(origin(item) == origin(source)
+                       and ALIASES.get(item["field"], item["field"]) == subject
+                       and normalized(line) in normalized(item["quote"]) for item in typed):
+                    continue
                 if subject == "as_is":
                     current(match[2], [source])
                 else:
@@ -173,6 +180,9 @@ def extract(data, spans):
     sources = [s for s in typed if s["field"] in ("as_is", "problem", "goal", "to_be", "required_functions")]
     if not sources:
         sources = [s for s in spans if s.get("kind") == "IMPROVEMENT" and s.get("field") == "original_text"]
+    # One hypothesis retains all matching spans, but quotes the explicit future
+    # requirement first instead of an incidental historical entry operation.
+    sources = sorted(sources, key=lambda source: source.get("field") not in ("goal", "to_be", "required_functions"))
     for identifier, label, pattern in FUNCTIONS:
         intent = [s for s in typed if s["field"] in ("goal", "to_be", "required_functions", "constraints")]
         groups = {}

@@ -343,3 +343,40 @@ def test_explicit_exclusion_header_suppresses_the_matching_task_only():
     labels={c["data"].get("function_label") for c in output}
     assert "검수 결과·이력 관리" not in labels
     assert "출하·배송 이력 관리" in labels
+
+
+def test_order_intake_quotes_explicit_future_requirement_before_incidental_current_entry():
+    data=dict(as_is="현재 수주를 엑셀에 기록합니다. 같은 주문을 여러 번 입력해서 현황 확인이 어렵습니다.",
+              to_be="주문 접수와 작업 배정, 진행 상태 조회, 검수 결과 기록, 출하 이력 및 담당자별 업무 이력을 한 화면에서 조회합니다. 중복 입력을 줄이고 싶습니다.",
+              constraints="적용 범위: 물류팀의 주문·배정·배송 업무. 기존 회계 프로그램은 유지합니다.")
+    spans=[source(value,field) for field,value in data.items()]
+    output,_=analyze(data,spans)
+    found=[c for c in output if c["data"].get("function_label")=="주문 접수·조회"]
+    assert len(found)==1
+    assert found[0]["content"]=="주문 접수"
+    assert found[0]["data"]["evidence"][0]["field"]=="to_be"
+    assert {e["field"] for e in found[0]["data"]["evidence"]}=={"as_is","to_be"}
+    assert found[0]["data"]["claim_kind"]=="INFERRED"
+    for candidate in output:validate(candidate,spans)
+
+
+def test_typed_labeled_constraint_is_not_reemitted_from_itself_or_composed_original():
+    constraints="적용 범위: 물류팀의 수주·배정·배송 업무. 기존 프로그램은 유지합니다. 설비 연계는 제외합니다."
+    data=dict(as_is="수주를 수기로 접수합니다.",to_be="검수 이력을 조회합니다.",constraints=constraints)
+    spans=[source(value,field) for field,value in data.items()]
+    spans.append(source("[현재 입력]\n제약 및 확인 필요사항\n"+constraints,"original_text"))
+    output,_=analyze(data,spans)
+    found=[c for c in output if c["category"]=="STRUCTURE" and c["data"]["subject"]=="constraints"]
+    assert len(found)==1 and found[0]["content"]==constraints
+    assert found[0]["data"]["evidence"]==[spans[2]]
+    for candidate in output:validate(candidate,spans)
+
+
+def test_same_labeled_constraint_in_an_independent_document_remains_reviewable():
+    constraints="적용 범위: 물류센터 한 곳"
+    spans=[source(constraints,"constraints")]
+    spans.append(dict(kind="DOCUMENT",file_id="INDEPENDENT_FILE",evidence_id="INDEPENDENT_PROOF",quote=constraints))
+    output,_=analyze({},spans)
+    found=[c for c in output if c["category"]=="STRUCTURE" and c["data"]["subject"]=="constraints"]
+    assert len(found)==2
+    assert any(c["data"]["evidence"]==[spans[1]] for c in found)

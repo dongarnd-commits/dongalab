@@ -3,7 +3,7 @@ import re
 from app.company.improvement_language import active_match,answer_span,classify_domains,scalar_observations
 from app.company.improvement_structure import extract as extract_structure, function_derivation
 
-VERSION = 'improvement-rules-v7'
+VERSION = 'improvement-rules-v8'
 REASONS = {
  'R02':'개선 전후 효과를 비교하려면 측정 지표·기준기간·현재값·단위를 확인해야 합니다.',
  'R03':'기업이 기대하는 개선 결과를 구체화하기 위한 확인입니다.',
