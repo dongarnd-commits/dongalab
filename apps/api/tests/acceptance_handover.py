@@ -264,7 +264,7 @@ def make_plan(owner_root,nonce,kind,product_file,out,previous_file=None):
     return plan
 
 
-CONTROL_FILES=('acceptance_handover.py','acceptance_handover_fence.py','acceptance_handover_projection.py','acceptance_handover_job.py')
+CONTROL_FILES=('acceptance_handover.py','acceptance_handover_fence.py','acceptance_handover_projection.py','acceptance_handover_job.py','acceptance_release.py','acceptance_rehandover.py')
 
 def validate_control(plan):
     require(Path(plan['control_root']).resolve()==ROOT,'HANDOVER_FROZEN_LAUNCHER_ROOT_MISMATCH')
@@ -279,7 +279,13 @@ def static_owner(plan,entry_fence=None):
     owner=plan['owner'];root,data,m,mhash=owner_paths(owner['root'],owner['manifest']['nonce'],owner['kind'])
     require(mhash==owner['manifest_sha256'] and m==owner['manifest'],'HANDOVER_MANIFEST_CHANGED')
     require(legacy_dirty_contract(root)==owner['documents'],'HANDOVER_PROTECTED_DOCUMENT_CHANGED')
-    require((entry_fence.sha256() if entry_fence else release.file_hash(root/'apps/api/tests/manual_acceptance.py'))==owner['entrypoint_sha256'],'HANDOVER_ENTRYPOINT_CHANGED')
+    if entry_fence:entry_hash=entry_fence.sha256()
+    elif plan.get('predecessor') and process_matches(plan['predecessor']['state']['custodian']):
+        from acceptance_rehandover import require_predecessor
+        require_predecessor(plan) # Frozen live predecessor holds the exclusive entry fence.
+        entry_hash=owner['entrypoint_sha256']
+    else:entry_hash=release.file_hash(root/'apps/api/tests/manual_acceptance.py')
+    require(entry_hash==owner['entrypoint_sha256'],'HANDOVER_ENTRYPOINT_CHANGED')
     require(docker_projection(m)==owner['resources'],'HANDOVER_DATABASE_RESOURCE_CHANGED')
     details=(data/'files').stat()
     require(dict(path=str(data/'files'),device=details.st_dev,inode=details.st_ino)==owner['files_directory'],'HANDOVER_FILES_DIRECTORY_REPLACED')
@@ -431,7 +437,11 @@ def run_owner(plan_path,approval_path,mode='activate',fault=None):
     m=runtime_manifest(plan) # Exact URL target gate before any legacy stop/fence/write.
     require(release.db_snapshot(m)['alembic']==plan['owner']['database']['alembic'],'HANDOVER_RUNTIME_DATABASE_PROBE_MISMATCH')
     require(not (out/'request.json').exists(),'HANDOVER_PENDING_REQUEST_REJECTED')
-    if mode=='activate':
+    if mode in ('activate','replace'):
+        require((mode=='replace')==bool(plan.get('predecessor')),'HANDOVER_REPLACEMENT_MODE_REQUIRED')
+        if mode=='replace':
+            from acceptance_rehandover import require_predecessor
+            require_predecessor(plan)
         require(not (out/'state.json').exists(),'HANDOVER_EXISTING_LEASE_REQUIRES_RESUME')
         require(read_json(data/'state.json')==plan['owner']['legacy_state'],'HANDOVER_LEGACY_STATE_CHANGED')
     else:
@@ -444,15 +454,18 @@ def run_owner(plan_path,approval_path,mode='activate',fault=None):
         ports_free(m)
     job=None;slot='TARGET';stopped_hash=None;children=[];finished=False
     with release.action_lock(out),ExitStack() as stack:
-        entry=stack.enter_context(FileFence(root/'apps/api/tests/manual_acceptance.py',exclusive=True))
+        if mode=='replace':
+            from acceptance_rehandover import stop_predecessor
+            entry,stopped_hash=stop_predecessor(plan,approval,stack)
+        else:entry=stack.enter_context(FileFence(root/'apps/api/tests/manual_acceptance.py',exclusive=True))
         static_owner(plan,entry)
         if mode=='activate':stopped_hash=stop_legacy(plan,data,m)
-        else:stopped_hash=lease['stopped_state_sha256']
+        elif mode!='replace':stopped_hash=lease['stopped_state_sha256']
         current_lease(out,plan,'STOPPED',slot,stopped_state_sha256=stopped_hash,children=[],cleanup_complete=True)
         fence=stack.enter_context(FileFence(data/'state.json',exclusive=False))
         require(fence.sha256()==stopped_hash,'HANDOVER_STATE_FENCE_RACE')
         save(out/'active-approval.json',approval)
-        event(out,'LEGACY_HANDED_OVER' if mode=='activate' else 'EXPLICIT_RECONCILIATION',legacy_state_sha256=stopped_hash)
+        event(out,'LEGACY_HANDED_OVER' if mode=='activate' else ('CURRENT04_REPLACED' if mode=='replace' else 'EXPLICIT_RECONCILIATION'),legacy_state_sha256=stopped_hash)
         def begin(selected,inject=None,action=mode):
             nonlocal job,children,slot
             slot=selected;validate_approval(plan,approval,action);validate_control(plan);static_owner(plan,entry)
@@ -504,18 +517,23 @@ def request_action(plan_path,approval_path,action):
     save(out/'request.json',dict(action=action,approval=approval,custodian=lease['custodian']))
 
 def main():
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('action',choices=['prepare','activate','resume','recover','stop','status','api-child','worker-child'])
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('action',choices=['prepare','activate','replace','resume','recover','stop','status','prepare-replacement','api-child','worker-child'])
     parser.add_argument('--plan',type=Path);parser.add_argument('--approval',type=Path)
-    parser.add_argument('--owner-root',type=Path);parser.add_argument('--nonce');parser.add_argument('--kind',choices=['EXISTING_OWNER','SYNTHETIC_CLONE'])
+    parser.add_argument('--predecessor-plan',type=Path);parser.add_argument('--owner-root',type=Path);parser.add_argument('--nonce');parser.add_argument('--kind',choices=['EXISTING_OWNER','SYNTHETIC_CLONE'])
     parser.add_argument('--previous-product',type=Path);parser.add_argument('--product',type=Path);parser.add_argument('--out',type=Path);parser.add_argument('--fixture-fault',choices=['api','worker','web'])
     a=parser.parse_args()
     try:
-        if a.action=='prepare':
+        if a.action=='prepare-replacement':
+            from acceptance_rehandover import make_replacement_plan
+            require(all((a.predecessor_plan,a.product,a.previous_product,a.out)),'HANDOVER_REPLACEMENT_ARGUMENTS_REQUIRED')
+            private_directory(a.out);p=make_replacement_plan(a.predecessor_plan,a.product,a.previous_product,a.out)
+            print(json.dumps(dict(result='REPLACEMENT_PREPARED_NOT_APPLIED',plan_sha256=p['id'],product_head=PRODUCT,recovery_head=RECOVERY)))
+        elif a.action=='prepare':
             require(all((a.owner_root,a.nonce,a.kind,a.product,a.out,a.previous_product)),'HANDOVER_PREPARE_ARGUMENTS_REQUIRED')
             private_directory(a.out);p=make_plan(a.owner_root,a.nonce,a.kind,a.product,a.out,a.previous_product)
             print(json.dumps(dict(result='PREPARED_NOT_APPLIED',plan_sha256=p['id'],product_head=PRODUCT,recovery_head=RECOVERY)))
         elif a.action in ('api-child','worker-child'):child_main(a.plan,'api' if a.action=='api-child' else 'worker')
-        elif a.action in ('activate','resume'):run_owner(a.plan,a.approval,a.action,a.fixture_fault)
+        elif a.action in ('activate','replace','resume'):run_owner(a.plan,a.approval,a.action,a.fixture_fault)
         elif a.action in ('recover','stop'):request_action(a.plan,a.approval,a.action)
         else:
             p=load_plan(a.plan);out=a.plan.resolve().parent

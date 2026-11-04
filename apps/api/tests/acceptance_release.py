@@ -28,6 +28,8 @@ PROTECTED = {8443, 8444, 18445, 49355, 49356}
 RECORD_SCHEMA = 'datco-uat-release-v3'
 ANCHOR_SCHEMA = 'datco-uat-release-v2'
 DATA_FORMAT = 'dmp-workbook-metadata-v1'
+PORTAL_FILES=tuple('.role-portals/'+role+'/portal.'+extension for role in ('company','operator','admin') for extension in ('js','css'))
+PORTAL_FORMAT='datco-role-portals-v1'
 
 
 def fail(code):
@@ -319,16 +321,60 @@ def copy_entries(source,destination,entries):
     if all_files(destination)!=entries:fail('RELEASE_WEB_COPY_MANIFEST_MISMATCH')
 
 
+def portal_entries(web):
+    entries=[]
+    for relative in PORTAL_FILES:
+        path=no_links(web/relative)
+        if not fs_path(path).is_file() or fs_path(path).stat().st_size<=0:fail('RELEASE_REQUIRED_PORTAL_FILE_MISSING')
+        entries.append(dict(path=relative,size=fs_path(path).stat().st_size,sha256=file_hash(path)))
+    return entries
+
+
+def portal_source(source):
+    return dict(head=git(source,'rev-parse','HEAD'),web_tree=git(source,'rev-parse','HEAD:apps/web'))
+
+
+def portal_build_path(out,dist):
+    if not re.fullmatch(r'\.next/datco-e2e-[a-f0-9]{12}',dist):fail('RELEASE_DIST_PATH_INVALID')
+    return out/'portal-builds'/(Path(dist).name+'.json')
+
+
+def attest_portal_build(source,out,dist):
+    web=no_links(Path(source)/'apps/web')
+    build=no_links(web/dist)
+    if not fs_path(build/'BUILD_ID').is_file():fail('RELEASE_BUILD_INCOMPLETE')
+    body=dict(format=PORTAL_FORMAT,source=portal_source(source),dist=dist,
+        build_id=fs_path(build/'BUILD_ID').read_text(encoding='utf-8').strip(),files=portal_entries(web))
+    attestation=dict(body,id=digest(body))
+    immutable(portal_build_path(out,dist),attestation)
+    return attestation
+
+
+def validate_portals(web,contract,head,build_id):
+    if not isinstance(contract,dict) or contract.get('format')!=PORTAL_FORMAT:fail('RELEASE_REQUIRED_PORTAL_CONTRACT_MISSING')
+    if contract.get('id')!=digest({k:v for k,v in contract.items() if k!='id'}):fail('RELEASE_PORTAL_CONTRACT_CHANGED')
+    if contract.get('source',{}).get('head')!=head or contract.get('build_id')!=build_id:fail('RELEASE_PORTAL_VERSION_MISMATCH')
+    if [v.get('path') for v in contract.get('files',[])]!=list(PORTAL_FILES):fail('RELEASE_REQUIRED_PORTAL_CONTRACT_MISSING')
+    if portal_entries(web)!=contract['files']:fail('RELEASE_PORTAL_ROLE_OR_BYTES_MISMATCH')
+    return contract
+
+
 def snapshot_web(source,out,dist):
     web=no_links(Path(source)/'apps/web')
     build=no_links(web/dist)
     if not fs_path(build/'BUILD_ID').is_file():fail('RELEASE_BUILD_INCOMPLETE')
+    proof=portal_build_path(out,dist)
+    if not fs_path(no_links(proof)).is_file():fail('RELEASE_PORTAL_BUILD_ATTESTATION_REQUIRED')
+    contract=json.loads(fs_path(proof).read_text(encoding='utf-8'))
+    source_identity=portal_source(source)
+    validate_portals(web,contract,source_identity['head'],fs_path(build/'BUILD_ID').read_text(encoding='utf-8').strip())
+    if contract.get('source')!=source_identity or contract.get('dist')!=dist:fail('RELEASE_PORTAL_SOURCE_MISMATCH')
     entries=[]
     for name in ('package.json','next.config.mjs'):
         path=no_links(web/name)
         if not fs_path(path).is_file():fail('RELEASE_WEB_RUNTIME_CONFIG_MISSING')
         entries.append(dict(path=name,size=fs_path(path).stat().st_size,sha256=file_hash(path)))
-    for relative in (dist,'public'):
+    for relative in (dist,'public','.role-portals'):
         folder=web/relative
         if not fs_path(folder).exists():
             if relative=='public':continue
@@ -344,7 +390,8 @@ def snapshot_web(source,out,dist):
     else:copy_entries(web,root,entries)
     artifact=dict(format='datco-web-artifact-v1',artifact_id=artifact_id,
         relative_root=relative_root,manifest_sha256=identity,files=entries,
-        build_id=fs_path(build/'BUILD_ID').read_text(encoding='utf-8').strip(),fresh_build=True)
+        build_id=fs_path(build/'BUILD_ID').read_text(encoding='utf-8').strip(),fresh_build=True,portal_contract=contract)
+    validate_portals(root,contract,source_identity['head'],artifact['build_id'])
     metadata=no_links(root.parent/'artifact.json')
     if fs_path(metadata).exists():
         if json.loads(fs_path(metadata).read_text(encoding='utf-8'))!=artifact:fail('RELEASE_ARTIFACT_RECORD_CHANGED')
@@ -361,6 +408,9 @@ def validate_web_artifact(out,record):
     expected='release-artifacts/'+artifact['artifact_id']+'/web'
     if artifact.get('relative_root')!=expected:fail('RELEASE_ARTIFACT_PATH_MISMATCH')
     root=no_links(out/expected)
+    contract=artifact.get('portal_contract')
+    validate_portals(root,contract,record['head'],artifact['build_id'])
+    if contract.get('source')!=portal_source(Path(record['source_root'])):fail('RELEASE_PORTAL_SOURCE_MISMATCH')
     actual=all_files(root)
     if (actual!=artifact.get('files') or digest(actual)!=artifact.get('manifest_sha256')
             or record.get('build_hash')!=artifact.get('manifest_sha256')):
@@ -378,6 +428,7 @@ def execution_web(out,record):
     relative='executions/'+record['id']+'/'+run+'/web'
     root=no_links(out/relative)
     copy_entries(artifact,root,record['web_artifact']['files'])
+    validate_portals(root,record['web_artifact']['portal_contract'],record['head'],record['web_artifact']['build_id'])
     execution=dict(format='datco-web-execution-v1',release=record['id'],run=run,
         web_root=str(root),source_root=record['source_root'],head=record['head'],
         artifact_id=record['web_artifact']['artifact_id'],build_id=record['web_artifact']['build_id'],
@@ -436,6 +487,7 @@ def build(source,m,out,dist):
         with (out/'release-build.log').open('a',encoding='utf-8') as log:
             subprocess.run(command,cwd=web,env=env,stdout=log,stderr=subprocess.STDOUT,creationflags=uat.HIDDEN,check=True)
     finally:fs_path(web/'next-env.d.ts').write_bytes(original)
+    attest_portal_build(source,out,dist)
 
 
 def prepare(owner,m,out,source,head,dist=None,do_build=False):

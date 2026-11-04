@@ -360,11 +360,16 @@ def synthetic_web(source):
     (web/'public/roles/index.html').write_text('synthetic public artifact',encoding='utf-8')
     (web/'package.json').write_text('{"name":"synthetic"}',encoding='utf-8')
     (web/'next.config.mjs').write_text('export default {};',encoding='utf-8')
+    for relative in release.PORTAL_FILES:
+        file=web/relative;file.parent.mkdir(parents=True,exist_ok=True);file.write_text('SYNTHETIC '+relative,encoding='utf-8')
     return web
 
 
 def artifact_record(source,out):
-    artifact=release.snapshot_web(source,out,WEB_DIST)
+    from unittest.mock import patch
+    with patch.object(release,'portal_source',return_value=dict(head='a'*40,web_tree='b'*40)):
+        release.attest_portal_build(source,out,WEB_DIST)
+        artifact=release.snapshot_web(source,out,WEB_DIST)
     return dict(schema=release.RECORD_SCHEMA,id='r'+'1'*24,source_root=str(source),head='a'*40,
         dist_dir=WEB_DIST,web_artifact=artifact,build_hash=artifact['manifest_sha256'])
 
@@ -401,6 +406,7 @@ def test_route_cache_is_part_of_immutable_artifact_tamper_guard(tmp_path):
 def test_private_env_inside_selected_public_tree_is_rejected_before_snapshot_copy(tmp_path):
     source=tmp_path/'source';web=synthetic_web(source)
     (web/'public/.env.local').write_text('SYNTHETIC_ONLY',encoding='utf-8')
+    release.attest_portal_build(source,tmp_path/'owner',WEB_DIST)
     with pytest.raises(RuntimeError,match='SNAPSHOT_FORBIDDEN_FILE'):release.snapshot_web(source,tmp_path/'owner',WEB_DIST)
 
 
@@ -559,3 +565,51 @@ def test_owned_build_uses_fixed_memory_cap_and_restores_tracked_next_env_on_fail
     with pytest.raises(subprocess.CalledProcessError):release.build(source,sample(tmp_path),out,WEB_DIST)
     assert observed==[{'NODE_OPTIONS':'--max-old-space-size=2048','SAFE_MARKER':'retained'}]
     assert tracked.read_bytes()==original
+
+
+@pytest.fixture(autouse=True)
+def synthetic_portal_identity(monkeypatch):
+    monkeypatch.setattr(release,'portal_source',lambda source:dict(head='a'*40,web_tree='b'*40))
+
+
+@pytest.mark.parametrize('relative',release.PORTAL_FILES)
+def test_missing_portal_fails_before_immutable_artifact_creation(tmp_path,relative):
+    source=tmp_path/'source';out=tmp_path/'owner';web=synthetic_web(source)
+    release.attest_portal_build(source,out,WEB_DIST)
+    (web/relative).unlink()
+    with pytest.raises(RuntimeError,match='RELEASE_REQUIRED_PORTAL_FILE_MISSING'):release.snapshot_web(source,out,WEB_DIST)
+    assert not (out/'release-artifacts').exists()
+
+
+def test_portal_bytes_and_source_version_are_bound_to_fresh_build(tmp_path):
+    source=tmp_path/'source';out=tmp_path/'owner';web=synthetic_web(source)
+    release.attest_portal_build(source,out,WEB_DIST)
+    (web/release.PORTAL_FILES[0]).write_text('WRONG_ROLE_OR_BUILD',encoding='utf-8')
+    with pytest.raises(RuntimeError,match='RELEASE_PORTAL_ROLE_OR_BYTES_MISMATCH'):release.snapshot_web(source,out,WEB_DIST)
+    assert not (out/'release-artifacts').exists()
+
+
+def test_incomplete_old_artifact_is_refused_even_with_consistent_manifest(tmp_path):
+    source=tmp_path/'source';out=tmp_path/'owner';synthetic_web(source);r=artifact_record(source,out)
+    r['web_artifact'].pop('portal_contract')
+    with pytest.raises(RuntimeError,match='RELEASE_REQUIRED_PORTAL_CONTRACT_MISSING'):release.validate_web_artifact(out,r)
+
+
+def test_execution_copy_cannot_start_if_a_required_portal_is_missing(tmp_path,monkeypatch):
+    source=tmp_path/'source';out=tmp_path/'owner';synthetic_web(source);r=artifact_record(source,out)
+    original=release.copy_entries
+    def damaged_copy(source,destination,entries):
+        original(source,destination,entries)
+        (destination/release.PORTAL_FILES[2]).unlink()
+    monkeypatch.setattr(release,'copy_entries',damaged_copy)
+    with pytest.raises(RuntimeError,match='RELEASE_REQUIRED_PORTAL_FILE_MISSING'):release.execution_web(out,r)
+    assert not list((out/'executions').rglob('execution.json'))
+
+
+def test_portal_contract_rejects_cross_version_and_cross_role(tmp_path):
+    source=tmp_path/'source';out=tmp_path/'owner';web=synthetic_web(source);r=artifact_record(source,out)
+    c=r['web_artifact']['portal_contract']
+    with pytest.raises(RuntimeError,match='RELEASE_PORTAL_VERSION_MISMATCH'):release.validate_portals(web,c,'c'*40,c['build_id'])
+    a,b=[web/x for x in release.PORTAL_FILES[::2]][:2]
+    a.write_bytes(b.read_bytes())
+    with pytest.raises(RuntimeError,match='RELEASE_PORTAL_ROLE_OR_BYTES_MISMATCH'):release.validate_portals(web,c,r['head'],c['build_id'])
