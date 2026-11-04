@@ -444,3 +444,8 @@ SAVE/ACK/CONFIRM/Provider에 같은 현재성 검사를 적용한다. 이전 bas
 실제 적용은 이번 범위가 아니다. 새 HEAD의 CI, 완전한 역할 포털 6개 산출물, 정확한 현재 owner/DB 호환성과 새 계획 digest·별도 적용 승인을 확인한 후에만 전환할 수 있다. 이전 04/9b 전환 승인과 산출물 해시를 새 제품에 재사용하지 않는다. 실제자료 사용·개인 계정·보존/삭제는 기존 단일 결정표의 미확정 상태를 유지하며 승인으로 간주하지 않는다.
 
 로컬 최초 OCR 2실패는 Windows 시험 프로세스에 기존 OCR Docker 실행물이 지정되지 않은 환경 문제였다. 설치·OCR 코드 변경 없이 기존 `datco-local-ocr:pr14-v1`를 네트워크 차단 자식 시험에만 지정한 후 순수497건이 통과했다. 초기 경로 설정/역할 후보 선택/Review 집합 순서/빈 의견의 요청 검증과 업무 가드 구분 실패도 원로그를 보존했다. 기업 입력폼은 기존3개 입력으로 실제 브라우저 확인했으며, 원문 상세만 확대한다. 새 규칙 버전으로 기존 v6 분석은 현재 근거로 자동 승계하지 않고 원문을 유지한 새 분석·검토가 필요하다. 기존9b 복귀 실행물도 이 텍스트 출처 계약을 자동 보장한다고 가정하지 않으며 실제 적용 전 별도 호환 검증 대상으로 남긴다.
+
+
+종료 경계(권한 복구 대기): 검증된 기능·시험 소스 Commit은 `022cbf16d17fc77c0ad149dfc556b09eb2389c15`이며 새 브랜치에 Push했다. Draft PR 생성은 GitHub 연결의 `403 Resource not accessible by integration`으로 거부됐고, 기존 브라우저 대안도 `Computer Use app approval timed out`으로 중단됐다. 사용자가 GitHub 연결 권한 복구 경로를 선택했으나 실제 복구 완료는 아직 확인하지 않았다. 연결은 ENABLED이지만 승인 방식 변경은 GitHub 인증 권한 갱신을 대체하지 않으므로 Full access·새 인증정보·임의 설치로 우회하지 않았다. Draft PR은 **미생성**, 동일 HEAD의 원격 workflow는 **0건/미실행**으로서 PR20의 과거 CI를 새 결과로 세지 않는다. PR 본문은 보호 경로 `storage/private/runtime/requirements-20261104/DRAFT_PR_BODY.txt`에 준비돼 있다. 권한이 복구되면 기존 결과를 재사용하여 이 브랜치의 Draft PR 생성·최신 HEAD CI부터 이어간다.
+
+보존 확인: 원래 Worktree는725/기존 Feature Branch와 원래 dirty 문서2개의 동일 SHA256을 유지한다. 실제18445의 state는 RUNNING/제품04/계획8fbbe127… 그대로이고 기존 인수 DB container67e9…도 실행 중이다. 실제 업무행·사용자 TEST 제출·검토·CREDENTIALS는 읽지 않았다. PR17~20은 기존 HEAD/Draft/open/unmerged, main은10d3d8b… 그대로다. 실행 중이던 자체 CI 자식 DB0건을 확인한 뒤 소유권 label/id가 일치하는 합성 container307afc9f6d29만 정상 정지했으며 자체 volume·로그는 보존했다. 제품 소스·시험16파일의 검증 후 SHA256도 동일하다. 이번 보고 상태 기록은 문서만 변경하며 제품 적용이나 실제자료 승인으로 해석하지 않는다.
