@@ -196,6 +196,10 @@ test('fresh DMP full UI: zero published capabilities, verified assets, generated
   await operator.getByRole('button',{name:'이 개선요구의 구조화·서비스 추천 검토',exact:true}).click();
   await operator.getByRole('button',{name:'검토한 분석 내용으로 요구사항 정리',exact:true}).click();
   await expect(operator.getByLabel('공식 검토 필요 기능',{exact:true})).not.toHaveValue('');
+  // This combined one-sentence fixture does not separately state a future state.
+  // Review the literal workflow fragment instead of copying the entire goal twice.
+  await expect(operator.getByLabel('공식 검토 희망 개선 상태',{exact:true})).toHaveValue('');
+  await operator.getByLabel('공식 검토 희망 개선 상태',{exact:true}).fill('입출고 이력과 재고정보를 통합 관리');
   // The operator reads remaining rule/processing uncertainty. It stays explicit
   // in the structured constraints and later scoped technical review; it is not a fact
   // or a silently fulfilled requirement. Required scope is from the verified reply.

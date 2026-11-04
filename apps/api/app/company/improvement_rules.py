@@ -3,7 +3,7 @@ import re
 from app.company.improvement_language import active_match,answer_span,classify_domains,scalar_observations
 from app.company.improvement_structure import extract as extract_structure, function_derivation
 
-VERSION = 'improvement-rules-v6'
+VERSION = 'improvement-rules-v8'
 REASONS = {
  'R02':'개선 전후 효과를 비교하려면 측정 지표·기준기간·현재값·단위를 확인해야 합니다.',
  'R03':'기업이 기대하는 개선 결과를 구체화하기 위한 확인입니다.',
@@ -17,7 +17,7 @@ FIELDS = {'as_is':'현황','problem':'문제','impact':'영향','goal':'개선 �
 RULES = (
  ('R02','측정 기준',r'불량|생산성|소요시간|처리시간|비용\s*절감|측정|지표|재고.{0,15}(?:불일치|일치하지|오차)',r'측정\s*기준|기준기간|현재값|기준값','측정 지표의 정의·기준기간·현재값·단위를 확인해 주세요.'),
  ('R04','적용 범위',r'공정|업무|라인|사업장|부서|(?:창고|입출고|재고).{0,25}(?:관리|통합|구축)',r'적용\s*범위\s*[:：]|대상\s*범위\s*[:：]','이번 개선 대상과 포함·제외 범위를 확인해 주세요.'),
- ('R05','설비·시스템',r'설비|시스템|연계|구축',r'기존\s*(설비|시스템)\s*[:：]|연계\s*대상\s*[:：]','기존 설비·시스템 구성과 연계 대상·제약을 확인해 주세요.'),
+ ('R05','설비·시스템',r'설비|시스템|연계|구축|(?:기존|현재|현행).{0,12}프로그램',r'기존\s*(설비|시스템)\s*[:：]|연계\s*대상\s*[:：]','기존 설비·시스템 구성과 연계 대상·제약을 확인해 주세요.'),
  ('R06','사업비',r'예산|투자|견적|사업비',r'(예산|사업비|견적)\s*[:：]\s*\S+','검토할 예산의 산정 범위·통화·포함 비용을 확인해 주세요.'),
  ('R07','일정',r'착수|완료일|납기|일정|기한|도입\s*(?:시기|시점)',r'(착수|완료일|일정|기한)\s*[:：]\s*\S+','희망 일정의 기준일과 선행조건을 확인해 주세요.'),
 )
@@ -48,7 +48,13 @@ def analyze(data, spans, *, incomplete=False, coverage=()):
         unknown=[c['inspection_id'] for c in coverage if c['status']!='COMPLETE' and
                  not (c['status'] in ('EXCLUDED','NOT_SELECTED') and c['origin']=='COMMON_REFERENCE')]
         if found:
-            diagnostics.append(dict(rule=rule,outcome=answer_state,reason='명시 라벨 또는 지원하는 동등 표현/기존 검토 답변 확인; 미정 응답을 수치로 해석하지 않음',evidence=[found],scope=scope));return
+            diagnostics.append(dict(rule=rule,outcome=answer_state,reason='명시 라벨 또는 지원하는 동등 표현/기존 검토 답변 확인; 미정 응답을 수치로 해석하지 않음',evidence=[found],scope=scope))
+            if rule == 'R05' and answer_state == 'DECLARED_UNKNOWN':
+                emit('MISSING_INFORMATION', '연계 확인', '실제 시스템 연계는 추가 확인이 필요하다고 명시되어 있습니다.',
+                     rule, [found], 'DIRECT_SOURCE', '이미 답변한 기존 프로그램 유지 조건을 보존하고, 아직 미확인인 실제 연계 대상·방식·제약만 확인해 주세요.')
+                candidates[-1]['data'].update(search_scope=scope, uninspected_ids=[], assessment='DECLARED_UNKNOWN',
+                    uncertainty='기업이 연계 미확인을 명시함; 기존 프로그램 정보 부재나 연계 제공 검증 완료를 뜻하지 않음')
+            return
         if incomplete and not coverage:
             diagnostics.append(dict(rule=rule,outcome='UNKNOWN',reason='자료 처리 범위 불충분; 누락 판단 보류'));return
         uncertain=bool(unknown)

@@ -68,3 +68,14 @@ USE_FOR_REQUEST는 검토 활용 기록이다. Fact 확정·개선요구 CONFIRM
 - 파일 선택과 반응형 메뉴는 3포털의 공통 UI만 재사용한다. 업로드/추출/자료함/근거/Version의 기존 Backend를 유지한다.
 - 수동 재인수 도구는 레이블이 검증된 동일 Repository의 합성 인수환경에서 네 합성 계정만 읽기 검증하여 새 DB에 적용한다. 회사/Review/분석/승인 이력은 복제하지 않는다. 8443/49355/49356 포트는 거부하며 재바인딩은 중지 상태·정확 nonce 확인을 요구한다.
 - 이번 증분의 DB Schema/Migration/Trigger 변경은 없다. 기존 fg31m0012026을 새 작업 소유 DB에만 적용한다. 이전 8444 DB/파일/도구는 백업·실제 복원 검증 후 별도 보존한다.
+
+
+## 2026-11-04 제출 텍스트 진술 근거 집중 보완 계약
+
+사용자 승인 범위는 별도04 기반 개발 브랜치의 분석/구조화/정확한 제출 원문 연결 수정과 격리 합성 검증이다. 실제18445 사용자 TEST 제출/검토·8443/8444·원래DB/파일/계정/이력·PR17~20/main은 변경하지 않는다. 새 물리 Schema/API 경로/Role·외부AI·숫자/기간 해석 정책을 추가하지 않는다.
+
+기존 analysis_basis(run/source_version/review_ids)를 그대로 사용한다. 동일 회사/Root/SiteVersion의 실제 제출 원문과 최신 저장 USE_FOR_REQUEST Review를 검증한 후 STRUCTURE 후보의 IMPROVEMENT field/quote를 다시 검증한다. 이를 기업 진술 출처로만 인정하고 Fact·공식파일 Proof는 생성하지 않는다. 유효 basis에 실제 진술 출처가0건인 file-only는 기존Evidence가 있어야 하며, invalid/stale basis는 파일로 대체해 우회하지 못한다. 운영자 재구조화는 이전 basis를 조용히 삭제하지 않고 재검증하며 회사의 새raw DRAFT는 basis/이전ACK를 승계하지 않는다.
+
+구조화 저장·회사 exact ACK·공식 CONFIRM·Provider current_valid에서 같은 source/freshness를 재사용한다. 필수 구조화 값·missing 미해결 차단·회사ACK·운영자 의견·동시 ordinal/Review idempotency는 유지한다. stale basis의 새추천/구성은 차단하되 과거 Version/Run/Review/Proposal 및 basis없는 기존 파일 경로는 보존한다. 클라이언트가 선택만 한 검토나 미저장 의견은 서버 저장 Review를 대체하지 않는다.
+
+기업명·업종 등 COMPANY_INPUT은 보조참조로 보존하지만 요구사항 출처를 단독 대체하지 않는다. SAVE/CONFIRM/Provider 및 UI는 실제 file-backed Evidence 또는 검증된 제출 진술을 필요로 한다. 같은 Scope 파일의 업무 내용 적절성은 운영자 검토·기업 ACK 대상이며, file_id가 있다는 이유로 의미적 관련성까지 자동 검증했다고 주장하지 않는다.

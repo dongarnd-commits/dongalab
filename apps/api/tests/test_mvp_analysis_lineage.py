@@ -111,7 +111,7 @@ def prepare_source(e, run_analysis=True, review_decision='USE_FOR_REQUEST'):
         request(e, source['id'])
         run = finish(e, source['id'])
         candidate = next(c for c in run['candidates']
-            if c['category'] == 'STRUCTURE' and c['data'].get('subject') == 'as_is')
+            if c['category'] == 'STRUCTURE' and c['data'].get('subject') == 'problem')
         accepted = review(e, candidate, decision=review_decision) if review_decision else None
         result.update(run=run, candidate=candidate, review=accepted,
             basis=dict(run_id=run['run']['id'], review_ids=[accepted['id'] if accepted else candidate['id']], source_version_id=source['id']))
@@ -231,9 +231,15 @@ def test_changed_review_answer_company_or_run_stales_basis_without_rewriting_his
         newer = finish(e, item['source']['id'])
         assert newer['run']['id'] != item['run']['run']['id']
     assert not basis_current(e, target['id'], item['basis'])
-    recommendation = call(e, 'operator', '/capability/improvements/' + target['id'] + '/recommendations')
-    assert recommendation['analysis_basis']['run_id'] is None
-    assert recommendation['analysis_basis']['review_ids'] == [] and recommendation['limitations']
+    blocked = call(e, 'operator', '/capability/improvements/' + target['id'] + '/recommendations', status=409)
+    assert blocked['reason'] == 'STALE_INPUT_VERSION'
+    with e['factory']() as session:
+        a = CompanyApplication(session, e['files'])
+        person = e['people']['operator']
+        from app.company.provider import CompanyProvider
+        historical = CapabilityApplication(session, e['files'],CompanyProvider(a)).context(Actor(person['id'], person['role']), target['id'], require_current=False)
+        assert historical['confirmed'] and not historical['current_valid']
+        assert historical['structured']['analysis_basis'] == item['basis']
     call(e, 'operator', '/capability/compositions/' + saved['id'] + '/versions',
         dict(data=data, expected_version=saved['version_id'], idempotency_key=nonce()), status=409)
     assert len(call(e, 'operator', '/capability/compositions/' + saved['id'])['versions']) == 1
@@ -557,3 +563,192 @@ def test_reviewed_analysis_basis_reaches_notice_match_mvp_documents_and_company_
     assert call(e, 'operator', '/proposal/versions/' + vid) == proposal
     assert history['versions'][0]['manifest']['refs'] == refs
     assert basis_current(e, target['id'], item['basis'])
+
+
+# Fixed, non-sensitive input shared with the real-browser text-only path.
+def text_only_source(e, *, unresolved=False):
+    import json
+    from pathlib import Path
+    raw = json.loads((Path(__file__).parent / 'fixtures/requirements_text_only.json').read_text(encoding='utf-8'))
+    if unresolved:raw['constraints'] += ' 다른 시스템과 실제 연계가 필요한지는 추가 확인이 필요합니다.'
+    company, site, profile, source, values = submitted(e, dict(raw, original_text='\n'.join(raw.values()), problem='', goal=''))
+    request(e, source['id'])
+    run = finish(e, source['id'])
+    assert run['freshness']['usable'] and run['status'] == 'SUCCEEDED'
+    questions=[c for c in run['candidates'] if c['category']!='STRUCTURE']
+    if unresolved:
+        assert len(questions)==1 and questions[0]['data']['rule_id']=='R05' and questions[0]['data']['assessment']=='DECLARED_UNKNOWN'
+    else:assert not questions
+    candidates = [c for c in run['candidates'] if c['category'] == 'STRUCTURE']
+    reviews = [review(e, c) for c in candidates]
+    basis = dict(run_id=run['run']['id'], source_version_id=source['id'], review_ids=[r['id'] for r in reviews])
+    def content(subject):
+        return '\n'.join(c['content'] for c in candidates if c['data']['subject'] == subject)
+    formal = dict(values, as_is=content('as_is'), problem=content('problem'), goal=content('goal'), to_be=content('to_be'),
+                  required_functions=content('required_functions'), missing='\n'.join(c['data']['question'] for c in questions), analysis_basis=basis, evidence_ids=[], fact_version_ids=[])
+    assert all(formal[k] for k in ('as_is', 'problem', 'goal', 'to_be'))
+    return dict(company=company, site=site, profile=profile, source=source, values=formal, basis=basis, run=run, candidate=candidates[0], review=reviews[0])
+
+
+def save_text_structure(e, item, expected=1, values=None):
+    return call(e, 'operator', '/company/' + item['company']['id'] + '/improvements',
+        dict(data=values or item['values'], improvement_id=item['source']['improvement_id'], expected_ordinal=expected))
+
+
+def test_text_only_literal_statement_can_confirm_without_becoming_fact_or_proof(env):
+    from app.company.provider import CompanyProvider
+    e=env; item=text_only_source(e); original=version(e,item['source']['id'])
+    target=structure_and_confirm(e,item)
+    assert not target['data']['evidence_ids'] and not target['data']['fact_version_ids']
+    context=call(e,'operator','/capability/improvements/'+target['id']+'/recommendations')
+    assert context['context']['current_valid']
+    assert context['analysis_basis']==dict(item['basis'],review_ids=sorted(item['basis']['review_ids']))
+    with e['factory']() as session:
+        a=CompanyApplication(session,e['files']);person=e['people']['operator'];actor=Actor(person['id'],person['role'])
+        sources=ImprovementAnalysis(a).statement_sources(actor,target['id'],item['basis'])
+        assert sources and all(s['company_id']==item['company']['id'] and s['site_id']==item['site']['id'] and s['source_version_id']==original['id'] and s['quote'] in original['data'][s['field']] for s in sources)
+        assert all(s['source_kind']=='COMPANY_STATEMENT' for s in sources)
+        proof=CompanyProvider(a).proposal_basis(actor,item['company']['id'],target['id'])
+        assert not proof.proofs and not proof.fact_version_ids
+    assert version(e,original['id'])==original
+    detail=call(e,'operator','/company/'+item['company']['id'])
+    assert not detail['files'] and not detail['facts']
+    assert len(detail['improvements'][0]['versions'])==2
+    call(e,'other','/company/improvements/'+target['id']+'/context',status=404)
+
+
+@pytest.mark.parametrize('action', ['ACKNOWLEDGE','CONFIRM'])
+@pytest.mark.parametrize('change', ['REVIEW','RUN','PROFILE'])
+def test_stale_text_basis_blocks_exact_company_ack_or_confirm_atomically(env,action,change):
+    e=env;item=text_only_source(e);target=save_text_structure(e,item)
+    if action=='CONFIRM':
+        call(e,'editor','/company/improvements/'+target['id']+'/actions',dict(action='ACKNOWLEDGE',note='TEST exact v2 checked'))
+    if change=='REVIEW':review(e,item['candidate'],decision='NEEDS_CHECK',ordinal=1)
+    elif change=='RUN':request(e,item['source']['id']);finish(e,item['source']['id'])
+    else:call(e,'editor','/company/'+item['company']['id']+'/profile',dict(data=dict(item['profile'],overview='TEST new input'),expected_ordinal=1))
+    before=call(e,'operator','/company/'+item['company']['id'])
+    blocked=call(e,'editor' if action=='ACKNOWLEDGE' else 'operator','/company/improvements/'+target['id']+'/actions',dict(action=action,note='TEST stale must not record a decision'),status=409)
+    assert blocked['reason'] in ('STALE_REVIEW','STALE_ANALYSIS')
+    assert call(e,'operator','/company/'+item['company']['id'])==before
+
+
+def test_omitting_prior_basis_cannot_bypass_freshness_and_new_raw_draft_preserves_history(env):
+    e=env;item=text_only_source(e);target=save_text_structure(e,item);original=version(e,item['source']['id'])
+    values=dict(target['data']);values.pop('analysis_basis')
+    next_version=save_text_structure(e,item,expected=2,values=values)
+    assert next_version['data']['analysis_basis']==item['basis']
+    review(e,item['candidate'],decision='NEEDS_CHECK',ordinal=1)
+    blocked=call(e,'operator','/company/'+item['company']['id']+'/improvements',dict(data=values,improvement_id=item['source']['improvement_id'],expected_ordinal=3),status=409)
+    assert blocked['reason']=='STALE_REVIEW'
+    raw=call(e,'editor','/company/'+item['company']['id']+'/improvements',dict(data=values,improvement_id=item['source']['improvement_id'],expected_ordinal=3))
+    assert not raw['data'].get('analysis_basis')
+    assert version(e,original['id'])==original
+    assert version(e,target['id'])['data']['analysis_basis']==item['basis']
+
+
+def test_text_source_requires_saved_structure_review_and_preserves_optimistic_conflict(env):
+    e=env;item=text_only_source(e)
+    wrong=dict(item['values']);wrong.pop('analysis_basis')
+    assert call(e,'operator','/company/'+item['company']['id']+'/improvements',dict(data=wrong,improvement_id=item['source']['improvement_id'],expected_ordinal=1),status=409)['reason']=='IMPROVEMENT_SOURCE_REQUIRED'
+    call(e,'operator','/capability/improvements/'+item['source']['id']+'/recommendations',status=409)
+    saved=save_text_structure(e,item)
+    call(e,'operator','/company/'+item['company']['id']+'/improvements',dict(data=item['values'],improvement_id=item['source']['improvement_id'],expected_ordinal=1),status=409)
+    root=next(r for r in call(e,'operator','/company/'+item['company']['id'])['improvements'] if r['id']==item['source']['improvement_id'])
+    assert len(root['versions'])==2 and root['current_ordinal']==saved['ordinal']
+    call(e,'operator','/company/improvements/'+saved['id']+'/actions',dict(action='ACKNOWLEDGE',note='TEST cannot impersonate'),status=403)
+    call(e,'approver','/company/improvements/'+saved['id']+'/actions',dict(action='CONFIRM',note='TEST cannot impersonate'),status=403)
+
+
+def test_reviewed_question_without_statement_does_not_substitute_for_source(env):
+    e=env;c,site,p,v,values=submitted(e);request(e,v['id']);run=finish(e,v['id'])
+    question=next(c for c in run['candidates'] if c['category']=='MISSING_INFORMATION')
+    selected=review(e,question)
+    basis=dict(run_id=run['run']['id'],source_version_id=v['id'],review_ids=[selected['id']])
+    data=dict(values,as_is='TEST current',problem='TEST issue',goal='TEST goal',to_be='TEST future',analysis_basis=basis)
+    assert call(e,'operator','/company/'+c['id']+'/improvements',dict(data=data,improvement_id=v['improvement_id'],expected_ordinal=1),status=409)['reason']=='IMPROVEMENT_SOURCE_REQUIRED'
+
+
+@pytest.mark.parametrize('forgery',['QUOTE','FIELD','VERSION','MISSING','COMPANY_INPUT','RESPONSE','FACT','DOCUMENT'])
+def test_statement_resolver_rechecks_literal_location_and_does_not_promote_other_source_types(env,monkeypatch,forgery):
+    # Immutable PG constraints also protect stored candidates (migration tests).
+    # Simulate a corrupt adapter read without weakening those database guards.
+    from app.infrastructure import improvement_schema as I
+    from app.notice.domain import Denied
+    e=env;item=text_only_source(e)
+    with e['factory']() as session:
+        a=CompanyApplication(session,e['files']);original=a.rows
+        def rows(table,**filters):
+            values=original(table,**filters)
+            if table is I.details:
+                values=deepcopy(values)
+                for value in values:
+                    for source in value['data'].get('evidence',[]):
+                        if source['kind']!='IMPROVEMENT':continue
+                        if forgery=='QUOTE':source['quote']='TEST NONLITERAL QUOTE'
+                        elif forgery=='FIELD':source['field']='site_id'
+                        elif forgery=='VERSION':source['version_id']=nonce()
+                        elif forgery=='MISSING':source['field']='missing';source['quote']='TEST not present in source'
+                        else:source['kind']=forgery
+            return values
+        monkeypatch.setattr(a,'rows',rows)
+        who=Actor(e['people']['operator']['id'],'DATCO_OPERATOR')
+        if forgery in ('QUOTE','FIELD','VERSION','MISSING'):
+            with pytest.raises(Denied,match='IMPROVEMENT_STATEMENT_SOURCE_MISMATCH'):
+                ImprovementAnalysis(a).statement_sources(who,item['source']['id'],item['basis'],for_structure=True)
+        else:assert ImprovementAnalysis(a).statement_sources(who,item['source']['id'],item['basis'],for_structure=True)==[]
+
+
+def test_basic_company_input_cannot_replace_requirement_source(env):
+    e=env;item=text_only_source(e)
+    detail=call(e,'operator','/company/'+item['company']['id'])
+    auxiliary=[v['id'] for v in detail['evidence'] if v['mode']=='COMPANY_INPUT']
+    assert auxiliary
+    values=dict(item['values'],evidence_ids=auxiliary);values.pop('analysis_basis')
+    denied=call(e,'operator','/company/'+item['company']['id']+'/improvements',dict(data=values,improvement_id=item['source']['improvement_id'],expected_ordinal=1),status=409)
+    assert denied['reason']=='IMPROVEMENT_SOURCE_REQUIRED'
+    # Same references may be retained as auxiliary with an actual statement source.
+    target=save_text_structure(e,item,values=dict(values,analysis_basis=item['basis']))
+    assert target['data']['evidence_ids']==auxiliary
+
+
+def test_declared_unresolved_integration_stays_visible_and_blocks_confirm(env):
+    e=env;item=text_only_source(e,unresolved=True);target=save_text_structure(e,item)
+    assert '미확인' in target['data']['missing'] and '회계 프로그램은 유지' in target['data']['constraints']
+    call(e,'editor','/company/improvements/'+target['id']+'/actions',dict(action='ACKNOWLEDGE',note='TEST acknowledged pending integration, not completion'))
+    before=call(e,'operator','/company/'+item['company']['id'])
+    assert call(e,'operator','/company/improvements/'+target['id']+'/actions',dict(action='CONFIRM',note='TEST unresolved must block'),status=409)['reason']=='MISSING_REQUIRED_INFORMATION'
+    assert call(e,'operator','/company/'+item['company']['id'])==before
+    call(e,'operator','/capability/improvements/'+target['id']+'/recommendations',status=409)
+
+
+def test_text_basis_does_not_remove_operator_note_guard(env):
+    e=env;item=text_only_source(e);target=save_text_structure(e,item)
+    call(e,'editor','/company/improvements/'+target['id']+'/actions',dict(action='ACKNOWLEDGE',note='TEST exact structure checked'))
+    before=call(e,'operator','/company/'+item['company']['id'])
+    assert call(e,'operator','/company/improvements/'+target['id']+'/actions',dict(action='CONFIRM',note='   '),status=422)['reason']=='REVIEW_NOTE_REQUIRED'
+    assert call(e,'operator','/company/'+item['company']['id'])==before
+
+
+def test_provider_does_not_count_legacy_company_input_as_requirement_source(env,monkeypatch):
+    # Simulate a legacy adapter read; immutable persisted rows remain unchanged.
+    from app.company.provider import CompanyProvider
+    e=env;company,site,_,source,_=submitted(e)
+    detail=call(e,'operator','/company/'+company['id'])
+    auxiliary=[v['id'] for v in detail['evidence'] if v['mode']=='COMPANY_INPUT']
+    assert auxiliary
+    before=version(e,source['id'])
+    with e['factory']() as session:
+        a=CompanyApplication(session,e['files']);get,rows=a.get,a.rows
+        def legacy_get(table,key,*args):
+            value=get(table,key,*args)
+            if table is C.improvements and key==source['improvement_id']:return dict(value,state='CONFIRMED')
+            if table is C.improvement_versions and key==source['id']:return dict(value,data=dict(value['data'],evidence_ids=auxiliary))
+            return value
+        def legacy_rows(table,**filters):
+            if table is C.improvement_reviews and filters==dict(version_id=source['id'],outcome='CONFIRM'):return [dict(outcome='CONFIRM')]
+            return rows(table,**filters)
+        monkeypatch.setattr(a,'get',legacy_get);monkeypatch.setattr(a,'rows',legacy_rows)
+        context=CompanyProvider(a).read(Actor(e['people']['operator']['id'],'DATCO_OPERATOR'),source['id'])
+        assert context['confirmed'] and not context['current_valid']
+        assert context['structured']['evidence_ids']==auxiliary
+    assert version(e,source['id'])==before

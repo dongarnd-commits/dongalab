@@ -176,11 +176,44 @@ class ImprovementAnalysis:
             if candidate['run_id']!=run['id']:raise Denied('OBJECT_NOT_FOUND',404)
             if review['decision']!='USE_FOR_REQUEST' or self.ordered(S.reviews,candidate_id=candidate['id'])[-1]['id']!=key:raise Denied('STALE_REVIEW',409)
         return dict(run_id=run['id'],review_ids=list(ids),source_version_id=source['id'])
+    def statement_sources(self,who,target_vid,basis,*,for_structure=False):
+        """Validated company statements, never confirmed Facts or third-party proof.
+
+        A valid basis with only file/Fact/response sources returns an empty list;
+        an invalid or stale basis is an error and must not fall back to a file.
+        """
+        a=self.a;a.role(who,'DATCO_OPERATOR','COMPANY_EDITOR','COMPANY_APPROVER')
+        checked=self._validate_basis(who,target_vid,basis,for_structure=for_structure)
+        source=a.get(C.improvement_versions,checked['source_version_id'])
+        root=a.get(C.improvements,source['improvement_id'])
+        allowed={'original_text','as_is','problem','impact','goal','to_be','required_functions','constraints','missing'}
+        result=[];seen=set()
+        for rid in checked['review_ids']:
+            review=a.get(S.reviews,rid);candidate=a.get(N.candidates,review['candidate_id'])
+            details=a.rows(S.details,candidate_id=candidate['id'])
+            if candidate['kind']!='STRUCTURE' or not details or details[0]['category']!='STRUCTURE':continue
+            for item in details[0]['data'].get('evidence',[]):
+                if item.get('kind')!='IMPROVEMENT':continue
+                field=item.get('field');quote=item.get('quote');value=source['data'].get(field) if isinstance(field,str) else None
+                if (item.get('version_id')!=source['id'] or not isinstance(field,str) or field not in allowed
+                        or not isinstance(quote,str) or not quote.strip()
+                        or not isinstance(value,str) or quote not in value):
+                    raise Denied('IMPROVEMENT_STATEMENT_SOURCE_MISMATCH',409)
+                # Existing analysis may quote an unresolved/missing field. It
+                # remains valid file-basis lineage, not a statement substitute.
+                if field=='missing':continue
+                key=(source['id'],field,quote)
+                if key in seen:continue
+                seen.add(key);result.append(dict(company_id=root['company_id'],site_id=root['site_id'],
+                    source_version_id=source['id'],site_ordinal=source['site_ordinal'],field=field,quote=quote,
+                    candidate_id=candidate['id'],review_id=rid,source_kind='COMPANY_STATEMENT'))
+        return result
+
     def basis_current_for_company_decision(self,who,target_vid,run_id,review_ids):
         """Internal boolean only, called after Proposal authorization; no role impersonation."""
         try:
             self.a.role(who,'DATCO_OPERATOR','COMPANY_EDITOR','COMPANY_APPROVER')
-            self._validate_basis(who,target_vid,dict(run_id=run_id,review_ids=review_ids))
+            self.statement_sources(who,target_vid,dict(run_id=run_id,review_ids=review_ids))
             return True
         except Denied:return False
     def job(self,who,jid):

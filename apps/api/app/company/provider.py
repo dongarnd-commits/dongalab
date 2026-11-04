@@ -9,6 +9,12 @@ class CompanyProvider:
   a=self.app;v=a.get(S.improvement_versions,version_id);root=a.get(S.improvements,v['improvement_id']);a.scope(who,root['company_id']);a.get(S.companies,root['company_id'],True);root=a.get(S.improvements,root['id'])
   links=a.rows(S.improvement_facts,version_id=version_id);confirmed=bool(a.rows(S.improvement_reviews,version_id=version_id,outcome='CONFIRM'))
   current=confirmed and root['state']=='CONFIRMED' and root['current_ordinal']==v['ordinal'] and a.get(S.sites,root['site_id'])['current_ordinal']==v['site_ordinal'] and all(a.current_fact(l['fact_version_id'])[2] for l in links) and all(a.evidence_current(e['evidence_id']) for e in a.rows(S.improvement_evidence,version_id=version_id))
+  sources=[]
+  if current and v['data'].get('analysis_basis'):
+   from app.company.improvement_analysis import ImprovementAnalysis
+   try:sources=ImprovementAnalysis(a).statement_sources(who,version_id,v['data']['analysis_basis'])
+   except Denied:current=False
+  if current:current=a.has_improvement_source(v['data'],sources)
   fact_details=[]
   for link in links:
    fv,fact,valid=a.current_fact(link['fact_version_id']);eid,review_id=a.fact_evidence(fv)
