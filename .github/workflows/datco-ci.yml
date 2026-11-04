@@ -1,7 +1,7 @@
 name: DATCO CI
 on:
   pull_request:
-    branches: [main, feat/mvp-dmp-assets-auto-composition, fix/company-portal-ux-20261103]
+    branches: [main, feat/mvp-dmp-assets-auto-composition, fix/company-portal-ux-20261103, fix/portal-analysis-quality-20261103]
   push:
     branches: [main]
   workflow_dispatch:
@@ -32,6 +32,7 @@ jobs:
         working-directory: apps/api
         run: uv run --frozen pytest tests/test_mvp_analysis_rules.py tests/test_solution_recommendations.py tests/test_solution_rule_evaluation.py tests/test_mvp_proposal_documents.py tests/test_improvement_rules.py tests/test_dmp_inventory.py tests/test_capability_comparison.py tests/test_proposal_documents.py tests/test_company_documents.py tests/test_company_registration.py tests/test_company_business_documents.py tests/test_statement_documents.py tests/test_v14_contracts.py tests/test_reacceptance_rules.py tests/test_manual_acceptance_tools.py tests/test_asset_solutions.py tests/test_dmp_asset_catalog.py tests/test_analysis_quality.py tests/test_asset_workbook_import.py tests/test_acceptance_release.py tests/test_quality_compare.py -m 'not integration' -v --junitxml=unit.xml
   integration:
+    needs: backend-unit
     name: PostgreSQL Integration
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -63,6 +64,7 @@ jobs:
         working-directory: apps/api
         run: uv run --frozen python tests/ci_run.py integration
   frontend:
+    needs: integration
     name: Frontend Quality
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -95,6 +97,7 @@ jobs:
         run: node --test tests/operator-review-unit.mjs
       - run: npm run build --prefix apps/web
   playwright:
+    needs: frontend
     name: Playwright Public E2E
     runs-on: ubuntu-24.04
     timeout-minutes: 55

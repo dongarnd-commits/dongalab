@@ -264,6 +264,9 @@ class CompanyApplication(BusinessRecords,InformationRequests):
   self.role(who,'COMPANY_EDITOR','DATCO_OPERATOR')
   from app.company.provider import CompanyProvider
   return CompanyProvider(self).read(who,version_id)
+ def has_improvement_source(self,data,statements=()):
+  # Basic company-input evidence is auxiliary, not the source of a requirement.
+  return bool(statements or any(self.get(S.evidence,key)['file_id'] for key in data['evidence_ids']))
  def save_improvement(self,who,cid,data,key=None,expected=0):
   self.role(who,'COMPANY_EDITOR','DATCO_OPERATOR');self.scope(who,cid,True);data=Improvement.model_validate(data).model_dump();self.site(cid,data['site_id'])
   if data.get('analysis_basis') is None:data.pop('analysis_basis',None)
@@ -277,11 +280,16 @@ class CompanyApplication(BusinessRecords,InformationRequests):
    if who.role=='DATCO_OPERATOR':
     if root['state'] not in ('SUBMITTED','REVIEW_REQUIRED'):raise Denied('TRANSITION_NOT_ALLOWED',409)
     if data['original_text']!=previous['data']['original_text'] or data['site_id']!=root['site_id']:raise Denied('ORIGINAL_COMPANY_INPUT_IS_IMMUTABLE',409)
+    # An operator may replace a basis with another current reviewed basis, but
+    # cannot silently discard recorded provenance to evade stale-review guards.
+    if 'analysis_basis' not in data and previous['data'].get('analysis_basis'):data['analysis_basis']=dict(previous['data']['analysis_basis'])
   else:
    self.role(who,'COMPANY_EDITOR');root=self.add(S.improvements,company_id=cid,site_id=data['site_id'],title=data['title'],current_ordinal=0,state='DRAFT')
+  statement_sources=[]
   if data.get('analysis_basis'):
    from app.company.improvement_analysis import ImprovementAnalysis
    data['analysis_basis']=ImprovementAnalysis(self).validate_basis(who,previous['id'],data['analysis_basis'],for_structure=True)
+   statement_sources=ImprovementAnalysis(self).statement_sources(who,previous['id'],data['analysis_basis'],for_structure=True)
   for fid in data['fact_version_ids']:
    v,f,current=self.current_fact(fid)
    if f['company_id']!=cid or (f['site_id'] and f['site_id']!=data['site_id']):raise Denied('OBJECT_NOT_FOUND',404)
@@ -291,6 +299,7 @@ class CompanyApplication(BusinessRecords,InformationRequests):
    if e['company_id']!=cid or (e['site_id'] and e['site_id']!=data['site_id']):raise Denied('OBJECT_NOT_FOUND',404)
    if e['file_id'] and (not key or eid not in previous['data']['evidence_ids']):self.active_file(e['file_id'])
    if not self.evidence_current(eid):raise Denied('STALE_INPUT_VERSION',409)
+  if who.role=='DATCO_OPERATOR' and not self.has_improvement_source(data,statement_sources):raise Denied('IMPROVEMENT_SOURCE_REQUIRED',409)
   v=self.add(S.improvement_versions,improvement_id=root['id'],ordinal=expected+1,data=data,actor_id=who.id,site_ordinal=self.get(S.sites,data['site_id'])['current_ordinal'])
   for fid in set(data['fact_version_ids']):self.add(S.improvement_facts,version_id=v['id'],fact_version_id=fid)
   for eid in set(data['evidence_ids']):self.add(S.improvement_evidence,version_id=v['id'],evidence_id=eid)
@@ -311,11 +320,19 @@ class CompanyApplication(BusinessRecords,InformationRequests):
   elif action=='ACKNOWLEDGE':
    self.role(who,'COMPANY_EDITOR')
    if state!='REVIEW_REQUIRED':raise Denied('TRANSITION_NOT_ALLOWED',409)
+   if v['data'].get('analysis_basis'):
+    from app.company.improvement_analysis import ImprovementAnalysis
+    sources=ImprovementAnalysis(self).statement_sources(who,version_id,v['data']['analysis_basis'])
+    if not self.has_improvement_source(v['data'],sources):raise Denied('IMPROVEMENT_SOURCE_REQUIRED',409)
    new=state
   elif action=='CONFIRM':
    self.role(who,'DATCO_OPERATOR')
    if state!='REVIEW_REQUIRED':raise Denied('TRANSITION_NOT_ALLOWED',409)
-   if not all(v['data'][k].strip() for k in ('as_is','problem','goal','to_be')) or v['data']['missing'].strip() or not v['data']['evidence_ids']:raise Denied('MISSING_REQUIRED_INFORMATION',409)
+   sources=[]
+   if v['data'].get('analysis_basis'):
+    from app.company.improvement_analysis import ImprovementAnalysis
+    sources=ImprovementAnalysis(self).statement_sources(who,version_id,v['data']['analysis_basis'])
+   if not all(v['data'][k].strip() for k in ('as_is','problem','goal','to_be')) or v['data']['missing'].strip() or not self.has_improvement_source(v['data'],sources):raise Denied('MISSING_REQUIRED_INFORMATION',409)
    if not self.rows(S.improvement_reviews,version_id=version_id,outcome='ACKNOWLEDGE'):raise Denied('COMPANY_CONFIRMATION_REQUIRED',409)
    for fid in v['data']['fact_version_ids']:
     if not self.current_fact(fid)[2]:raise Denied('STALE_INPUT_VERSION',409)
