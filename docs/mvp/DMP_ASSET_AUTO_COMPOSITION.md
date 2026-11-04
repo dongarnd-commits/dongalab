@@ -3,9 +3,9 @@
 기준 2ee2640836ae1fa07bf4ccf0a34d03a4f27851e0, 2026-11-02 사용자 명시 통합 보완개발 지시.
 이 문서는 구현 전 영향 계약과 이후 실제 검증 결과를 한 곳에 유지한다.
 
-> **2026-11-04 산출물 보완 준비 완료:** 신규04/9b 필수 포털6개·격리 네 역할·정상 인계/복귀·시작 실패 복귀를 확인했고, 새 계획8fbbe127…은 승인 대기다. **실제18445는 변경하지 않아 기존04/e98 포털503 상태 그대로다.** 최신 준비 결과는 마지막 절에 있다.
+> **2026-11-04 09:53 KST 현재 상태: A. 재전환 성공 — 사용자 화면 검수 가능.** 승인 계획8fbbe127…과 제어8c98d64로 신규 완전 산출물의 제품04를 기존18445에 적용했다. 네 TEST 역할·세 포털·관리자 상세·운영자 회사 유지/보완요청 진입·기존 자료 보존을 실제 환경에서 확인했다. 실제자료/공식공고 기반 인수는 별도다. 아래 이전503·준비/PENDING 기록은 당시 이력이고 마지막 실제 재전환 기록이 현재 판정이다.
 
-> **2026-11-04 현재 상태: 04 코드 적용 후 포털 검증 실패, 사용자 검수 보류.** 기존 725는 정상 종료했고 현재 18445의 API·Worker·Web·Gateway는04다. 고정 불변 Web 실행물에 세 포털 번들6개가 빠져 수요기업 포털503을 재현했다. 이전9b 산출물도 동일 누락이 있어 복귀는 실행하지 않았다. 아래 이전의 “미적용/준비 완료/복귀 가능” 기록은 준비 당시의 관측이며, 현재 사용 가능 판정은 이 문서 끝의 실제 적용 결과가 우선한다. 원래 data-owner의 보존 문서2개는 수정하지 않았다.
+> **2026-11-04 이전 적용 회차의 보존 기록: 04 코드 적용 후 포털 검증 실패.** 기존 725는 정상 종료했고 현재 18445의 API·Worker·Web·Gateway는04다. 고정 불변 Web 실행물에 세 포털 번들6개가 빠져 수요기업 포털503을 재현했다. 이전9b 산출물도 동일 누락이 있어 복귀는 실행하지 않았다. 아래 이전의 “미적용/준비 완료/복귀 가능” 기록은 준비 당시의 관측이며, 현재 사용 가능 판정은 이 문서 끝의 실제 적용 결과가 우선한다. 원래 data-owner의 보존 문서2개는 수정하지 않았다.
 
 현재 상태: PR18 집중 보완 구현·로컬 자동 회귀 완료(출발 c62e2d3, 기존 완료 결과 보존). 소스 동결 후의 최신 HEAD CI·새 로컬 인수환경 실측 판정은 PR18/보호 RUNBOOK에서 확인한다. 실기업 평가·사용자 최종 인수·운영 배포는 대기다.
 
@@ -588,3 +588,49 @@ acceptance_handover.py와 좁은 acceptance_rehandover.py는 **현재 e98의 RUN
 보호 근거는 준비 Worktree의 `storage/private/runtime/portal-package-20261104-36d706fc/`에 모았다. build-results.json과 두 portable-product.json/portal-builds, focused-execution-summary.json/브라우저 세 합격 회차, 초기 실패/진단 JSON·focused-failure-history.json, clone-final-resources.json, actual-final-preservation.json, actual-plan-location.json을 연결한다. 보호 로그·실행물·계정·DB/자료 원문은 Git/CI에 포함하지 않는다. 기존 소스 [PR20](https://github.com/dongarnd-commits/dongalab/pull/20)·[제품04 CI](https://github.com/dongarnd-commits/dongalab/actions/runs/41590876064)와 이번 도구/실행물 검증은 별개다. 새 준비 브랜치의 전체 CI 성공을 주장하지 않는다.
 
 이번 완료 범위는 **검증된 새 두 실행물과 현재04에서의 정상 재전환 계획 확보**다. 남은 사용자 결정은 새 digest/action/적용 시각·유효기간에 대한 실제 재전환 승인이다. 승인 뒤 기술 담당자가 필수 사전검사·정상 인계/필요시검증된9b 복귀·실제 환경 핵심 검증을 수행한다. 사용자는 명령·로그 수집·수동 병합을 맡지 않는다. 실제자료/개별 접근·보존 조건은 기존 단일 결정표의 별도 미승인 사항이며 이번 결정으로 승격하지 않는다.
+
+
+### 2026-11-04 실제18445 정상 재전환 완료 — A. 사용자 화면 검수 가능
+
+사용자의 이번 명시 명령은 고정 제품04·호환9b·제어8c98d64·계획8fbbe127…의 **정상 재전환1회와 실패 시 검증된 호환복귀만** 승인했다. 현재 대화의 해당 승인 메시지 수신 timestamp와 메시지 SHA256만 결합했으며 본문/다른 대화·비밀번호·키·실자료를 출력하지 않았다. 수신 시각은 `2026-11-04T09:39:28.626+09:00`(UTC00:39:28.626), 만료는 정확90분 뒤 `2026-11-04T11:09:28.626+09:00`(UTC02:09:28.626)다. 이후 검사를 시작한 시각으로 유효기간을 연장하지 않았다.
+
+#### 사전검사와 실제 실행
+
+기존 e98/RUNNING04의 계획·상태·11개 전체 프로세스/자손·생성시각/실행물/cwd/listener를 재확인했다. 새04/9b의 정확 source HEAD/contract·의존성/Schema/workbook reader·두 불변 artifact와 필수6개/출처 계약, 기존 DB container/volume·files·계정/Role/CompanyScope·TLS·원래 manifest/문서2개를 검사했다. 서버 내부 전체 row/count/hash와 파일의 이름 없는 bytes hash·보호 포트8443/8444·보호 Git refs를 전환 전에 남겼다. queued/processing/attempts·활성 DB 업무·API/Web/Gateway 연결이 연속2회0인 것을 확인했다. 불일치를 무시한 검사 생략은 없었다.
+
+별도 현재 사용자 승인 receipt는 이번 계획/replace·조건부recover·필요stop/원래 수신·만료시각에 결합했고 과거63d252… 계획의 승인 파일을 신규 실행물에 재사용하지 않았다. 기존 제어의 정상STOP에는 새 결정에서 파생한 별도 predecessor STOP receipt를 사용했다. 기존 approval-user 원본은 보존했으며 active-approval의 정상 STOP 갱신과 과거 승인 문서를 구분한다.
+
+**09:43:22 KST 재전환1회 시작**, 기존 custodian의 정상STOP→구 프로세스/자손·포트 정리→연속 state read fence/새 entry fence→같은 DB/files/TLS에서 신규04를 기동했다. 부모/자식이 불명인 프로세스를 임의 종료하거나 Docker/DB를 재시작·초기화하지 않았다. 새Web 실행 cwd는 소스 폴더와 분리됐다. 현재 구성은 다음과 같다.
+
+- 제품 HEAD: `04dfea4ee9d2521ba632c430c2218463df5df63c`
+- 제어 HEAD: `8c98d6469b18ca17c3dd6cffc6c1c2633d612988`
+- 실제 계획: `8fbbe127f8e6af347a193b146a072403b78b18eb8789d1388ee691e1a3404760`
+- Web artifact: `a5a4209f9ec4a14f40cb0241c`, manifest SHA256 `5a4209f9ec4a14f40cb0241cd6425d7a003e6ff564c497fd1342f0238dc46420`
+- Web execution: `1359002b8e5c4dd187ba2b61a3b3ffae`, 외부 runtime state RUNNING/TARGET, nonce9ca49b473812
+- URL: https://127.0.0.1:18445/login
+
+API·Worker-ready·Web 실행물·Gateway 공개 응답/인증서·DB/Role/nonce/files가 일치한다. 실제 source는 고정04의 새 checkout이며 원래 data-owner Worktree의 Git HEAD725/manifest와 자연 STOPPED725 상태는 역사 자료로 보존했다. 이를04로 바꿔 통과시키지 않았다. 기존11개 정체성은 종료됐고 새11개 전체 프로세스/자손의 소유권도 확인했다. 복귀9b는 실행하지 않았다.
+
+#### 실제 환경의 집중 검증
+
+| 항목 | 결과 |
+| --- | --- |
+| 수요기업 편집 TEST | 로그인·세션/권한·인증 화면200·실행물 JS/CSS 일치·F5·로그아웃·폐기 쿠키401·로그인 재표시 PASS. 기존 회사/사업장/첨부 조회와 첨부 bytes SHA256 다운로드 PASS |
+| 운영자 TEST | 같은 공통 검증 PASS. 회사 선택의 메뉴 간 유지/F5와 기업 공통정보 보완요청 작성폼 진입 PASS. 제목 입력·요청 저장/발송은 하지 않음 |
+| 관리자 TEST | 같은 공통 검증 PASS. SYSTEM/MODULE/FEATURE 상세 API200 및 브라우저 상세/이력 표시 PASS. CURRENT_CATALOG649와 지정 IMPORT649의 모든 페이지/투영 hash 동일 |
+| 수요기업 승인 TEST | 기존 전용 / 화면·재조회/F5·로그아웃/폐기 쿠키401 PASS. 세 포털 접근403 및 관리자 API403 유지. 신규 역할/포털을 만들지 않음 |
+| 오류·쓰기·외부 요청 | 세 포털503/서버5xx/페이지 오류0. 허용하지 않은 업무 쓰기0, 외부 요청0. 기존 TEST 계정만 내부 로그인 도우미에서 사용 |
+
+초기 집중 브라우저 도우미는 실제 메뉴 aria-label을 “운영자 메뉴”로 잘못 지정해 click timeout이 났고, 후속 관리자 도우미의 Response 변수가 inventory 함수를 가려 TypeError가 났다. 이때도 포털200/JS/CSS·서버오류0이었으며 제품을 수정하지 않았다. 실제 소스의 “운영자 업무 메뉴”와 변수 이름만 정정했다. 이미 통과한 역할은 반복하지 않고 편집자1회차·운영자2회차·관리자/승인자3회차의 완전 통과 근거를 같은 실행물/run으로 결합했다. 실패 JSON·후속 통과·auth 감사6 LOGIN/6 LOGOUT을 구분해 남겼다. 기대값/Guard를 낮추거나 실패를SKIP으로 숨기지 않았다.
+
+기존 제출본은0건이다. 운영자 회사 선택·빈 제출본 선택 화면/정확한 미제출 안내·보완요청 작성 진입을 확인했으며 실제 제출 Version을 선택했다고 주장하지 않는다. 이를 채우려고 새 개선요구·회사·공고·평가 정답을 주입하지 않았다. 실제 존재하는 제출본/연계 업무의 추가 사람 검수와 공식공고 기반 제안 인수는 별도다.
+
+#### 최종 보존과 사용자 검수 범위
+
+09:53:15 KST 최종 판정은 **A_RETRANSITION_SUCCESS_USER_PORTAL_REVIEW_READY**다. 전체 기존 업무 테이블의 count/hash는 같고 기존 감사 prefix도 동일하다. 추가는 정상 TEST 인증 LOGIN6/LOGOUT6뿐이며 local_sessions는 쿠키 폐기401로 별도 검사했다. 회사1·사업장1·첨부1·원천649·원본 Snapshot1을 유지했다. 파일 bytes·DB container/volume·Schema·계정/역할/CompanyScope·TLS·manifest·원래 문서2개·8443/8444 listener/소유권·보호 Git refs를 보존했고 작업 queued/processing/attempts0이다. PR17~20은 동일 HEAD의 Draft/open/unmerged이고 main도10d3d8b0f0142b0d6cbb992acb07bb34ed40c049 그대로다.
+
+보호 근거는 원래 data-owner의 `storage/private/runtime/reapply04-20261104/`에 있다. authorization-source/preflight/quiet-work-samples/one-attempt-reservation/replacement-attempt, post-runtime-core-proof, 브라우저3회차 및 결합 browser-focused-proof, DB/파일 전후 해시, final-result를 보존했다. 승인/과거 실패 로그·원문·비밀번호·키·계정 파일·실행물은 Git/CI에 넣지 않았다. 기존 제품04 CI·격리132단위/3경로 결과를 재사용했고 이번에는 실제 전환 영향의 집중 검증만 했다. 제품 코드 변경/전체 제품 CI 재실행은 없다.
+
+사용자는 기존 주소와 보호 CREDENTIALS.txt의 동일 TEST 계정으로 수요기업 A–G→운영자 회사 유지/보완요청→관리자 자산 상세/Excel 비교 화면→공통 로그아웃 순서의 화면 검수를 시작할 수 있다. 사용자 검수 자체와 실기업 평가·최종 인수를 완료한 것은 아니다. 공고0건이므로 B(정식 매칭·DOCX/PDF·기업 전달)는 보류하고 DEMO로 대신하지 않는다. RT-01/RT-02 검증 대기와 숫자/기간 미지원5건, 기존 단일 결정표의 실제자료·접근·보존/삭제·백업 미확정 항목을 유지한다.
+
+기존 RUNBOOK/START/STOP/CLEANUP은 원래 owner의 역사 자료로 보존하며 현재8fb 제어와 섞어 사용하지 않는다. 후속 정지/재개/재전환은 해당 시점의 정확 계획·승인과 소유권/정리를 확인한다. 재부팅·custodian 강제 종료 후 자동 재개/영구 OS 서비스는 이번 범위에서 제공하지 않으며 불명 상태를 임의 수정해 재개하지 않는다.
